@@ -13,14 +13,28 @@ public static class CameraMath
     public const float FollowRate = 0.2f;
     private const float SnapDistance = 0.5f;
 
+    // Room kept between a fighter's drawn edge and the screen edge.
+    public const float FramePad = 16f;
+
+    // The zoom that fits both fighters' drawn extents (plus FramePad each side) in the view: 1
+    // unless they're drawn wider than the screen, which only happens near the separation limit
+    // (their pushboxes span one screen there, and arms and leans reach past them). Then the camera
+    // zooms out just enough rather than cutting anyone off.
+    public static float FrameZoom(float drawnLeft, float drawnRight, float viewWidth)
+    {
+        var needed = drawnRight - drawnLeft + 2 * FramePad;
+        return needed <= viewWidth ? 1f : viewWidth / needed;
+    }
+
     // Where the camera wants to be: the fighters' midpoint, but no closer to a wall than half the
-    // visible width, so the stage edge is never passed.
+    // visible width. Follow may still take it past a wall, just far enough to keep a cornered
+    // fighter's drawn body in view (it's drawn past the wall its pushbox stops at).
     public static float TargetX(float p1X, float p2X, float leftWall, float rightWall, float viewWidth, float zoom = 1f) =>
         ClampToStage((p1X + p2X) / 2, leftWall, rightWall, viewWidth / zoom);
 
-    // One tick of lag toward the target, then kept where both fighters' outer edges are in view.
-    // The simulation caps the separation at one screen, so that range is never empty, and the
-    // lag can never cut a fighter off.
+    // One tick of lag toward the target, then kept where both fighters' outer edges (their drawn
+    // extents, padded) are in view, past a wall if need be. At FrameZoom's zoom that range is never
+    // empty, so the lag can never cut a fighter off.
     public static float Follow(float current, float target, float leftEdge, float rightEdge, float viewWidth)
     {
         var next = MathF.Abs(target - current) < SnapDistance ? target : current + (target - current) * FollowRate;
@@ -28,6 +42,22 @@ public static class CameraMath
         var min = rightEdge - half;
         var max = leftEdge + half;
         return min <= max ? Math.Clamp(next, min, max) : (leftEdge + rightEdge) / 2;
+    }
+
+    // One display frame of framing: the zoom that fits what's drawn, and the camera's x after
+    // `ticks` ticks of lag from `current` (null to cut straight to the target), then kept where
+    // everything drawn, padded, is in view.
+    public static (float X, float Zoom) Frame(float? current, int ticks, float p1X, float p2X, float drawnLeft, float drawnRight,
+        float leftWall, float rightWall, float viewWidth)
+    {
+        var zoom = FrameZoom(drawnLeft, drawnRight, viewWidth);
+        var visible = viewWidth / zoom;
+        var target = TargetX(p1X, p2X, leftWall, rightWall, visible);
+        var (left, right) = (drawnLeft - FramePad, drawnRight + FramePad);
+        var x = current ?? target;
+        for (var i = 0; i < ticks; i++)
+            x = Follow(x, target, left, right, visible);
+        return (Follow(x, x, left, right, visible), zoom);
     }
 
     public static float ClampToStage(float centerX, float leftWall, float rightWall, float visibleWidth)
@@ -75,6 +105,9 @@ public static class CameraMath
         float baseX, float baseY, float pointX, float pointY, float zoom, float amount,
         float leftWall, float rightWall, float stageHeight, float viewWidth, float viewHeight)
     {
+        // No push-in: the normal view as it is (which may be past a wall to frame a cornered fighter).
+        if (amount <= 0f)
+            return (baseX, baseY, 1f);
         var z = 1f + (zoom - 1f) * amount;
         var x = ClampToStage(baseX + (pointX - baseX) * amount, leftWall, rightWall, viewWidth / z);
         var y = ClampToStage(baseY + (pointY - baseY) * amount, 0f, stageHeight, viewHeight / z);

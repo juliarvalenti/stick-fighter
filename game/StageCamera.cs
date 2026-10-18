@@ -1,11 +1,11 @@
 using Godot;
 using StickFighter.Sim;
-using StickFighter.Sim.Collision;
 
 namespace StickFighter;
 
 // Keeps both fighters framed: centered on their midpoint with a little lag, clamped to the stage
-// walls, at a fixed zoom. It reads game state and never writes it.
+// walls, except that whatever's drawn of a fighter stays in view: past a wall in a corner, and
+// zoomed out a touch at the separation limit. It reads game state and never writes it.
 //
 // Effects for later epics: Shake (Hitstop and sparks) and PushIn (Meter and supers). Each is a
 // pure function (CameraMath) of its inputs and of how many frames have passed since it started,
@@ -78,27 +78,21 @@ public partial class StageCamera : Camera2D
         var left = stage.LeftWall.ToFloat();
         var right = stage.RightWall.ToFloat();
 
+        // Framed on what's drawn, not the pushboxes: arms and leans reach past them, past a wall in
+        // a corner and past the screen at the separation limit (where the camera zooms out a touch).
         var p1 = state.Fighters[0].Position.X.ToFloat();
         var p2 = state.Fighters[1].Position.X.ToFloat();
-        var half = Body.PushHalfWidth.ToFloat();
-        var leftEdge = Mathf.Min(p1, p2) - half;
-        var rightEdge = Mathf.Max(p1, p2) + half;
-        var target = CameraMath.TargetX(p1, p2, left, right, view.X);
-
-        if (!_placed)
-        {
-            _x = target;
-            _placed = true;
-        }
-        for (var i = 0; i < ticks; i++)
-            _x = CameraMath.Follow(_x, target, leftEdge, rightEdge, view.X);
+        var (drawnLeft, drawnRight) = DrawnBounds.Of(state);
+        (_x, var frameZoom) = CameraMath.Frame(_placed ? _x : null, ticks, p1, p2, drawnLeft, drawnRight, left, right, view.X);
+        _placed = true;
+        var visible = view.X / frameZoom;
 
         var amount = CameraMath.PushInAmount(_frame - _pushStart, _pushIn, _pushHold, _pushOut);
-        var (x, y, zoom) = CameraMath.PushIn(_x, view.Y / 2, _pushX, _pushY, _pushZoom, amount, left, right, view.Y, view.X, view.Y);
+        var (x, y, zoom) = CameraMath.PushIn(_x, view.Y / 2, _pushX, _pushY, _pushZoom, amount, left, right, view.Y, visible, view.Y / frameZoom);
         var (shakeX, shakeY) = CameraMath.Shake(_shakeAmplitude, _shakeDuration, _frame - _shakeStart);
 
         Position = new Vector2(x, y);
-        Zoom = new Vector2(zoom, zoom);
+        Zoom = new Vector2(zoom * frameZoom, zoom * frameZoom);
         Offset = new Vector2(shakeX, shakeY);
         ForceUpdateScroll();
     }
