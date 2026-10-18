@@ -74,18 +74,48 @@ public class ReplayTests
             inputs[i] = replay.Inputs[i];
         inputs[42] = new FrameInput(Buttons.Left, Buttons.Right);
 
-        var tampered = new Replay(replay.Seed, inputs, replay.Checksums);
+        var tampered = new Replay(replay.Seed, replay.DataHash, inputs, replay.Checksums);
         Assert.Equal(42, tampered.FirstDivergence(out var expected, out var actual));
         Assert.NotEqual(expected, actual);
     }
 
     [Theory]
     [InlineData("not-a-replay 1\nseed 1\nframes 0\nfinal 0\n")]
-    [InlineData("stick-fighter-replay 99\nseed 1\nframes 0\nfinal 0\n")]
-    [InlineData("stick-fighter-replay 1\nseed 1\nframes 2\ninput 0000 0000 1\nchecksum 00\nfinal 00\n")]
-    [InlineData("stick-fighter-replay 1\nseed 1\nframes 0\nbogus line\n")]
+    [InlineData("stick-fighter-replay 99\nseed 1\ndata 00\nframes 0\nfinal 0\n")]
+    [InlineData("stick-fighter-replay 2\nseed 1\ndata 00\nframes 2\ninput 0000 0000 1\nchecksum 00\nfinal 00\n")]
+    [InlineData("stick-fighter-replay 2\nseed 1\ndata 00\nframes 0\nbogus line\n")]
+    [InlineData("stick-fighter-replay 2\nseed 1\nframes 0\nfinal 0\n")] // no data line
     public void MalformedReplaysAreRejected(string text)
     {
         Assert.Throws<FormatException>(() => Replay.Read(text));
+    }
+
+    [Fact]
+    public void ReplaysRecordTheCharacterDataHash()
+    {
+        var replay = Recorded(30);
+        Assert.Equal(Characters.Characters.Placeholder.DataHash, replay.DataHash);
+        Assert.True(replay.MatchesLoadedData);
+        Assert.Equal(replay.DataHash, Replay.Read(replay.Write()).DataHash);
+    }
+
+    [Fact]
+    public void AReplayFromOtherDataIsFlagged()
+    {
+        var replay = Recorded(30);
+        var other = new Replay(replay.Seed, replay.DataHash ^ 1, replay.Inputs, replay.Checksums);
+        Assert.False(other.MatchesLoadedData);
+    }
+
+    [Fact]
+    public void Version1IsRefusedWithAClearMessageButRerecordCanReadIt()
+    {
+        const string v1 = "stick-fighter-replay 1\nseed 1\nframes 1\ninput 0000 0000 1\nchecksum 00\nfinal 0000000000000000\n";
+        var error = Assert.Throws<FormatException>(() => Replay.Read(v1));
+        Assert.Contains("rerecord", error.Message, StringComparison.Ordinal);
+
+        var old = Replay.Read(v1, allowVersion1: true);
+        Assert.Equal(0UL, old.DataHash);
+        Assert.Equal(1, old.Frames);
     }
 }

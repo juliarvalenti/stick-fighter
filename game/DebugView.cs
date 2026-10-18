@@ -1,7 +1,7 @@
 using Godot;
 using StickFighter.Sim;
+using StickFighter.Sim.Characters;
 using StickFighter.Sim.Collision;
-using StickFighter.Sim.Numerics;
 
 namespace StickFighter;
 
@@ -75,8 +75,9 @@ public partial class DebugView : Node2D
         for (var i = 0; i < shapes.HitCount; i++)
             DrawCapsule(shapes.Hit[i], HitColor);
 
-        foreach (var joint in Joints)
-            DrawCircle(Body.Joint(fighter, joint).ToVector2(), 4, JointColor);
+        var joints = Body.Pose(fighter);
+        for (var i = 0; i < Skeleton.JointCount; i++)
+            DrawCircle(joints[i].ToVector2(), 4, JointColor);
         DrawCircle(fighter.Position.ToVector2(), 5, PushColor); // origin: the feet
     }
 
@@ -94,9 +95,4 @@ public partial class DebugView : Node2D
         DrawLine(a + side, b + side, color, Line);
         DrawLine(a - side, b - side, color, Line);
     }
-
-    private static readonly FixVec2[] Joints =
-    {
-        Body.Hip, Body.Neck, Body.Head, Body.BackFoot, Body.FrontFoot, Body.BackHand, Body.FrontHand,
-    };
 }

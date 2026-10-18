@@ -1,3 +1,4 @@
+using StickFighter.Sim.Characters;
 using StickFighter.Sim.Collision;
 using StickFighter.Sim.Numerics;
 
@@ -5,9 +6,6 @@ namespace StickFighter.Sim;
 
 public static class Simulation
 {
-    // Placeholder walk speed in px per frame, until characters have their own data.
-    private static readonly Fix WalkSpeed = Fix.FromInt(4);
-
     // Advances the match by one frame. Must not allocate.
     public static void Step(ref GameState state, in FrameInput input)
     {
@@ -16,14 +14,29 @@ public static class Simulation
         for (var i = 0; i < GameState.PlayerCount; i++)
             state.Inputs[i].Record(state.Frame, input.For(i).Cleaned());
 
+        var stats = Characters.Characters.Placeholder.Stats;
         for (var i = 0; i < GameState.PlayerCount; i++)
         {
             ref var fighter = ref state.Fighters[i];
-            var buttons = state.Inputs[i].At(state.Frame, state.Frame);
-            var forward = Numpad.Horizontal(Numpad.Direction(buttons, fighter.Facing));
-            fighter.Velocity = new FixVec2(WalkSpeed * (forward * fighter.Facing), Fix.Zero);
+            var direction = Numpad.Direction(state.Inputs[i].At(state.Frame, state.Frame), fighter.Facing);
+
+            // Down crouches (no walking while crouched); otherwise forward and back walk at their own speeds.
+            var forward = Numpad.Horizontal(direction);
+            var action = Numpad.Vertical(direction) < 0 ? FighterAction.Crouch
+                : forward > 0 ? FighterAction.WalkForward
+                : forward < 0 ? FighterAction.WalkBack
+                : FighterAction.Stand;
+            var speed = action switch
+            {
+                FighterAction.WalkForward => stats.WalkForward,
+                FighterAction.WalkBack => -stats.WalkBack,
+                _ => Fix.Zero,
+            };
+
+            fighter.Velocity = new FixVec2(speed * fighter.Facing, Fix.Zero);
             fighter.Position += fighter.Velocity;
-            fighter.ActionFrame++;
+            fighter.ActionFrame = (int)action == fighter.Action ? fighter.ActionFrame + 1 : 0;
+            fighter.Action = (int)action;
         }
 
         Pushing.Resolve(ref state);

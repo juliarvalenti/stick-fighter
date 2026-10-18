@@ -18,6 +18,11 @@
     <AdditionalFiles Include="BannedSymbols.txt" />
   </ItemGroup>
 
+  <!-- Character data ships inside the assembly, so every consumer loads identical bytes. -->
+  <ItemGroup>
+    <EmbeddedResource Include="../../data/characters/*.json" LogicalName="characters/%(Filename)%(Extension)" />
+  </ItemGroup>
+
   <ItemGroup>
     <InternalsVisibleTo Include="Sim.Tests" />
     <InternalsVisibleTo Include="StickFighter.Bench" />

@@ -14,7 +14,8 @@ public struct Hurtbox
 // it's rebuilt from the state whenever it's needed, so it never needs saving or checksumming.
 public struct FighterShapes
 {
-    public const int MaxHurtboxes = 8;
+    // Head plus the ten bones.
+    public const int MaxHurtboxes = 12;
     public const int MaxHitboxes = 4;
 
     public HurtboxList Hurt;

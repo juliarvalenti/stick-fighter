@@ -1,53 +1,48 @@
+using StickFighter.Sim.Characters;
 using StickFighter.Sim.Numerics;
 
 namespace StickFighter.Sim.Collision;
 
-// The placeholder fighter's skeleton and the shapes that come from it. One fixed standing pose
-// until moves supply keyframed poses and hitbox frames (Movement, normals, blocking, throws).
-// Offsets are in px from the feet, for a fighter facing right; facing left mirrors X.
+// A fighter's pose and the collision shapes that come from it this frame. The pose is a pure
+// function of (character, action, action frame), so none of this is stored in GameState.
 public static class Body
 {
-    public static readonly Fix PushHalfWidth = Fix.FromInt(30);
-    public static readonly Fix PushHeight = Fix.FromInt(230);
+    private static Character Data => Characters.Characters.Placeholder;
 
-    private static readonly Fix LimbRadius = Fix.FromInt(8);
-    private static readonly Fix TorsoRadius = Fix.FromInt(16);
-    private static readonly Fix HeadRadius = Fix.FromInt(28);
+    public static Fix PushHalfWidth => Data.Stats.PushHalfWidth;
+    public static Fix PushHeight => Data.Stats.PushHeight;
+    public static Fix HeadRadius => Data.Skeleton.HeadRadius;
 
-    // Joints of the standing pose.
-    public static readonly FixVec2 Hip = V(0, -110);
-    public static readonly FixVec2 Neck = V(0, -230);
-    public static readonly FixVec2 Head = V(0, -266);
-    public static readonly FixVec2 BackFoot = V(-35, 0);
-    public static readonly FixVec2 FrontFoot = V(35, 0);
-    public static readonly FixVec2 BackHand = V(-40, -160);
-    public static readonly FixVec2 FrontHand = V(70, -210);
-    public static readonly Fix HeadSize = HeadRadius;
+    public static PoseKey PoseOf(in FighterState fighter) =>
+        Data.Pose((FighterAction)fighter.Action).At(fighter.ActionFrame);
 
-    // A joint's position in the world for this fighter.
-    public static FixVec2 Joint(in FighterState fighter, FixVec2 offset) =>
-        fighter.Position + new FixVec2(offset.X * fighter.Facing, offset.Y);
+    public static Joints Pose(in FighterState fighter) =>
+        Skeleton.Solve(Data.Skeleton, PoseOf(fighter), fighter.Position, fighter.Facing);
 
+    // Every bone is a hurtbox; the head is a circle. A move's active limb will become a hitbox here
+    // once moves run (Normals and getting hit).
     public static FighterShapes Shapes(in FighterState fighter)
     {
+        var joints = Pose(fighter);
+        var size = Data.Skeleton;
         var shapes = new FighterShapes();
-        var hip = Joint(fighter, Hip);
-        var neck = Joint(fighter, Neck);
 
-        shapes.AddHurt(Capsule.Circle(Joint(fighter, Head), HeadRadius));
-        shapes.AddHurt(new Capsule(hip, neck, TorsoRadius));
-        shapes.AddHurt(new Capsule(hip, Joint(fighter, BackFoot), LimbRadius));
-        shapes.AddHurt(new Capsule(hip, Joint(fighter, FrontFoot), LimbRadius));
-        shapes.AddHurt(new Capsule(neck, Joint(fighter, BackHand), LimbRadius));
-        shapes.AddHurt(new Capsule(neck, Joint(fighter, FrontHand), LimbRadius));
+        shapes.AddHurt(Capsule.Circle(joints[Joint.Head], size.HeadRadius));
+        shapes.AddHurt(Segment(joints, Limb.Spine, size.TorsoRadius));
+        for (var limb = Limb.BackUpperArm; limb <= Limb.FrontShin; limb++)
+            shapes.AddHurt(Segment(joints, limb, size.LimbRadius));
 
         shapes.Push = PushBox(fighter.Position);
         return shapes;
     }
 
+    public static Capsule Segment(in Joints joints, Limb limb, Fix radius)
+    {
+        var (from, to) = Skeleton.Ends(limb);
+        return new Capsule(joints[from], joints[to], radius);
+    }
+
     public static Box PushBox(FixVec2 feet) => new(
         new FixVec2(feet.X - PushHalfWidth, feet.Y - PushHeight),
         new FixVec2(feet.X + PushHalfWidth, feet.Y));
-
-    private static FixVec2 V(int x, int y) => new(Fix.FromInt(x), Fix.FromInt(y));
 }
