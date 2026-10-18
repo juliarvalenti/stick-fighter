@@ -33,6 +33,7 @@ public partial class Main : Node2D
     private DebugOverlay _overlay = null!;
     private DebugView _debugView = null!;
     private StageCamera _camera = null!;
+    private StageBackdrop _backdrop = null!;
     private FramePacer _pacer = new(0);
     private int _screen = -1;
 
@@ -51,6 +52,8 @@ public partial class Main : Node2D
         AddChild(_debugView);
         _camera = new StageCamera();
         AddChild(_camera);
+        _backdrop = new StageBackdrop();
+        AddChild(_backdrop);
 
         var args = OS.GetCmdlineUserArgs();
 
@@ -75,7 +78,14 @@ public partial class Main : Node2D
 
         if (Arg(args, "--scenario") is { } name)
             StartScenario(name, args);
-        _camera.Present(_state, 0);
+        PresentView(0);
+    }
+
+    // The camera first, then the backdrop, which scrolls by where the camera ended up.
+    private void PresentView(int ticks)
+    {
+        _camera.Present(_state, ticks);
+        _backdrop.Present(_state.Stage, _camera.Position.X);
     }
 
     private void StartScenario(string name, string[] args)
@@ -158,7 +168,7 @@ public partial class Main : Node2D
         var simMs = Stopwatch.GetElapsedTime(start).TotalMilliseconds;
 
         _overlay.Record(delta * 1000, simMs, ticks, _driver.DroppedTicks, _state.Frame);
-        _camera.Present(_state, ticks);
+        PresentView(ticks);
         _debugView.Present(_state);
         QueueRedraw();
 

@@ -47,6 +47,18 @@ public class CameraMathTests
     }
 
     [Fact]
+    public void ParallaxScrollsSlowerTheFurtherAway()
+    {
+        // The camera moves 400 px across the stage; on screen (stage x minus camera x), a shape
+        // on the stage layer moves all 400, one at half depth 200, and one fixed to the screen 0.
+        static float OnScreen(float layerX, float cameraX, float depth) => CameraMath.ParallaxX(layerX, cameraX, depth) - cameraX;
+
+        Assert.Equal(-400f, OnScreen(100f, 1040f, 1f) - OnScreen(100f, 640f, 1f));
+        Assert.Equal(-200f, OnScreen(100f, 1040f, 0.5f) - OnScreen(100f, 640f, 0.5f));
+        Assert.Equal(0f, OnScreen(100f, 1040f, 0f) - OnScreen(100f, 640f, 0f));
+    }
+
+    [Fact]
     public void ShakeIsAPureFunctionOfItsInputs()
     {
         for (var frame = 0; frame < 20; frame++)

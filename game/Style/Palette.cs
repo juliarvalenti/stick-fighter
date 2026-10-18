@@ -12,6 +12,13 @@ public static class Palette
     public const string PaperShade = "#E2DCCC"; // cards and empty slots laid on paper
     public const string Ink = "#17161C"; // floor line, outlines, text on paper
 
+    // The stage's distant blocks, a shade or two into the paper. Faint on purpose: they give depth
+    // without competing, and every player color keeps 4.5:1 on them, as on Paper.
+    public const string BackdropFar = "#ECE7DA"; // the far row of blocks
+    public const string BackdropNear = "#E8E3D5"; // the nearer row
+
+    public static readonly string[] Backdrops = { Paper, BackdropFar, BackdropNear };
+
     // The fighters: one flat color each. The alternates are for mirror matches and color select.
     public const string P1 = "#C8102E"; // red
     public const string P2 = "#1D4ED8"; // blue

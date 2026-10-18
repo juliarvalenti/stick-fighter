@@ -50,10 +50,14 @@ public class PaletteTests
     [Fact]
     public void EveryPlayerColorStandsOutFromTheStage()
     {
-        foreach (var player in Palette.Players)
+        // Paper and every backdrop shape a fighter can stand in front of.
+        foreach (var backdrop in Palette.Backdrops)
         {
-            var ratio = Contrast(player, Palette.Paper);
-            Assert.True(ratio >= MinContrast, $"{NameOf(player)} on the stage: {ratio:0.00}:1");
+            foreach (var player in Palette.Players)
+            {
+                var ratio = Contrast(player, backdrop);
+                Assert.True(ratio >= MinContrast, $"{NameOf(player)} on {NameOf(backdrop)}: {ratio:0.00}:1");
+            }
         }
     }
 
