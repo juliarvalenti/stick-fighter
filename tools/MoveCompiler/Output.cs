@@ -75,20 +75,27 @@ public static class Output
         for (var i = 0; i < keys.Count; i++)
         {
             var (frame, v) = keys[i];
-            text.Append("        { \"frame\": ").Append(frame)
-                .Append(", \"hip\": [").Append(v[0]).Append(", ").Append(v[1]).Append("], \"angles\": { ");
-            for (var j = 0; j < 10; j++)
-            {
-                if (j > 0)
-                    text.Append(", ");
-                text.Append('"').Append(FloatPose.Names[j]).Append("\": ").Append(v[2 + j]);
-            }
-            text.Append(i < keys.Count - 1 ? " } },\n" : " } }\n");
+            text.Append("        ").Append(Key(frame, v)).Append(i < keys.Count - 1 ? ",\n" : "\n");
         }
         text.Append("      ]\n    }");
     }
 
-    private static int[] Round(FloatPose p)
+    // One pose key on one line: `{ "frame": 0, "hip": [x, y], "angles": { ... } }`.
+    public static string Key(int frame, int[] v)
+    {
+        var text = new StringBuilder();
+        text.Append("{ \"frame\": ").Append(frame)
+            .Append(", \"hip\": [").Append(v[0]).Append(", ").Append(v[1]).Append("], \"angles\": { ");
+        for (var j = 0; j < 10; j++)
+        {
+            if (j > 0)
+                text.Append(", ");
+            text.Append('"').Append(FloatPose.Names[j]).Append("\": ").Append(v[2 + j]);
+        }
+        return text.Append(" } }").ToString();
+    }
+
+    public static int[] Round(FloatPose p)
     {
         var v = new int[12];
         v[0] = (int)Math.Round(p.HipX, MidpointRounding.AwayFromZero);
@@ -98,7 +105,7 @@ public static class Output
         return v;
     }
 
-    private static bool Same(int[] a, int[] b)
+    public static bool Same(int[] a, int[] b)
     {
         for (var i = 0; i < a.Length; i++)
         {

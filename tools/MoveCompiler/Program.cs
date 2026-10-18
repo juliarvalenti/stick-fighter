@@ -1,7 +1,8 @@
 // Compiles move scripts into the character's compiled move data.
 //
-//   dotnet run --project tools/MoveCompiler              compile and write data/characters/<name>.moves.json
-//   dotnet run --project tools/MoveCompiler -- --check   fail if the committed file is out of date (CI)
+//   dotnet run --project tools/MoveCompiler              compile and write data/characters/<name>.moves.json,
+//                                                        and the breathing stand and crouch in <name>.json
+//   dotnet run --project tools/MoveCompiler -- --check   fail if either committed file is out of date (CI)
 //
 // Inputs: data/characters/<name>.json (skeleton, stance poses), data/moves/library.json (key poses)
 // and data/moves/<name>.scripts.json (the scripts). Every compiled move must pass the body checks.
@@ -30,22 +31,41 @@ try
     if (problems.Count > 0)
         return 1;
 
+    // The stand and crouch tracks breathe; they're generated into the character file itself.
+    var breathing = Breathing.Apply(characterJson);
+
     var relative = Path.GetRelativePath(root, outputPath);
+    var characterRelative = Path.GetRelativePath(root, characterPath);
     if (check)
     {
         var committed = File.Exists(outputPath) ? File.ReadAllText(outputPath) : "";
+        var stale = false;
         if (committed != output)
         {
             Console.WriteLine($"FAIL {relative} is out of date with the move scripts.");
+            stale = true;
+        }
+        if (characterJson != breathing)
+        {
+            Console.WriteLine($"FAIL {characterRelative}'s stand and crouch breathing is out of date with its first keys.");
+            stale = true;
+        }
+        if (stale)
+        {
             Console.WriteLine("     Run: dotnet run --project tools/MoveCompiler   and commit the result.");
             return 1;
         }
-        Console.WriteLine($"ok   {relative} matches the scripts");
+        Console.WriteLine($"ok   {relative} matches the scripts, and {characterRelative} breathes");
         return 0;
     }
 
     File.WriteAllText(outputPath, output);
     Console.WriteLine($"wrote {relative}");
+    if (characterJson != breathing)
+    {
+        File.WriteAllText(characterPath, breathing);
+        Console.WriteLine($"wrote the stand and crouch breathing into {characterRelative}");
+    }
     return 0;
 }
 catch (CompileException e)
