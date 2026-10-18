@@ -24,7 +24,14 @@ public sealed record Scenario(
     string? PoseSheet = null,
     Func<GameState, GameState>? EachFrame = null,
     Func<Godot.Control>? StyleFrame = null,
-    bool Versus = false);
+    bool Versus = false,
+    bool Flow = false,
+    Dictionary<int, string>? Actions = null);
+
+// A Flow scenario runs the game's own menus from the title: its frames, captures and Actions are
+// counted in display frames (the sim doesn't tick on the menus), and Actions are Godot input actions
+// ("ui_accept", "ui_down", "pause", ...) pressed on those frames and released on the next. Script
+// still plays the players' inputs once a match is on, by sim frame.
 
 public static class Scenarios
 {
@@ -325,6 +332,29 @@ public static class Scenarios
             StyleFrame: () => new UI.Screens.PauseScreen { Presses = { [32] = "ui_down", [35] = "ui_down" } }),
         new Scenario("screen-movelist", 1, _ => default, Captures: new[] { 5 }, Frames: 5,
             Setup: s => Place(s, 540, 740), StyleFrame: () => new UI.Screens.PauseScreen(moveList: true)),
+
+        // The menus, driven like a player would: from the title through select into a versus match,
+        // then pause (the sim must not move for 60 frames: checked, not just captured), the move
+        // list, back, the command list, back, and play resumes. Frames are display frames.
+        // Stops: the title, the menu, select (P1 choosing, then P2 choosing on the mirror alternate),
+        // the match under way, paused, the move list, back on pause, the command list, and the match
+        // running again, past the round call, the fighters walking in.
+        new Scenario("menus-flow", 1, _ => WalkIn, Captures: new[] { 5, 15, 25, 35, 55, 70, 140, 150, 162, 260 }, Frames: 260, Flow: true,
+            Actions: new()
+            {
+                [10] = "ui_accept", // press start
+                [20] = "ui_accept", // Versus
+                [30] = "ui_accept", // P1 locks in on Stick
+                [40] = "ui_accept", // P2 too: a mirror, so P2 starts on the alternate; the match starts
+                [60] = "pause",
+                [125] = "ui_down", // Move list
+                [130] = "ui_accept",
+                [145] = "ui_cancel", // back to pause, Move list still focused
+                [152] = "ui_down", // Command list
+                [155] = "ui_accept",
+                [165] = "ui_cancel",
+                [170] = "pause", // while paused, pause steps back: resume
+            }),
     };
 
     // The input display's first capture: after all of InputDemo's frames (a capture shows the state
