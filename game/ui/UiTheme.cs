@@ -20,6 +20,9 @@ public static class UiTheme
     public const string Strong = "Strong"; // a value that matters
     public const string Caption = "Caption"; // small secondary text: section names, hints
 
+    // Dims the screen behind a dialog: ink at half strength, so the paper reads as set aside.
+    public static readonly Color Scrim = new(Look.Ink, 0.55f);
+
     public const int FocusWidth = 4;
     public const int FocusGap = 3;
 

@@ -3,8 +3,8 @@ using StickFighter.Style;
 
 namespace StickFighter.UI;
 
-// The ui-kit scenarios' picture: every component in every state (page 1) and the input glyphs
-// (page 2), laid out on the stage paper. It's the kit's golden image and what a reviewer reads.
+// The ui-kit scenarios' pictures: every component in every state, the dialog and toasts over a
+// dimmed screen, and the input glyphs. They're the kit's golden images and what a reviewer reads.
 //
 // Hover and focus can't be held on many controls at once (only one control has focus, and there's
 // no pointer in CI), so those samples show the theme's own hover and focus looks forced on.
@@ -13,6 +13,7 @@ public partial class KitSheet : Control
     public enum Page
     {
         Components,
+        Overlays,
         Glyphs,
     }
 
@@ -37,17 +38,27 @@ public partial class KitSheet : Control
 
     public override void _Ready()
     {
-        if (_page == Page.Components)
-            BuildComponents();
-        else
-            BuildGlyphs();
+        switch (_page)
+        {
+            case Page.Components:
+                BuildComponents();
+                break;
+            case Page.Overlays:
+                BuildOverlays();
+                break;
+            default:
+                BuildGlyphs();
+                break;
+        }
     }
 
     public override void _Draw()
     {
         DrawRect(new Rect2(Vector2.Zero, Size), Look.Paper);
-        var title = _page == Page.Components ? "UI KIT" : "INPUT GLYPHS";
-        this.Text(new Rect2(32, 12, 600, 56), title, Look.Display, Look.DisplayMedium, Look.Ink, HorizontalAlignment.Left);
+        var title = _page switch { Page.Components => "UI KIT", Page.Overlays => "DIALOGS AND TOASTS", _ => "INPUT GLYPHS" };
+        this.Text(new Rect2(32, 12, 800, 56), title, Look.Display, Look.DisplayMedium, Look.Ink, HorizontalAlignment.Left);
+        if (_page == Page.Overlays)
+            DrawRect(new Rect2(0, 80, Size.X, Size.Y - 80), UiTheme.Scrim);
     }
 
     private void BuildComponents()
@@ -92,41 +103,47 @@ public partial class KitSheet : Control
         side.AddChild(Ui.Line("Effects", Force(Ui.Slider(40), "focus")));
         side.AddChild(Ui.Line("Announcer", new HSlider { Value = 0, Editable = false, CustomMinimumSize = new Vector2(280, 32) }));
 
+    }
+
+    // What appears over a screen: a dialog over the dimmed screen, and toasts stacked in a corner.
+    private void BuildOverlays()
+    {
         var toasts = new VBoxContainer();
-        Place(toasts, new Vector2(736, 456), Vector2.Zero);
+        Place(toasts, new Vector2(800, 96), Vector2.Zero);
         toasts.AddChild(new Toast("Controller 2 connected"));
         toasts.AddChild(new Toast("Replay saved", Toast.Kind.Success));
-        toasts.AddChild(new Toast("Opponent's connection is unstable", Toast.Kind.Warning));
+        toasts.AddChild(new Toast("Connection is unstable", Toast.Kind.Warning));
 
         var dialog = new Dialog("Quit to menu?", "The match so far won't be saved.", "Stay", "Quit");
-        Place(dialog, new Vector2(32, 488), Vector2.Zero);
+        AddChild(dialog);
+        dialog.Position = (Size - dialog.GetCombinedMinimumSize()) / 2 + new Vector2(0, 60);
     }
 
     private void BuildGlyphs()
     {
         // Every move the character has, on the paper (the move list's look).
         var list = new GridContainer { Columns = 4 };
-        list.AddThemeConstantOverride("h_separation", 20);
-        list.AddThemeConstantOverride("v_separation", 6);
-        Place(list, new Vector2(32, 84), Vector2.Zero);
+        list.AddThemeConstantOverride("h_separation", 16);
+        list.AddThemeConstantOverride("v_separation", 8);
+        Place(list, new Vector2(32, 92), Vector2.Zero);
         foreach (var move in Sim.Characters.Characters.Placeholder.Moves)
         {
-            var label = new Label { Text = move.Input, CustomMinimumSize = new Vector2(70, 34), VerticalAlignment = VerticalAlignment.Center };
+            var label = new Label { Text = move.Input, CustomMinimumSize = new Vector2(56, 30), VerticalAlignment = VerticalAlignment.Center };
             label.AddThemeColorOverride("font_color", Look.Ink);
             list.AddChild(label);
-            list.AddChild(Glyphs.For(move.Input, 34));
+            list.AddChild(Glyphs.For(move.Input, 30));
         }
 
         // The basics, light on a panel (training mode's input display sits on one).
-        var panel = Place(Ui.Panel(), new Vector2(640, 84), new Vector2(608, 0));
+        var panel = Place(Ui.Panel(), new Vector2(496, 84), Vector2.Zero);
         var basics = new GridContainer { Columns = 4 };
         basics.AddThemeConstantOverride("h_separation", 16);
-        basics.AddThemeConstantOverride("v_separation", 10);
+        basics.AddThemeConstantOverride("v_separation", 8);
         panel.AddChild(basics);
         foreach (var notation in Basics)
         {
-            basics.AddChild(Ui.Label(notation, UiTheme.Muted));
-            basics.AddChild(Glyphs.For(notation, 40, onPanel: true));
+            basics.AddChild(new Label { Text = notation, ThemeTypeVariation = UiTheme.Muted, CustomMinimumSize = new Vector2(96, 0), VerticalAlignment = VerticalAlignment.Center });
+            basics.AddChild(Glyphs.For(notation, 32, onPanel: true));
         }
     }
 
@@ -190,6 +207,7 @@ public partial class KitSheet : Control
         public override void _Ready()
         {
             MouseFilter = MouseFilterEnum.Ignore;
+            ShowBehindParent = true; // under the label, as the real focus look is
             SetAnchorsPreset(LayoutPreset.FullRect);
         }
 
