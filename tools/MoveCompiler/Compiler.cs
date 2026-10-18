@@ -244,6 +244,8 @@ public sealed class Compiler
         var windup = targets["startup"];
         var hit = targets["active"];
         var home = targets["recovery"];
+        var scriptWindup = startupFrames > 0 ? windup.Clone() : stance;
+        var scriptHit = hit.Clone();
         if (startupFrames > 0)
         {
             _motion.Windup(windup, strike, moved.Contains("startup"), leaned.Contains("startup"));
@@ -260,7 +262,15 @@ public sealed class Compiler
         // Startup winds up from the stance; active snaps out (or eases, if the script says) and holds.
         var frames = new List<FloatPose>();
         Segment(frames, stance, windup, startupFrames, holds["startup"], eases["startup"] ?? Ease.InOut, airborne, Overlap.Lag);
+        var activeStart = frames.Count;
         Segment(frames, windup, hit, active, 0, eases["active"] ?? Ease.Snap, airborne, Overlap.None);
+
+        // The body never moves the hit: on every active frame the striking hand or foot is exactly
+        // where the script alone puts it, even when the script eases through the active frames.
+        var aimed = new List<FloatPose>();
+        Segment(aimed, scriptWindup, scriptHit, active, 0, eases["active"] ?? Ease.Snap, airborne, Overlap.None);
+        for (var i = 0; i < active; i++)
+            _motion.Aim(frames[activeStart + i], strikeLimb, _motion.Ends(aimed[i], strikeLimb));
 
         // Recovery holds for `hold`, pulls the limb back into its chamber fast, then eases home
         // through it and settles. Too short for that, it eases straight home.
