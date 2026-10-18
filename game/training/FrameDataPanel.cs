@@ -13,7 +13,7 @@ namespace StickFighter.Training;
 // F5 shows or hides it (until the training menu exists).
 public partial class FrameDataPanel : Control
 {
-    private static readonly Vector2 PanelSize = new(560, 108);
+    private static readonly Vector2 PanelSize = new(560, 144);
     private const float Top = 132;
 
     private readonly FrameDataAnalyser _analyser = new();
@@ -58,31 +58,34 @@ public partial class FrameDataPanel : Control
         x += 52;
         x += Glyphs.Draw(this, new Vector2(x, inner.Position.Y), r.Move, 26, onPanel: true) + 10;
         this.Text(new Rect2(x, inner.Position.Y, 120, 26), r.Move, Look.UiBold, Look.UiMedium, Look.Text, HorizontalAlignment.Left);
-        var result = r.Blocked ? "BLOCKED" : r.Combo > 1 ? $"{r.Combo} HIT COMBO" : "HIT";
+        var result = !r.Contact ? (r.Whiffed ? "WHIFF" : "") : r.Blocked ? "BLOCKED" : r.Combo > 1 ? $"{r.Combo} HIT COMBO" : "HIT";
         this.Text(new Rect2(inner.Position.X, inner.Position.Y, inner.Size.X, 26), result, Look.UiBold, Look.UiSmall,
-            r.Blocked ? Look.TextMuted : Look.Accent, HorizontalAlignment.Right);
+            r.Blocked || !r.Contact ? Look.TextMuted : Look.Accent, HorizontalAlignment.Right);
 
-        // Startup, active, recovery.
-        var row = new Rect2(inner.Position.X, inner.Position.Y + 36, inner.Size.X * 0.62f, 24);
-        this.Text(row, $"Startup {Value(r.Startup)}    Active {Value(r.Active)}    Recovery {Value(r.Recovery)}",
-            Look.Ui, Look.UiMedium, Look.Text, HorizontalAlignment.Left);
-
-        // The advantage, big.
-        var advantage = new Rect2(inner.Position.X + inner.Size.X * 0.62f, inner.Position.Y + 28, inner.Size.X * 0.38f, 48);
+        // Startup, active, recovery, and the advantage: a caption over each number, in fixed
+        // columns, so a two-digit value never runs out of room.
+        var top = inner.Position.Y + 34;
+        Stat(new Rect2(inner.Position.X, top, 100, 52), "STARTUP", Value(r.Startup), Look.Text);
+        Stat(new Rect2(inner.Position.X + 110, top, 100, 52), "ACTIVE", Value(r.Active), Look.Text);
+        Stat(new Rect2(inner.Position.X + 220, top, 100, 52), "RECOVERY", Value(r.Recovery), Look.Text);
         var adv = r.Advantage is { } a ? (a > 0 ? $"+{a}" : a.ToString()) : "–";
         var color = r.Advantage is { } v ? (v >= 0 ? Look.Accent : Look.Danger) : Look.TextMuted;
-        this.Text(new Rect2(advantage.Position.X, advantage.Position.Y, advantage.Size.X - 84, advantage.Size.Y),
-            r.Blocked ? "on block" : "on hit", Look.Ui, Look.UiSmall, Look.TextMuted, HorizontalAlignment.Right);
-        this.Text(new Rect2(advantage.End.X - 76, advantage.Position.Y, 76, advantage.Size.Y), adv, Look.Display,
-            Look.UiLarge + 8, color, HorizontalAlignment.Right);
+        Stat(new Rect2(inner.End.X - 160, top, 160, 52), r.Blocked ? "ON BLOCK" : "ON HIT", adv, color, HorizontalAlignment.Right);
 
         // Strings, combos, links; or a warning if frames were missed.
         var note = r.MissedFrames ? "Frames were skipped: do it again for exact numbers"
-            : r.Blocked && r.Gap is { } gap ? (gap == 0 ? "True block string" : $"Gap {gap}f in the block string")
-            : r.LinkWindow is { } window ? (window > 0 ? $"Link: {window}f window" : "Not a link: too slow by " + (1 - window) + "f")
+            : r.Blocked && r.Gap is { } gap ? (gap == 0 ? "True block string" : $"Gap: {gap}f in the block string")
+            : r.LinkWindow is { } window ? (window > 0 ? $"Link: {window}f window" : $"Not a link: {1 - window}f too slow")
             : "";
-        this.Text(new Rect2(inner.Position.X, inner.Position.Y + 64, inner.Size.X * 0.62f, 22), note, Look.Ui, Look.UiSmall,
+        this.Text(new Rect2(inner.Position.X, inner.End.Y - 20, inner.Size.X, 20), note, Look.Ui, Look.UiSmall,
             r.MissedFrames ? Look.Danger : Look.TextMuted, HorizontalAlignment.Left);
+    }
+
+    private void Stat(Rect2 box, string caption, string value, Color color, HorizontalAlignment align = HorizontalAlignment.Left)
+    {
+        this.Text(new Rect2(box.Position, new Vector2(box.Size.X, 16)), caption, Look.UiBold, 12, Look.TextMuted, align);
+        this.Text(new Rect2(box.Position.X, box.Position.Y + 16, box.Size.X, box.Size.Y - 16), value, Look.Display,
+            Look.UiLarge, color, align);
     }
 
     private static string Value(int? frames) => frames?.ToString() ?? "–";

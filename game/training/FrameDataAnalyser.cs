@@ -16,7 +16,9 @@ public sealed record FrameReport(
     int? Gap, // block strings: frames the defender was free between this block and the last; 0 is a true string
     int Combo, // hits in the combo so far (1 for a single hit)
     int? LinkWindow, // when this hit linked from a recovered attacker: frames it could have started in
-    bool MissedFrames); // the display skipped frames, so these numbers aren't trustworthy
+    bool MissedFrames, // the display skipped frames, so these numbers aren't trustworthy
+    bool Contact = true, // false: the move hasn't touched anyone (yet, or at all: see Whiffed)
+    bool Whiffed = false); // the move finished without touching anyone
 
 // Training mode's frame data, measured from the simulation rather than looked up: it watches the
 // game state after every frame and reports what actually happened, so it catches what the data
@@ -39,6 +41,7 @@ public sealed class FrameDataAnalyser
     private int? _lastBlockFree; // the frame the defender came free after its last block
     private int _combo;
     private bool _missed;
+    private int _lastStarted = -1; // the player who started the latest move
 
     public FrameReport? Last { get; private set; }
 
@@ -62,6 +65,8 @@ public sealed class FrameDataAnalyser
         WatchContact(state, frame);
         if (_exchange is { } x)
             Report(x);
+        else if (_lastStarted >= 0)
+            ReportMoveOnly(_lastStarted);
 
         _previous = state;
         _hasPrevious = true;
@@ -81,6 +86,12 @@ public sealed class FrameDataAnalyser
             var previous = watch;
             watch = new MoveWatch { Move = fighter.Move, Start = frame };
             _missed = false; // a fresh move, seen from its first frame
+            _lastStarted = player;
+
+            // A finished exchange belongs to the last move; this one starts its own. (One still in
+            // play stays, so a combo or a block string can follow on from it.)
+            if (_exchange is { AttackerFree: not null, DefenderFree: not null })
+                _exchange = null;
 
             // A new move before the old one finished is a cancel. One starting on the very frame the
             // old one ended (a buffered press) followed a recovered attacker: a link.
@@ -189,6 +200,26 @@ public sealed class FrameDataAnalyser
             x.Blocked ? 0 : _combo,
             x.Link,
             _missed);
+    }
+
+    // A move that hasn't touched anyone: its own frames, and once it's over, a whiff.
+    private void ReportMoveOnly(int player)
+    {
+        var watch = _moves[player];
+        Last = new FrameReport(
+            player,
+            _character.Moves[watch.Move].Input,
+            watch.FirstActive - watch.Start + 1,
+            watch.LastActive - watch.FirstActive + 1,
+            watch.End - watch.LastActive - 1,
+            Blocked: false,
+            Advantage: null,
+            Gap: null,
+            Combo: 0,
+            LinkWindow: null,
+            _missed,
+            Contact: false,
+            Whiffed: watch.End is not null);
     }
 
     private struct MoveWatch

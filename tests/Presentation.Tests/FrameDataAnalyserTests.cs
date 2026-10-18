@@ -91,6 +91,33 @@ public class FrameDataAnalyserTests
     }
 
     [Fact]
+    public void AWhiffAfterABlockIsReportedOnItsOwn()
+    {
+        // A blocked 5MP, then a 5LP that touches nobody: the report is the jab's, as a whiff, not the
+        // jab paired with the old block's advantage.
+        var state = Apart(60);
+        var analyser = new FrameDataAnalyser();
+        for (var frame = 0; frame < 70; frame++)
+        {
+            var p1 = frame == 0 ? Buttons.MediumPunch : frame == 50 ? Buttons.LightPunch : Buttons.None;
+            Simulation.Step(ref state, new FrameInput(p1, frame < 45 ? Buttons.Right : Buttons.None)); // P2 walks off
+            analyser.Observe(state);
+            if (frame == 40)
+            {
+                Assert.True(analyser.Last!.Blocked);
+                Assert.Equal(2, analyser.Last.Advantage);
+            }
+        }
+        var jab = Data.FindMove("5LP")!;
+        var report = analyser.Last!;
+        Assert.Equal("5LP", report.Move);
+        Assert.False(report.Contact);
+        Assert.True(report.Whiffed);
+        Assert.Null(report.Advantage);
+        Assert.Equal((jab.Startup, jab.Active, jab.Recovery), (report.Startup!.Value, report.Active!.Value, report.Recovery!.Value));
+    }
+
+    [Fact]
     public void SkippedFramesAreFlaggedNotGuessed()
     {
         var state = Apart(60);
