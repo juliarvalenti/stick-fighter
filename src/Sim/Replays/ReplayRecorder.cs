@@ -3,7 +3,8 @@ using System.Collections.Generic;
 namespace StickFighter.Sim.Replays;
 
 // Wraps an input source and records every frame's input as the match runs. Building the replay
-// re-simulates from the seed to fill in the per-frame checksums, so it needs no hook in the driver.
+// re-simulates from the seed to fill in the checkpoints and final checksum, so it needs no hook in
+// the driver.
 public sealed class ReplayRecorder : IInputSource
 {
     private readonly IInputSource _source;

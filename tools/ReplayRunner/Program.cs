@@ -4,14 +4,17 @@
 //   dotnet run --project tools/ReplayRunner -- synctest replays/       every frame survives rollback
 //                                                (check and synctest also take one .sfr file)
 //   dotnet run --project tools/ReplayRunner -- rerecord replays/       after a deliberate sim change
+//   dotnet run --project tools/ReplayRunner -- trace FILE FROM TO       every frame, to diff two builds
 //   dotnet run --project tools/ReplayRunner -- generate out.sfr SEED FRAMES
 //   dotnet run --project tools/ReplayRunner -- script out.sfr NAME      a scripted match, see Scripts
 //
-// check prints the first diverging frame of each failing replay and exits 1 if any fail.
+// check prints, for each failing replay, the first checkpoint whose behavior differs and how (or
+// that only the final state does), and exits 1 if any fail.
 // synctest plays each replay's inputs, rolling back 1 to 8 frames after every frame (see SyncTest),
 // and exits 1 if any resimulated frame comes out different, listing the GameState fields that differ.
-// rerecord keeps each replay's inputs and rewrites its checksums; review the diff, since this is
-// how an intended behavior change gets accepted.
+// rerecord keeps each replay's inputs, rewrites its checkpoints and final checksum, and prints a
+// line per replay saying whether behavior changed (and where and how) or only the encoding did. Paste
+// that summary into the PR: it's how an intended behavior change gets reviewed and accepted.
 
 using System;
 using System.Collections.Generic;
@@ -27,12 +30,16 @@ if (args.Length < 2)
 
 switch (args[0])
 {
+    case "check" when args.Length == 4 && args[2] == "--trace-out":
+        return Check(args[1], args[3]);
     case "check":
-        return Check(args[1]);
+        return Check(args[1], null);
     case "synctest":
         return SyncTestAll(args[1]);
     case "rerecord":
         return Rerecord(args[1]);
+    case "trace" when args.Length == 4:
+        return Trace(args[1], int.Parse(args[2]), int.Parse(args[3]));
     case "generate" when args.Length == 4:
         return Write(args[1], Replay.Record(ulong.Parse(args[2]), Stage.Training, Walkabout(ulong.Parse(args[2]), int.Parse(args[3]))));
     // Scripts named match-… are versus matches (rounds, timer, KO); the rest are training.
@@ -43,7 +50,9 @@ switch (args[0])
         return Usage();
 }
 
-static int Check(string folder)
+// traceOut: for each replay whose behavior differs, write <name>.range ("file from to") and this
+// build's trace of that range as <name>.head.trace, so CI can trace the base build and diff.
+static int Check(string folder, string? traceOut)
 {
     var files = Files(folder);
     if (files.Length == 0)
@@ -75,17 +84,43 @@ static int Check(string folder)
             continue;
         }
 
-        var frame = replay.FirstDivergence(out var expected, out var actual);
-        if (frame < 0)
+        if (replay.Verify() is not { } mismatch)
         {
             Console.WriteLine($"ok   {file}  {replay.Frames} frames  final {replay.FinalChecksum:x16}");
             continue;
         }
         failures++;
-        Console.WriteLine($"FAIL {file}  diverges at frame {frame}: expected {expected:x16}, got {actual:x16}");
-        Console.WriteLine($"     inputs on that frame: p1 {replay.Inputs[frame].Player1}, p2 {replay.Inputs[frame].Player2}");
+        if (mismatch.Frame < 0)
+        {
+            Console.WriteLine($"FAIL {file}  every checkpoint's behavior matches, but the final state differs ({mismatch.Differences[0]})");
+            Console.WriteLine("     a field changed without changing what players see: if intended, rerecord");
+            continue;
+        }
+        var previous = mismatch.Frame - Replay.CheckpointInterval + 1;
+        Console.WriteLine($"FAIL {file}  behavior differs at checkpoint frame {mismatch.Frame}:");
+        foreach (var difference in mismatch.Differences)
+            Console.WriteLine($"       {difference}");
+        var from = previous > 0 ? previous : 0;
+        Console.WriteLine($"     it started between frames {from} and {mismatch.Frame}; to find the frame, trace that range on both builds and diff:");
+        Console.WriteLine($"       ReplayRunner trace {file} {from} {mismatch.Frame}");
+        if (traceOut is not null)
+        {
+            Directory.CreateDirectory(traceOut);
+            var name = Path.GetFileNameWithoutExtension(file);
+            File.WriteAllText(Path.Combine(traceOut, name + ".range"), $"{file} {from} {mismatch.Frame}\n");
+            File.WriteAllLines(Path.Combine(traceOut, name + ".head.trace"), replay.Trace(from, mismatch.Frame));
+        }
     }
     return failures == 0 ? 0 : 1;
+}
+
+// Every frame in a range, behavior and checksum, for diffing two builds.
+static int Trace(string file, int from, int to)
+{
+    var replay = Replay.Read(File.ReadAllText(file));
+    foreach (var line in replay.Trace(from, to))
+        Console.WriteLine(line);
+    return 0;
 }
 
 static int SyncTestAll(string folder)
@@ -113,6 +148,8 @@ static int SyncTestAll(string folder)
     return failures == 0 ? 0 : 1;
 }
 
+// Rewrites each replay from its inputs and says what changed, for the PR body: nothing, the
+// encoding only (behavior identical at every checkpoint), or behavior, from which frame and how.
 static int Rerecord(string folder)
 {
     foreach (var file in Files(folder))
@@ -120,7 +157,18 @@ static int Rerecord(string folder)
         var old = Replay.Read(File.ReadAllText(file), allowOldVersions: true);
         var updated = Replay.Record(old.Seed, old.Stage, old.Inputs, old.Mode);
         File.WriteAllText(file, updated.Write());
-        Console.WriteLine($"rerecorded {file}: final {old.FinalChecksum:x16} -> {updated.FinalChecksum:x16}");
+
+        var name = Path.GetFileNameWithoutExtension(file);
+        if (old.Checkpoints.Count == 0)
+            Console.WriteLine($"{name}: upgraded to format {Replay.FormatVersion} (no behavior recorded before)");
+        else if (old.DataHash != updated.DataHash && old.Compare(updated) is null)
+            Console.WriteLine($"{name}: character data changed, behavior identical");
+        else if (old.Compare(updated) is not { } change)
+            Console.WriteLine($"{name}: unchanged");
+        else if (change.Frame < 0)
+            Console.WriteLine($"{name}: encoding changed, behavior identical");
+        else
+            Console.WriteLine($"{name}: behavior changed at frame {change.Frame}: {string.Join("; ", change.Differences)}");
     }
     return 0;
 }
@@ -561,7 +609,7 @@ static int Write(string file, Replay replay)
 
 static int Usage()
 {
-    Console.WriteLine("usage: ReplayRunner check|synctest|rerecord <folder> | generate <file> <seed> <frames> | script <file> <name>");
+    Console.WriteLine("usage: ReplayRunner check|synctest|rerecord <folder> | trace <file> <from> <to> | generate <file> <seed> <frames> | script <file> <name>");
     return 2;
 }
 

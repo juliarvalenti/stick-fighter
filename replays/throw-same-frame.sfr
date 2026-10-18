@@ -1,4 +1,4 @@
-stick-fighter-replay 4
+stick-fighter-replay 5
 seed 1
 data 5cd46efa9b5d33eb
 stage 0 2560 600 1280
@@ -7,58 +7,5 @@ frames 54
 input 0008 0004 23
 input 0090 0090 1
 input 0000 0000 30
-checksum 3d43b4d0eaae18f0
-checksum 715f39f699b710f9
-checksum a706394ef158419e
-checksum 3c808bea237365e6
-checksum 63bf21127c1177af
-checksum 9a1c577f98e98275
-checksum c987395573bbcd8e
-checksum 0c668eb72bed851c
-checksum 0fda85386b127f8f
-checksum c3690f47e30dcd52
-checksum 3cf006d0f2e787e5
-checksum 145d8d8b1812e4c0
-checksum ae194b92d666b08c
-checksum 1513cfc8f2901829
-checksum c13bd278882f5d3c
-checksum 75dbeba109597b76
-checksum 8d12c510d9172746
-checksum 12897ccdf38dec12
-checksum dd577f791c4ed0ec
-checksum f10c4f4218ad1065
-checksum 60bc305d7e5000cc
-checksum 1f920172581821c3
-checksum 39cb41bd279f3ce8
-checksum 64ae736028c1d88e
-checksum 4216b3b8e6409ad1
-checksum c4259113589d6bb8
-checksum a3be0dc6a1cd080d
-checksum 28e460df7c8a5108
-checksum 732869061ce19ffc
-checksum 81d3a263df9143f3
-checksum 7bfa446fa79f7ae4
-checksum fa4a758a95f4bdad
-checksum a44a0a631966cd91
-checksum b946b8aa3d48c882
-checksum b34b0d5715f4f1a4
-checksum 28896421390f548a
-checksum bbc504d72afd4cec
-checksum b00a2510bc9d28e8
-checksum afbfac85e12ce966
-checksum 5b6d895c23952347
-checksum 2238d54c9e8826a7
-checksum a0b40a6750ea99c8
-checksum f439706f88d8183c
-checksum bd440e76333ebb2c
-checksum 2a0daa409201a931
-checksum df6ee42a59369669
-checksum 150b3537bf95da0d
-checksum 097e3217060dfbdb
-checksum 8f276c7219bb885f
-checksum 17903fc0b931d0cf
-checksum 39055106c018ad85
-checksum d1990f3695961438
-checksum d3ed76951386154f
-checksum 224695d487d1ffb6
+at 53 p1 1210 600 1 Stand 28 1000 p2 1350 600 -1 Stand 28 1000 match Fight 0 0 0 0
 final 224695d487d1ffb6

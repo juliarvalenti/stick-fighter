@@ -113,6 +113,7 @@ public partial class Main : Node2D
         _input = new Scenarios.Source(_scenario);
         _pacer = new FramePacer(ScenarioRefreshMilliHz);
         _debugView.Visible = _scenario.Boxes;
+        _debugView.ShowChecksum = false;
         _overlay.Visible = _scenario.Overlay;
         _overlay.Deterministic = true;
 

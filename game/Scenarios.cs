@@ -189,7 +189,7 @@ public static class Scenarios
         // The camera, boxes on (the ruler under the floor shows where on the stage the view is).
         // P1 walks P2 right: the camera follows across the stage (60) and stops at the right wall
         // (260). Then P2 walks P1 all the way left (500) and into the left corner (700). The
-        // frame and checksum stay fixed on screen throughout.
+        // frame number stays fixed on screen throughout.
         new Scenario("camera", 1,
             f => f < 260 ? new FrameInput(Buttons.Right, Buttons.Right) : new FrameInput(Buttons.Left, Buttons.Left),
             Captures: new[] { 60, 260, 500, 700 }, Frames: 700, Boxes: true),
