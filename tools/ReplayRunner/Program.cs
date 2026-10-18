@@ -518,6 +518,33 @@ static List<FrameInput>? Scripts(string name) => name switch
         (Buttons.LightPunch | Buttons.MediumPunch, Buttons.None, 1),
         (Buttons.None, Buttons.None, 30)),
 
+    // Hit states. P2 starts a heavy kick as P1 jabs: the jab lands in the kick's startup, a counter hit.
+    "counter-hit" => Runs(
+        (Buttons.Right, Buttons.None, 46),
+        (Buttons.LightPunch, Buttons.HeavyKick, 1),
+        (Buttons.None, Buttons.None, 40)),
+
+    // Both walk right until P2 is in the corner, then P1 mashes jab (pressed every other frame) for
+    // 40 frames: each comes out on the first free frame and links (+6), so three hits make one combo,
+    // scaled 100%, 100%, 80%.
+    "combo-scaling" => Concat(
+        Runs((Buttons.Right, Buttons.Right, 300)),
+        Mash(Buttons.LightPunch, Buttons.None, 40),
+        Runs((Buttons.None, Buttons.None, 40))),
+
+    // P2 crouches; P1's crouching jab gets the crouch hitstun bonus.
+    "crouch-hitstun" => Runs(
+        (Buttons.Right, Buttons.Down, 46),
+        (Buttons.Down | Buttons.LightPunch, Buttons.Down, 1),
+        (Buttons.Down, Buttons.Down, 30)),
+
+    // P1 jumps straight up at point-blank and P2's jab catches it rising, knocking it into a fall;
+    // P2 keeps mashing jab, but a normal can't juggle, so the next jab passes through the falling P1.
+    "air-no-juggle" => Concat(
+        Runs((Buttons.Right, Buttons.None, 46), (Buttons.Up, Buttons.None, 3), (Buttons.None, Buttons.LightPunch, 1)),
+        Mash(Buttons.None, Buttons.LightPunch, 40),
+        Runs((Buttons.None, Buttons.None, 20))),
+
     // Both walk in and throw on the same frame: both tech and break apart.
     "throw-same-frame" => Runs(
         (Buttons.Right, Buttons.Left, 23),
@@ -588,6 +615,23 @@ static Buttons Attack(in GameState state, int player)
     var gap = Fix.Abs(state.Fighters[1].Position.X - state.Fighters[0].Position.X);
     var free = me.Action is (int)FighterAction.Stand or (int)FighterAction.WalkForward;
     return free && gap <= Fix.FromInt(70) ? Buttons.HeavyPunch : forward;
+}
+
+// Buttons pressed every other frame (down, up, down...) for `frames` frames: mashing.
+static List<FrameInput> Mash(Buttons p1, Buttons p2, int frames)
+{
+    var inputs = new List<FrameInput>();
+    for (var i = 0; i < frames; i++)
+        inputs.Add(i % 2 == 0 ? new FrameInput(p1, p2) : default);
+    return inputs;
+}
+
+static List<FrameInput> Concat(params List<FrameInput>[] parts)
+{
+    var inputs = new List<FrameInput>();
+    foreach (var part in parts)
+        inputs.AddRange(part);
+    return inputs;
 }
 
 static List<FrameInput> Runs(params (Buttons P1, Buttons P2, int Frames)[] runs)

@@ -72,6 +72,10 @@ public static class CharacterLoader
             }
             for (var i = 0; i < moves.Count; i++)
             {
+                // The buffer reaches back across a hitstop (Combat.Hitstop), so the longest freeze
+                // plus the buffer window has to fit in the input history.
+                if (moves[i].HitstopOnHit + Combat.Normals.BufferWindow > InputHistory.MaxWindow)
+                    throw new CharacterDataException($"move {moves[i].Input}: hitstop {moves[i].HitstopOnHit} plus the {Combat.Normals.BufferWindow}-frame buffer is more than the input history holds ({InputHistory.MaxWindow})");
                 for (var j = i + 1; j < moves.Count; j++)
                 {
                     if (moves[i].Input == moves[j].Input)
@@ -123,7 +127,11 @@ public static class CharacterLoader
         BackDashDistance: Fix.FromInt(Positive(s, "backDashDistance", h)),
         ForwardDashRecovery: Int(s, "forwardDashRecovery", h),
         BackDashRecovery: Int(s, "backDashRecovery", h),
-        DashInputWindow: Positive(s, "dashInputWindow", h));
+        DashInputWindow: Positive(s, "dashInputWindow", h),
+        CrouchHitstunBonus: Int(s, "crouchHitstunBonus", h),
+        LowLifeReduction: Flag(s, "lowLifeReduction", h),
+        AirHitRise: Fix.FromRatio(Int(s, "airHitRise", h), 1000),
+        AirHitDrift: Fix.FromRatio(Int(s, "airHitDrift", h), 1000));
 
     // A share from 1 to 1000.
     private static int PerMille(JsonElement s, string key, DataHasher h)
@@ -197,6 +205,9 @@ public static class CharacterLoader
                 PushbackBlock: Int(m, "pushbackBlock", h),
                 Chip: OptionalInt(m, "chip", h) ?? 0,
                 ChipKo: Flag(m, "chipKo", h),
+                JuggleStart: OptionalInt(m, "juggleStart", h) ?? 1,
+                JuggleIncrease: OptionalInt(m, "juggleIncrease", h) ?? 1,
+                JuggleLimit: OptionalInt(m, "juggleLimit", h) ?? 0,
                 HitstunOverride: OptionalInt(m, "hitstun", h),
                 BlockstunOverride: OptionalInt(m, "blockstun", h),
                 HitboxLimb: limb,

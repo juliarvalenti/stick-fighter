@@ -4,7 +4,7 @@ namespace StickFighter.Sim;
 
 public struct FighterState
 {
-    public const int EncodedSize = 16 + 16 + 4 + 4 + 4 + 4 + 4 + 1 + 4 + 4 + 1 + 4 + 4 + 4 + 4 + 1 + 1 + 1 + 1;
+    public const int EncodedSize = 16 + 16 + 4 + 4 + 4 + 4 + 4 + 1 + 4 + 4 + 1 + 4 + 4 + 4 + 4 + 1 + 1 + 1 + 1 + 4 + 4 + 1 + 4 + 4;
 
     public FixVec2 Position;
     public FixVec2 Velocity;
@@ -60,6 +60,22 @@ public struct FighterState
     // recovery instead of being free).
     public bool AirAttackUsed;
 
+    // The combo this fighter is taking: hits so far and the damage they did. A hit landing while
+    // the last one's hitstun (or juggle fall) is still running adds to it; both reset to 0 when the
+    // fighter recovers. The HUD's combo counter reads them.
+    public int ComboHits;
+    public int ComboDamage;
+
+    // The last hit this fighter took was a counter hit (landed in the startup of its own attack).
+    // The HUD's COUNTER callout reads it.
+    public bool CounterHit;
+
+    // Juggle count while falling from an air hit (0 when not juggled). See Move.JuggleLimit.
+    public int Juggle;
+
+    // Stun damage taken, scaled like damage. The stun meter (dizzy, recovery) is the knockdowns task.
+    public int Stun;
+
     public readonly void Encode(ref StateWriter writer)
     {
         writer.Write(Position);
@@ -81,5 +97,10 @@ public struct FighterState
         writer.Write(Techable);
         writer.Write(Airborne);
         writer.Write(AirAttackUsed);
+        writer.Write(ComboHits);
+        writer.Write(ComboDamage);
+        writer.Write(CounterHit);
+        writer.Write(Juggle);
+        writer.Write(Stun);
     }
 }

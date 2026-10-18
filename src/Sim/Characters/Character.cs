@@ -131,7 +131,14 @@ public sealed record Stats(
     Fix BackDashDistance,
     int ForwardDashRecovery,
     int BackDashRecovery,
-    int DashInputWindow);
+    int DashInputWindow,
+    // Hit states (see the comment in the character data): extra hitstun on a crouching defender,
+    // SF4's damage reduction at low health (on or off), and the fall an air hit knocks a fighter
+    // into: upward speed, and drift away from the attacker, per frame.
+    int CrouchHitstunBonus,
+    bool LowLifeReduction,
+    Fix AirHitRise,
+    Fix AirHitDrift);
 
 public sealed record SkeletonSize(
     Fix Spine,
@@ -210,6 +217,12 @@ public sealed record Move(
     // (specials and supers) can take the last point of health with it.
     int Chip,
     bool ChipKo,
+    // Juggles, SF4's system: an air hit sets the falling fighter's juggle count to JuggleStart; a
+    // later hit connects only if its JuggleLimit is at least the count, and adds JuggleIncrease.
+    // Normals default to 1, 1, 0: they knock a fighter into a fall but can't hit one already falling.
+    int JuggleStart,
+    int JuggleIncrease,
+    int JuggleLimit,
     Limb HitboxLimb,
     Fix HitboxRadius,
     Fix ActiveBonus,

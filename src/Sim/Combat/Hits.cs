@@ -18,6 +18,14 @@ public static class Hits
         var p1Guarding = Guarding(state, 0, out var p1Crouching);
         var p2Guarding = Guarding(state, 1, out var p2Crouching);
 
+        // Likewise each fighter's stance before any hit: in its own attack's startup (a hit there is
+        // a counter hit), and crouching (for the crouch hitstun bonus).
+        var p1Startup = HitStates.InStartup(state.Fighters[0], character);
+        var p2Startup = HitStates.InStartup(state.Fighters[1], character);
+        var p1Low = HitStates.Crouching(state.Fighters[0], character);
+        var p2Low = HitStates.Crouching(state.Fighters[1], character);
+        var stats = character.Stats;
+
         // The longest hitstop among this frame's hits and blocks: in a trade both freeze for it.
         var freeze = 0;
 
@@ -34,6 +42,10 @@ public static class Hits
                 continue;
             var move = character.Moves[moveIndex];
 
+            // A juggled fighter passes through moves that can't juggle it; the move can still hit later.
+            if (!HitStates.CanHit(move, defender))
+                continue;
+
             attacker.MoveHit = true;
 
             var guarding = contact.Defender == 0 ? p1Guarding : p2Guarding;
@@ -46,16 +58,39 @@ public static class Hits
             }
             freeze = move.HitstopOnHit > freeze ? move.HitstopOnHit : freeze;
 
+            // The hit's place in the defender's combo: it continues one still running (the last
+            // hit's hitstun or juggle fall not over), or starts a new one.
+            var hitInCombo = defender.ComboHits + 1;
+            var counter = contact.Defender == 0 ? p1Startup : p2Startup;
+            var damage = HitStates.Damage(move.Damage, hitInCombo, counter, defender.Health, stats.Health, stats.LowLifeReduction);
+            damage = damage < defender.Health ? damage : defender.Health;
+
             defender.Blockstun = 0;
-            defender.Health = defender.Health > move.Damage ? defender.Health - move.Damage : 0;
+            defender.Health -= damage;
+            defender.ComboHits = hitInCombo;
+            defender.ComboDamage += damage;
+            defender.CounterHit = counter;
+            defender.Stun += HitStates.Stun(move.Stun, hitInCombo, counter);
 
             // Hitstun counts the frame of the hit, so the defender acts again move.Hitstun frames
-            // after the hit lands, and on-hit advantage is exactly hitstun - active - recovery.
-            defender.Hitstun = move.Hitstun - 1;
+            // after the hit lands, and on-hit advantage is exactly hitstun - active - recovery. A
+            // counter hit and a crouching defender add to it.
+            var low = contact.Defender == 0 ? p1Low : p2Low;
+            defender.Hitstun = move.Hitstun - 1
+                + (counter ? HitStates.CounterHitstun(move.Strength) : 0)
+                + (low ? stats.CrouchHitstunBonus : 0);
             defender.Action = (int)Characters.FighterAction.Hitstun;
             defender.ActionFrame = 0;
             defender.Move = -1;
             defender.Velocity = FixVec2.Zero;
+
+            // In the air, the hit knocks the defender into a fall: up a little and away, then gravity.
+            if (defender.Airborne)
+            {
+                defender.Juggle = defender.Juggle == 0 ? move.JuggleStart : defender.Juggle + move.JuggleIncrease;
+                var away = defender.Position.X >= attacker.Position.X ? 1 : -1;
+                defender.Velocity = new FixVec2(stats.AirHitDrift * away, -stats.AirHitRise);
+            }
 
             Push(ref attacker, ref defender, Fix.FromInt(move.PushbackHit), state.Stage);
         }
