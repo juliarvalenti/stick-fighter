@@ -1,3 +1,4 @@
+using StickFighter.Sim.Collision;
 using StickFighter.Sim.Numerics;
 
 namespace StickFighter.Sim;
@@ -25,6 +26,7 @@ public static class Simulation
             fighter.ActionFrame++;
         }
 
+        Pushing.Resolve(ref state);
         FaceEachOther(ref state);
 
         // Placeholder: draw from the RNG every frame so the rollback tests prove its state restores.

@@ -128,11 +128,10 @@ public class InputTests
     [Fact]
     public void FacingFlipsWhenFightersCrossOver()
     {
+        // Pushboxes stop them walking through each other, so put P1 on the right as a jump-over would.
         var state = GameState.NewMatch(1);
-        var walkIn = new FrameInput(Buttons.Right, Buttons.Left);
-        // No pushboxes yet, so they walk through each other.
-        while (state.Fighters[0].Position.X <= state.Fighters[1].Position.X)
-            Simulation.Step(ref state, walkIn);
+        (state.Fighters[0].Position, state.Fighters[1].Position) = (state.Fighters[1].Position, state.Fighters[0].Position);
+        Simulation.Step(ref state, default);
 
         Assert.Equal(-1, state.Fighters[0].Facing);
         Assert.Equal(1, state.Fighters[1].Facing);
