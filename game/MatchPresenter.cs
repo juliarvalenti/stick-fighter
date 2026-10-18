@@ -21,9 +21,11 @@ public partial class MatchPresenter : CanvasLayer
         AddChild(_hud);
     }
 
-    // A new match: no trail, no calls made, no rounds logged.
-    public void Begin()
+    // A new match: no trail, no calls made, no rounds logged. `colors` are the players' color
+    // choices (0 own, 1 alternate), so the HUD matches the fighters.
+    public void Begin(int[]? colors = null)
     {
+        _hud.ColorChoices = colors ?? new[] { 0, 0 };
         _trail = new HealthTrail();
         _announcer = new Announcer();
         _log = new RoundLog();
