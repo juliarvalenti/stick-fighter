@@ -21,7 +21,8 @@ public struct GameState
         + PlayerCount * InputHistory.EncodedSize
         + PlayerCount * FighterState.EncodedSize
         + MaxProjectiles * ProjectileState.EncodedSize
-        + Stage.EncodedSize;
+        + Stage.EncodedSize
+        + MatchState.EncodedSize;
 
     // How far each fighter starts from the middle of the stage.
     public const int StartOffset = 200;
@@ -41,14 +42,26 @@ public struct GameState
     // Fixed for the match, but kept here so the checksum covers it.
     public Stage Stage;
 
+    // Rounds, the timer and the score (Versus), or nothing to track (Training).
+    public MatchState Match;
+
     public static GameState NewMatch(ulong seed) => NewMatch(seed, Stage.Training);
 
-    public static GameState NewMatch(ulong seed, in Stage stage)
+    public static GameState NewMatch(ulong seed, in Stage stage, MatchMode mode = MatchMode.Training)
     {
         var state = new GameState { Rng = Rng.Create(seed), Stage = stage };
+        PlaceFighters(ref state);
+        state.Match = Matches.MatchFlow.Start(mode);
+        return state;
+    }
+
+    // Both fighters fresh at their start positions: the start of a match, and of every round.
+    public static void PlaceFighters(ref GameState state)
+    {
+        var stage = state.Stage;
         state.Fighters[0] = Fresh(new FixVec2(stage.Center - StartOffset, stage.Floor), 1);
         state.Fighters[1] = Fresh(new FixVec2(stage.Center + StartOffset, stage.Floor), -1);
-        return state;
+        state.Projectiles = default;
     }
 
     private static FighterState Fresh(FixVec2 position, int facing) => new()
@@ -75,6 +88,7 @@ public struct GameState
         for (var i = 0; i < MaxProjectiles; i++)
             Projectiles[i].Encode(ref writer);
         Stage.Encode(ref writer);
+        Match.Encode(ref writer);
     }
 
     // 64-bit FNV-1a over the canonical encoding. Same state, same checksum, on every machine.

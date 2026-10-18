@@ -12,10 +12,11 @@ namespace StickFighter.Sim.Replays;
 //
 // Text format, one item per line so diffs read well:
 //
-//   stick-fighter-replay 3
+//   stick-fighter-replay 4
 //   seed 42
 //   data 5be0c6f2a1d3e497    hash of the character data it was recorded with
 //   stage 0 2560 600 1280    left wall, right wall, floor, max separation (whole pixels)
+//   mode versus              training (no rounds) or versus (a best-of-three match)
 //   frames 3
 //   input 0008 0004 2        p1 buttons, p2 buttons (hex), run length
 //   input 0000 0000 1
@@ -23,34 +24,38 @@ namespace StickFighter.Sim.Replays;
 //   ...
 //   final 9f86d081884c7d65
 //
-// Version 1 had no data line and version 2 no stage line. A replay is only meaningful with the
-// data it was recorded with, so one made with different move data is refused rather than
-// reported as a divergence. The stage is recorded whole, so a replay always plays on its own.
+// Version 1 had no data line, version 2 no stage line and version 3 no mode line. A replay is only
+// meaningful with the data it was recorded with, so one made with different move data is refused
+// rather than reported as a divergence. The stage and mode are recorded, so a replay always plays
+// as it was recorded.
 public sealed class Replay
 {
     public const string Magic = "stick-fighter-replay";
-    public const int FormatVersion = 3;
+    public const int FormatVersion = 4;
 
     public ulong Seed { get; }
     public ulong DataHash { get; }
     public Stage Stage { get; }
+    public MatchMode Mode { get; }
     public IReadOnlyList<FrameInput> Inputs { get; }
     public IReadOnlyList<ulong> Checksums { get; }
 
-    public Replay(ulong seed, ulong dataHash, in Stage stage, IReadOnlyList<FrameInput> inputs, IReadOnlyList<ulong> checksums)
+    public Replay(ulong seed, ulong dataHash, in Stage stage, IReadOnlyList<FrameInput> inputs, IReadOnlyList<ulong> checksums,
+        MatchMode mode = MatchMode.Training)
     {
         if (inputs.Count != checksums.Count)
             throw new ArgumentException("A replay needs one checksum per frame of input");
         Seed = seed;
         DataHash = dataHash;
         Stage = stage;
+        Mode = mode;
         Inputs = inputs;
         Checksums = checksums;
     }
 
     public int Frames => Inputs.Count;
 
-    public ulong FinalChecksum => Checksums.Count > 0 ? Checksums[^1] : GameState.NewMatch(Seed, Stage).Checksum();
+    public ulong FinalChecksum => Checksums.Count > 0 ? Checksums[^1] : GameState.NewMatch(Seed, Stage, Mode).Checksum();
 
     public static ulong LoadedDataHash => Characters.Characters.Placeholder.DataHash;
 
@@ -58,22 +63,22 @@ public sealed class Replay
     public bool MatchesLoadedData => DataHash == LoadedDataHash;
 
     // Plays the inputs from the seed and records the checksums: how a replay is made from inputs alone.
-    public static Replay Record(ulong seed, in Stage stage, IReadOnlyList<FrameInput> inputs)
+    public static Replay Record(ulong seed, in Stage stage, IReadOnlyList<FrameInput> inputs, MatchMode mode = MatchMode.Training)
     {
-        var state = GameState.NewMatch(seed, stage);
+        var state = GameState.NewMatch(seed, stage, mode);
         var checksums = new ulong[inputs.Count];
         for (var i = 0; i < inputs.Count; i++)
         {
             Simulation.Step(ref state, inputs[i]);
             checksums[i] = state.Checksum();
         }
-        return new Replay(seed, LoadedDataHash, stage, inputs, checksums);
+        return new Replay(seed, LoadedDataHash, stage, inputs, checksums, mode);
     }
 
     // Replays the inputs and returns the first frame whose checksum differs, or -1 if all match.
     public int FirstDivergence(out ulong expected, out ulong actual)
     {
-        var state = GameState.NewMatch(Seed, Stage);
+        var state = GameState.NewMatch(Seed, Stage, Mode);
         for (var i = 0; i < Inputs.Count; i++)
         {
             Simulation.Step(ref state, Inputs[i]);
@@ -97,6 +102,7 @@ public sealed class Replay
             .Append(Pixels(Stage.RightWall)).Append(' ')
             .Append(Pixels(Stage.Floor)).Append(' ')
             .Append(Pixels(Stage.MaxSeparation)).Append('\n');
+        text.Append("mode ").Append(Mode == MatchMode.Versus ? "versus" : "training").Append('\n');
         text.Append("frames ").Append(Frames.ToString(CultureInfo.InvariantCulture)).Append('\n');
 
         for (var i = 0; i < Inputs.Count;)
@@ -118,7 +124,8 @@ public sealed class Replay
     }
 
     // Reads the current format. `allowOldVersions` lets rerecord upgrade old files: a version 1 data
-    // hash reads as 0, and versions 1 and 2 were all played on the training stage.
+    // hash reads as 0, versions 1 and 2 were all played on the training stage, and versions 1 to 3
+    // in training mode.
     public static Replay Read(string text, bool allowOldVersions = false)
     {
         using var reader = new StringReader(text);
@@ -126,15 +133,19 @@ public sealed class Replay
         if (header[0] != Magic)
             throw new FormatException("Not a stick-fighter replay");
         var version = int.Parse(header[1], CultureInfo.InvariantCulture);
-        var old = version is 1 or 2;
+        var old = version is 1 or 2 or 3;
         if (old && !allowOldVersions)
-            throw new FormatException($"Replay format {version} doesn't record {(version == 1 ? "which character data" : "which stage")} it used; rerecord it (ReplayRunner rerecord)");
+        {
+            var missing = version switch { 1 => "which character data", 2 => "which stage", _ => "which match mode" };
+            throw new FormatException($"Replay format {version} doesn't record {missing} it used; rerecord it (ReplayRunner rerecord)");
+        }
         if (version != FormatVersion && !old)
             throw new FormatException($"Replay format {header[1]}, but this build reads {FormatVersion}");
 
         var seed = ulong.Parse(Expect(reader, "seed"), CultureInfo.InvariantCulture);
         var dataHash = version == 1 ? 0 : ulong.Parse(Expect(reader, "data"), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
-        var stage = old ? Stage.Training : ReadStage(ExpectFields(reader, "stage", 5));
+        var stage = version <= 2 ? Stage.Training : ReadStage(ExpectFields(reader, "stage", 5));
+        var mode = version <= 3 ? MatchMode.Training : ReadMode(Expect(reader, "mode"));
         var frames = int.Parse(Expect(reader, "frames"), CultureInfo.InvariantCulture);
         var inputs = new List<FrameInput>(frames);
         var checksums = new List<ulong>(frames);
@@ -168,7 +179,7 @@ public sealed class Replay
 
         if (inputs.Count != frames || checksums.Count != frames)
             throw new FormatException($"Replay says {frames} frames but has {inputs.Count} inputs and {checksums.Count} checksums");
-        var replay = new Replay(seed, dataHash, stage, inputs, checksums);
+        var replay = new Replay(seed, dataHash, stage, inputs, checksums, mode);
         if (final != replay.FinalChecksum)
             throw new FormatException("Replay's final checksum doesn't match its last frame");
         return replay;
@@ -177,6 +188,13 @@ public sealed class Replay
     private static bool Same(FrameInput a, FrameInput b) => a.Player1 == b.Player1 && a.Player2 == b.Player2;
 
     private static string Pixels(Numerics.Fix value) => value.FloorToInt().ToString(CultureInfo.InvariantCulture);
+
+    private static MatchMode ReadMode(string mode) => mode switch
+    {
+        "training" => MatchMode.Training,
+        "versus" => MatchMode.Versus,
+        _ => throw new FormatException($"Unknown match mode '{mode}' (training or versus)"),
+    };
 
     private static Stage ReadStage(string[] f) => new(
         int.Parse(f[1], CultureInfo.InvariantCulture),

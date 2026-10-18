@@ -65,6 +65,27 @@ public class SyncTestTests
         Assert.Empty(StateDiff.Between(a, a));
     }
 
+    // GameState's own fields are found by reflection too, so a field added to it (here, the match)
+    // is named in a desync without anyone listing it.
+    [Fact]
+    public void TheDiffNamesMatchFields()
+    {
+        var a = GameState.NewMatch(1, Stage.Training, MatchMode.Versus);
+        var b = a;
+        b.Match.TimerFrames--;
+        b.Match.P2Wins = 1;
+        b.Match.Phase = MatchPhase.RoundEnd;
+
+        Assert.Equal(
+            new[]
+            {
+                "Match.Phase: Intro vs RoundEnd",
+                $"Match.TimerFrames: {a.Match.TimerFrames} vs {b.Match.TimerFrames}",
+                "Match.P2Wins: 0 vs 1",
+            },
+            StateDiff.Between(a, b));
+    }
+
     // A step that remembers, outside GameState, whether it ever saw the same input three frames
     // running. The real match never holds an input, so rolling back on the same inputs never sets it;
     // only a misprediction (a held input) does, and the correction then comes out different.
