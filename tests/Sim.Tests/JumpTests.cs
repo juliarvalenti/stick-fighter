@@ -254,6 +254,63 @@ public class JumpTests
         Assert.True(hit.Fighters[1].Hitstun > 0, "jump-ins are high: a crouching guard is hit");
     }
 
+    [Fact]
+    public void NeitherAirborneNorPreJumpFightersCanBeThrown()
+    {
+        Assert.True(Throws.Throwable(new FighterState { Grab = -1 }));
+        Assert.False(Throws.Throwable(new FighterState { Grab = -1, Airborne = true, Action = (int)FighterAction.Jump }));
+        Assert.False(Throws.Throwable(new FighterState { Grab = -1, Action = (int)FighterAction.PreJump }));
+    }
+
+    [Fact]
+    public void LandingFramesCanBeTeched()
+    {
+        Assert.True(Throws.Techable(new FighterState { Action = (int)FighterAction.Landing }));
+    }
+
+    // The jump-related throw replays show what their names say: a throw active during pre-jump or
+    // the air never grabs, and a throw in the landing frames grabs and is teched.
+    [Theory]
+    [InlineData("throw-prejump")]
+    [InlineData("throw-airborne")]
+    [InlineData("throw-landing-tech")]
+    public void ThrowReplaysAroundJumpsShowWhatTheySay(string name)
+    {
+        var replay = Replays.Replay.Read(System.IO.File.ReadAllText(System.IO.Path.Combine(RepoRoot(), "replays", name + ".sfr")));
+        var state = GameState.NewMatch(replay.Seed, replay.Stage);
+        bool throwActive = false, grabbed = false, grabbedLanding = false, jumped = false, knockedDown = false;
+        foreach (var input in replay.Inputs)
+        {
+            var before = state.Fighters[1];
+            Simulation.Step(ref state, input);
+            // Active and whiffing, or already holding P2 (a grab turns the throw into the hold at once).
+            if ((Collision.Body.MoveOf(state.Fighters[0]) is { Kind: MoveKind.Throw } t && t.IsActive(state.Fighters[0].ActionFrame))
+                || state.Fighters[0].Grab >= 0)
+                throwActive = true;
+            if (state.Fighters[1].Grab >= 0 && before.Grab < 0)
+            {
+                grabbed = true;
+                grabbedLanding |= before.Action == (int)FighterAction.Landing;
+            }
+            jumped |= state.Fighters[1].Airborne;
+            knockedDown |= state.Fighters[1].KnockedDown;
+        }
+
+        Assert.True(throwActive, "P1's throw came out");
+        switch (name)
+        {
+            case "throw-prejump":
+            case "throw-airborne":
+                Assert.False(grabbed, "the throw grabbed P2");
+                Assert.True(jumped, "P2 jumped");
+                break;
+            case "throw-landing-tech":
+                Assert.True(grabbedLanding, "P2 was grabbed in its landing frames");
+                Assert.False(knockedDown, "P2 teched rather than being thrown");
+                break;
+        }
+    }
+
     // A replay only pins checksums; this checks each jump replay still shows what its name says.
     [Theory]
     [InlineData("jump-in-blocked")]

@@ -325,6 +325,32 @@ static List<FrameInput>? Scripts(string name) => name switch
         (Buttons.LightPunch | Buttons.LightKick, Buttons.None, 1),
         (Buttons.None, Buttons.None, 60)),
 
+    // P1 walks in and throws as P2 starts a jump: the throw is active during P2's pre-jump frames,
+    // which can't be thrown, so it whiffs and P2 jumps.
+    "throw-prejump" => Runs(
+        (Buttons.Right, Buttons.None, 46),
+        (Buttons.LightPunch | Buttons.LightKick, Buttons.Up, 1),
+        (Buttons.None, Buttons.Up, 4),
+        (Buttons.None, Buttons.None, 60)),
+
+    // P2 jumps a little earlier, so it has just left the ground when the throw is active: whiff.
+    "throw-airborne" => Runs(
+        (Buttons.Right, Buttons.None, 40),
+        (Buttons.Right, Buttons.Up, 5),
+        (Buttons.Right, Buttons.None, 1),
+        (Buttons.LightPunch | Buttons.LightKick, Buttons.None, 1),
+        (Buttons.None, Buttons.None, 60)),
+
+    // P2 jumps straight up and P1 walks in and throws it in its landing frames; landing can be
+    // teched, and P2 techs.
+    "throw-landing-tech" => Runs(
+        (Buttons.Right, Buttons.Up, 5),
+        (Buttons.Right, Buttons.None, 35),
+        (Buttons.LightPunch | Buttons.LightKick, Buttons.None, 1),
+        (Buttons.None, Buttons.None, 4),
+        (Buttons.None, Buttons.LightPunch | Buttons.LightKick, 1),
+        (Buttons.None, Buttons.None, 50)),
+
     // Holding back while throwing: P2 lands behind P1, and the two swap sides.
     "throw-back" => Runs(
         (Buttons.Right, Buttons.None, 46),
