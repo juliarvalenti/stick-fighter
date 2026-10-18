@@ -1,5 +1,6 @@
 using Godot;
 using StickFighter.Style;
+using StickFighter.UI;
 
 namespace StickFighter.StyleFrames;
 
@@ -7,12 +8,30 @@ namespace StickFighter.StyleFrames;
 public partial class TitleFrame : Control
 {
     private static readonly string[] Items = { "Versus", "Training", "Options", "Quit" };
-    private const int Focused = 0;
 
     public TitleFrame()
     {
         Size = new Vector2(1280, 720);
         MouseFilter = MouseFilterEnum.Ignore;
+        Theme = UiTheme.Default;
+    }
+
+    // The menu: the kit's list rows on a panel, the first one focused, as a pad would leave it.
+    public override void _Ready()
+    {
+        var panel = Ui.Panel();
+        AddChild(panel);
+        var rows = new VBoxContainer();
+        panel.AddChild(rows);
+        Button? first = null;
+        foreach (var item in Items)
+        {
+            var row = Ui.Row(item);
+            rows.AddChild(row);
+            first ??= row;
+        }
+        panel.Position = new Vector2((Size.X - panel.GetCombinedMinimumSize().X) / 2, 244);
+        first?.GrabFocus();
     }
 
     public override void _Draw()
@@ -24,22 +43,6 @@ public partial class TitleFrame : Control
         var y = title.End.Y + 8;
         this.Stroke(new Vector2(380, y), new Vector2(632, y), Look.P1, Look.FighterStroke);
         this.Stroke(new Vector2(648, y), new Vector2(900, y), Look.P2, Look.FighterStroke);
-
-        // The menu: the focused item is a dark pill with accent text; the rest are ink on paper.
-        var row = new Vector2(240, 52);
-        for (var i = 0; i < Items.Length; i++)
-        {
-            var rect = new Rect2((Size.X - row.X) / 2, 264 + i * (row.Y + 8), row.X, row.Y);
-            if (i == Focused)
-            {
-                this.Pill(rect, Look.Surface);
-                this.Text(rect, Items[i], Look.UiBold, Look.UiLarge, Look.Accent);
-            }
-            else
-            {
-                this.Text(rect, Items[i], Look.Ui, Look.UiLarge, Look.Ink);
-            }
-        }
 
         this.Text(new Rect2(0, Size.Y - 72, Size.X, 32), "Enter  select       Esc  back", Look.Ui, Look.UiSmall,
             Look.InkMuted);
