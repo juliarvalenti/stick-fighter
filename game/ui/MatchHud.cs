@@ -29,7 +29,7 @@ public static class MatchHud
 
         model.Timer = versus ? match.TimerSeconds : null;
         model.RoundsToWin = versus ? MatchFlow.WinsToMatch : 0;
-        model.Combo = null; // combos are counted from Hit states on
+        model.Combo = null;
         model.Announcement = Announcement(state);
 
         for (var p = 0; p < GameState.PlayerCount; p++)
@@ -40,10 +40,22 @@ public static class MatchHud
             player.Health = fighter.Health;
             player.RecentHealth = trail.At(p, state.Frame, fighter.Health);
             player.MaxStun = character.Stats.Stun;
-            player.Stun = 0; // stun builds from Hit states on
+            player.Stun = fighter.Stun;
             player.RoundWins = p == 0 ? match.P1Wins : match.P2Wins;
             player.Meter = null; // Meter and supers
-            player.Callout = null; // COUNTER needs counter hits, from Hit states on
+            player.Callout = null;
+        }
+
+        // The combo and COUNTER are kept on the fighter taking them, and shown on the attacker's
+        // side while the combo runs: the counter from the second hit, COUNTER from the first.
+        for (var p = 0; p < GameState.PlayerCount; p++)
+        {
+            var defender = state.Fighters[p];
+            var attacker = 1 - p;
+            if (defender.ComboHits >= 2)
+                model.Combo = new HudCombo(attacker, defender.ComboHits, defender.ComboDamage);
+            if (defender.ComboHits > 0 && defender.CounterHit)
+                model.Players[attacker].Callout = "COUNTER";
         }
     }
 

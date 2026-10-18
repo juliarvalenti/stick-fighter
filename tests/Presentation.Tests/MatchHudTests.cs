@@ -83,6 +83,48 @@ public class MatchHudTests
         Assert.Null(model.Players[0].Meter);
     }
 
+    // The combo and COUNTER are kept on the fighter taking them; the HUD shows them on the
+    // attacker's side, the counter from the second hit.
+    [Fact]
+    public void AComboAndCounterShowOnTheAttackersSide()
+    {
+        var state = Versus();
+        state.Fighters[1].ComboHits = 1;
+        state.Fighters[1].ComboDamage = 60;
+        state.Fighters[1].CounterHit = true;
+        var model = Filled(state);
+        Assert.Null(model.Combo);
+        Assert.Equal("COUNTER", model.Players[0].Callout);
+        Assert.Null(model.Players[1].Callout);
+
+        state.Fighters[1].ComboHits = 3;
+        state.Fighters[1].ComboDamage = 214;
+        Assert.Equal(new HudCombo(0, 3, 214), Filled(state).Combo);
+
+        // P1 taking one from P2: the counter on P2's side.
+        state.Fighters[1] = default;
+        state.Fighters[0].ComboHits = 2;
+        state.Fighters[0].ComboDamage = 90;
+        Assert.Equal(new HudCombo(1, 2, 90), Filled(state).Combo);
+
+        // Recovered: the combo and the callout are gone, whatever the last hit was.
+        state.Fighters[0].ComboHits = 0;
+        state.Fighters[0].CounterHit = true;
+        var after = Filled(state);
+        Assert.Null(after.Combo);
+        Assert.Null(after.Players[1].Callout);
+    }
+
+    [Fact]
+    public void StunShowsAgainstTheCharactersStun()
+    {
+        var state = Versus();
+        state.Fighters[1].Stun = 300;
+        var model = Filled(state);
+        Assert.Equal(300, model.Players[1].Stun);
+        Assert.Equal(Sim.Characters.Characters.Placeholder.Stats.Stun, model.Players[1].MaxStun);
+    }
+
     // Ends the round with these healths and steps `into` frames into the round end.
     private static GameState RoundEnd(int p1, int p2, int into, bool timeOver = false)
     {
