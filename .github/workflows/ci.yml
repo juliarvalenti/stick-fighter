@@ -47,16 +47,52 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-      # Measure the base branch on the same runner, so the regression check compares like with like.
-      - name: Benchmark the base branch
-        if: github.event_name == 'pull_request'
+      # Every round of this change must stay within the p99 budgets. On a PR that changes what the
+      # simulation runs, the base branch is measured too, on the same runner, in rounds that
+      # alternate with this change's so drift on the machine hits both alike; then the medians
+      # are compared. The base is built with this change's harness, so only the simulation differs.
+      - name: Benchmark
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          ROUNDS: 5
         run: |
-          git worktree add ../base "${{ github.event.pull_request.base.sha }}"
-          if [ -d ../base/tools/Bench ]; then
-            dotnet run -c Release --project ../base/tools/Bench -- --out "$RUNNER_TEMP/base.json" || true
+          out="$RUNNER_TEMP/bench"
+          mkdir -p "$out/base" "$out/head"
+          dotnet build -c Release tools/Bench -o "$out/bin-head"
+
+          compare=false
+          if [ -z "$BASE_SHA" ]; then
+            echo "not a pull request: budget check only"
+          elif git diff --quiet "$BASE_SHA" HEAD -- src/Sim data tools/Bench; then
+            echo "src/Sim, data and tools/Bench are unchanged from the base: budget check only"
+          else
+            git worktree add ../base "$BASE_SHA"
+            rm -rf ../base/tools/Bench
+            cp -R tools/Bench ../base/tools/Bench
+            if dotnet build -c Release ../base/tools/Bench -o "$out/bin-base"; then
+              compare=true
+            else
+              echo "::warning::the base doesn't build with this change's harness; skipping the regression check"
+            fi
           fi
-      - name: Benchmark this change
-        run: dotnet run -c Release --project tools/Bench -- --baseline "$RUNNER_TEMP/base.json"
+
+          status=0
+          for round in $(seq 1 "$ROUNDS"); do
+            if $compare; then
+              echo "::group::round $round: base"
+              dotnet "$out/bin-base/StickFighter.Bench.dll" --out "$out/base/$round.json" || true
+              echo "::endgroup::"
+            fi
+            echo "::group::round $round: this change"
+            dotnet "$out/bin-head/StickFighter.Bench.dll" --out "$out/head/$round.json" || status=1
+            echo "::endgroup::"
+          done
+
+          if $compare; then
+            dotnet "$out/bin-head/StickFighter.Bench.dll" compare --base "$out"/base/*.json --head "$out"/head/*.json || status=1
+          fi
+          exit $status
 
   godot-smoke:
     name: Godot headless smoke test
