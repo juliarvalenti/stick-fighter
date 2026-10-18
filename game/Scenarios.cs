@@ -274,7 +274,7 @@ public static class Scenarios
         // free); then, back at point-blank (P2 walked off holding back), a 5LP that hits.
         new Scenario("training-frame-data", 1,
             f => new FrameInput(f == 2 ? Buttons.MediumPunch : f == 50 ? Buttons.LightPunch : Buttons.None, f < 45 ? Buttons.Right : Buttons.None),
-            Captures: new[] { 40, 75 }, Frames: 75, Setup: s => Place(s, 610, 670),
+            Captures: new[] { 40, 85 }, Frames: 85, Setup: s => Place(s, 610, 670),
             EachFrame: s => s.Frame == 46 ? Place(s, 610, 670) : s,
             StyleFrame: () => new ScenarioKeys(new() { [1] = Godot.Key.F5 })),
         new Scenario("screen-results", 1, _ => default, Captures: new[] { 5 }, Frames: 5,
