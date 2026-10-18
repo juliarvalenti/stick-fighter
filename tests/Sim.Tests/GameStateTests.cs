@@ -6,8 +6,8 @@ namespace StickFighter.Sim.Tests;
 
 public class GameStateTests
 {
-    private static readonly FrameInput Walk = new(FrameInput.Right, FrameInput.Left);
-    private static readonly FrameInput Retreat = new(FrameInput.Left, FrameInput.Right);
+    private static readonly FrameInput Walk = new(Buttons.Right, Buttons.Left);
+    private static readonly FrameInput Retreat = new(Buttons.Left, Buttons.Right);
 
     // A fixed ten-frame input sequence: walk in, pause, back off.
     private static FrameInput Script(int i) => i < 5 ? Walk : i < 7 ? default : Retreat;
@@ -85,9 +85,11 @@ public class GameStateTests
 
         Changes(s => { s.Frame++; return s; });
         Changes(s => { s.Rng.NextUInt(); return s; });
+        Changes(s => { s.Rng.Increment += 2; return s; });
         for (var p = 0; p < GameState.PlayerCount; p++)
         {
             var i = p;
+            Changes(s => { s.Inputs[i].Record(s.Frame - 1, Buttons.HeavyKick); return s; });
             Changes(s => { s.Fighters[i].Position += new FixVec2(Fix.FromRaw(1), Fix.Zero); return s; });
             Changes(s => { s.Fighters[i].Position += new FixVec2(Fix.Zero, Fix.FromRaw(1)); return s; });
             Changes(s => { s.Fighters[i].Velocity += new FixVec2(Fix.FromRaw(1), Fix.Zero); return s; });
@@ -126,7 +128,7 @@ public class GameStateTests
         Assert.Equal(PinnedChecksum, state.Checksum());
     }
 
-    private const ulong PinnedChecksum = 14609224973884668388;
+    private const ulong PinnedChecksum = 9517315161643892968;
 
     private static GameState Busy()
     {

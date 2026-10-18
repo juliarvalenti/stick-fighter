@@ -140,5 +140,5 @@ record Result(double TickP99Us, double RollbackP99Us);
 static class Inputs
 {
     // Both fighters walking toward each other, so every step does real work.
-    public static readonly FrameInput Walking = new(FrameInput.Right, FrameInput.Left);
+    public static readonly FrameInput Walking = new(Buttons.Right, Buttons.Left);
 }
