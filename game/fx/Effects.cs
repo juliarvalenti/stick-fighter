@@ -37,7 +37,7 @@ public static class Effects
         Effect.Fireball => 12,
         Effect.FireballDissipate => 10,
         Effect.Dust => 14,
-        Effect.KoFlash => 18,
+        Effect.KoFlash => 12,
         _ => 24,
     };
 
@@ -138,9 +138,9 @@ public static class Effects
             var k = Mathf.Clamp(t * 1.3f - i * 0.12f, 0, 1);
             if (k >= 1)
                 continue;
-            var r = 18 + i * 12 + 22 * EaseOut(k);
-            var w = 7 * (1 - k) + 1;
-            item.DrawArc(at, r, toward - spread, toward + spread, 24, Look.Ink, w + 4, true);
+            var r = 18 + i * 14 + 22 * EaseOut(k);
+            var w = 11 * (1 - k) + 2;
+            item.DrawArc(at, r, toward - spread, toward + spread, 24, Look.Ink, w + 5, true);
             item.DrawArc(at, r, toward - spread, toward + spread, 24, Look.Text, w, true);
         }
         for (var i = 0; i < 4; i++)
@@ -148,11 +148,11 @@ public static class Effects
             var angle = toward + Mathf.Pi + (i - 1.5f) * 0.45f;
             var dir = Vector2.FromAngle(angle);
             var inner = 10 + 40 * EaseOut(t);
-            var outer = inner + 14 * (1 - t);
+            var outer = inner + 18 * (1 - t);
             if (outer - inner < 1)
                 continue;
-            item.Stroke(at + dir * inner, at + dir * outer, Look.Ink, 5);
-            item.Stroke(at + dir * inner, at + dir * outer, Look.Text, 2.5f);
+            item.Stroke(at + dir * inner, at + dir * outer, Look.Ink, 9);
+            item.Stroke(at + dir * inner, at + dir * outer, Look.Text, 4.5f);
         }
     }
 
