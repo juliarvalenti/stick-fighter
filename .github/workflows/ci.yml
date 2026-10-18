@@ -14,14 +14,42 @@ env:
 
 jobs:
   sim-tests:
-    name: Simulation tests
+    name: Build, lint and tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-      - run: dotnet test tests/Sim.Tests/Sim.Tests.csproj
+      - name: Format
+        run: dotnet format StickFighter.sln --verify-no-changes
+      # Warnings are errors, so this also runs the .NET analyzers and the
+      # determinism analyzers (SF0001 floats, SF0002 unordered iteration, RS0030 banned APIs).
+      - name: Build
+        run: dotnet build StickFighter.sln
+      - name: Tests
+        run: dotnet test StickFighter.sln --no-build
+
+  perf:
+    name: Perf benchmark
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+      # Measure the base branch on the same runner, so the regression check compares like with like.
+      - name: Benchmark the base branch
+        if: github.event_name == 'pull_request'
+        run: |
+          git worktree add ../base "${{ github.event.pull_request.base.sha }}"
+          if [ -d ../base/tools/Bench ]; then
+            dotnet run -c Release --project ../base/tools/Bench -- --out "$RUNNER_TEMP/base.json" || true
+          fi
+      - name: Benchmark this change
+        run: dotnet run -c Release --project tools/Bench -- --baseline "$RUNNER_TEMP/base.json"
 
   godot-smoke:
     name: Godot headless smoke test
@@ -48,7 +76,7 @@ jobs:
   macos-build:
     name: macOS build
     runs-on: macos-latest
-    needs: [sim-tests, godot-smoke]
+    needs: [sim-tests, godot-smoke, perf]
     # Pushes to main, or run by hand (workflow_dispatch) to try the export on a branch.
     if: github.event_name != 'pull_request'
     steps:
