@@ -338,8 +338,8 @@ public static class Scenarios
         // list, back, the command list, back, and play resumes. Frames are display frames.
         // Stops: the title, the menu, select (P1 choosing, then P2 choosing on the mirror alternate),
         // the match under way, paused, the move list, back on pause, the command list, and the match
-        // running again.
-        new Scenario("menus-flow", 1, _ => WalkIn, Captures: new[] { 5, 15, 25, 35, 55, 70, 140, 150, 162, 184 }, Frames: 185, Flow: true,
+        // running again, past the round call, the fighters walking in.
+        new Scenario("menus-flow", 1, _ => WalkIn, Captures: new[] { 5, 15, 25, 35, 55, 70, 140, 150, 162, 260 }, Frames: 260, Flow: true,
             Actions: new()
             {
                 [10] = "ui_accept", // press start
