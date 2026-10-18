@@ -18,7 +18,7 @@ public static class CharacterLoader
     };
 
     // In FighterAction order; Attack has no stance pose (it plays its move's track).
-    private static readonly string[] PoseNames = { "stand", "crouch", "walkForward", "walkBack", "hitstun", "blockStand", "blockCrouch" };
+    private static readonly string[] PoseNames = { "stand", "crouch", "walkForward", "walkBack", "hitstun", "blockStand", "blockCrouch", "crouchDown" };
 
     // `json` is the character (stats, skeleton, stance poses); `movesJson` is its compiled moves
     // (tools/MoveCompiler's output), or null for a character with no moves yet.
@@ -38,10 +38,17 @@ public static class CharacterLoader
 
             var poses = Obj(root, "poses");
             var tracks = ImmutableArray.CreateBuilder<PoseTrack>(PoseNames.Length);
+            var pushHeights = ImmutableArray.CreateBuilder<Fix>(PoseNames.Length);
             foreach (var poseName in PoseNames)
             {
                 var pose = Obj(poses, poseName);
                 tracks.Add(ReadTrack(Obj(pose, "keys", isArray: true), Int(pose, "length"), $"pose {poseName}", hash));
+
+                // A stance may set its own pushbox height (crouching ones do); otherwise it's the standing one.
+                var pushHeight = OptionalInt(pose, "pushHeight", hash);
+                if (pushHeight is <= 0)
+                    throw new CharacterDataException($"pose {poseName}: 'pushHeight' must be positive, found {pushHeight}");
+                pushHeights.Add(pushHeight is { } own ? Fix.FromInt(own) : stats.PushHeight);
             }
 
             var moves = ImmutableArray.CreateBuilder<Move>();
@@ -59,7 +66,7 @@ public static class CharacterLoader
                 }
             }
 
-            return new Character(name, stats, skeleton, tracks.MoveToImmutable(), moves.ToImmutable(), hash.Value);
+            return new Character(name, stats, skeleton, tracks.MoveToImmutable(), pushHeights.MoveToImmutable(), moves.ToImmutable(), hash.Value);
         }
         catch (CharacterDataException e)
         {
@@ -84,7 +91,18 @@ public static class CharacterLoader
         LandingFrames: Positive(s, "landingFrames", h),
         PushHalfWidth: Fix.FromInt(Positive(s, "pushHalfWidth", h)),
         PushHeight: Fix.FromInt(Positive(s, "pushHeight", h)),
-        ProximityGuard: Fix.FromInt(Positive(s, "proximityGuard", h)));
+        ProximityGuard: Fix.FromInt(Positive(s, "proximityGuard", h)),
+        CrouchTransitionFrames: Positive(s, "crouchTransitionFrames", h),
+        PushShare: Fix.FromRatio(PerMille(s, "pushShare", h), 1000));
+
+    // A share from 1 to 1000.
+    private static int PerMille(JsonElement s, string key, DataHasher h)
+    {
+        var value = Positive(s, key, h);
+        if (value > 1000)
+            throw new CharacterDataException($"'{key}' is per mille, at most 1000, found {value}");
+        return value;
+    }
 
     private static SkeletonSize ReadSkeleton(JsonElement s, DataHasher h) => new(
         Spine: Fix.FromInt(Positive(s, "spine", h)),
