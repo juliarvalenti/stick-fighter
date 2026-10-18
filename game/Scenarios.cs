@@ -253,7 +253,7 @@ public static class Scenarios
         // Training's input display: P1 plays InputDemo (236P, a 66 dash, an MP~LP plink, a held
         // back). F4 turns the display on (both players) at the start, and again near the end
         // switches it to player 1 only.
-        new Scenario("training-input-display", 1, Training.InputDemo.Script, Captures: new[] { 79, 85 }, Frames: 85,
+        new Scenario("training-input-display", 1, Training.InputDemo.Script, Captures: new[] { InputDemoEnd, 85 }, Frames: 85,
             Setup: s => Place(s, 500, 780),
             StyleFrame: () => new ScenarioKeys(new() { [1] = Godot.Key.F4, [82] = Godot.Key.F4 })),
         new Scenario("screen-results", 1, _ => default, Captures: new[] { 5 }, Frames: 5,
@@ -265,6 +265,10 @@ public static class Scenarios
         new Scenario("screen-movelist", 1, _ => default, Captures: new[] { 5 }, Frames: 5,
             Setup: s => Place(s, 540, 740), StyleFrame: () => new UI.Screens.PauseScreen(moveList: true)),
     };
+
+    // The input display's first capture: after all of InputDemo's frames (a capture shows the state
+    // after the frame before it), so the golden shows the same log InputLogTests checks.
+    private const int InputDemoEnd = Training.InputDemo.Frames;
 
     // A short exchange for the title to loop behind: walk in, P1 jabs, P2 kicks back.
     private static FrameInput TitleFight(int f) => f switch
