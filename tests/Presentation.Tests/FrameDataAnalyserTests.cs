@@ -64,7 +64,10 @@ public class FrameDataAnalyserTests
         var jab = Data.FindMove("5LP")!;
         for (var frame = 0; frame < 40; frame++)
         {
-            var press = frame == 0 || frame == jab.TotalFrames - 1 ? Buttons.LightPunch : Buttons.None; // buffered into the first free frame
+            // The second press lands on P1's last frame of the first jab, counting the block's hitstop
+            // (frozen frames don't advance the move), so it comes out on the first free frame.
+            var second = jab.TotalFrames - 1 + jab.HitstopOnBlock;
+            var press = frame == 0 || frame == second ? Buttons.LightPunch : Buttons.None;
             Simulation.Step(ref state, new FrameInput(press, Buttons.Right));
             analyser.Observe(state);
         }
@@ -81,7 +84,8 @@ public class FrameDataAnalyserTests
         var jab = Data.FindMove("5LP")!;
         for (var frame = 0; frame < 40; frame++)
         {
-            var press = frame == 0 || frame == jab.TotalFrames - 1 ? Buttons.LightPunch : Buttons.None;
+            var second = jab.TotalFrames - 1 + jab.HitstopOnHit; // as above, after the hit's hitstop
+            var press = frame == 0 || frame == second ? Buttons.LightPunch : Buttons.None;
             Simulation.Step(ref state, new FrameInput(press, Buttons.None));
             analyser.Observe(state);
         }

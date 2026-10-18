@@ -42,6 +42,7 @@ public sealed class FrameDataAnalyser
     private int _combo;
     private bool _missed;
     private int _lastStarted = -1; // the player who started the latest move
+    private int _clock; // frames that ran, not counting hitstop: what every measurement is in
 
     public FrameReport? Last { get; private set; }
 
@@ -57,12 +58,23 @@ public sealed class FrameDataAnalyser
             _exchange = null;
         }
 
+        // Hitstop: on a frozen frame nothing moves, no action frame advances and no stun counts
+        // down. Frame data counts only the frames that run (the freeze delays both fighters alike,
+        // so it changes no advantage), so frozen frames are passed over.
+        if (Sim.Combat.Hitstop.Frozen(state, frame))
+        {
+            _previous = state;
+            _hasPrevious = true;
+            return;
+        }
+        var t = ++_clock; // this frame, counting only frames that ran
+
         // Who came free on this frame is settled before any new contact replaces the exchange: the
         // defender acting on this frame and then being hit at its end is a gap, not a true string.
         for (var p = 0; p < GameState.PlayerCount; p++)
-            WatchMove(p, state, frame);
-        Resolve(state, frame);
-        WatchContact(state, frame);
+            WatchMove(p, state, t);
+        Resolve(state, t);
+        WatchContact(state, t);
         if (_exchange is { } x)
             Report(x);
         else if (_lastStarted >= 0)
