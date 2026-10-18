@@ -454,10 +454,11 @@ static List<FrameInput>? Scripts(string name) => name switch
 
     // P2 guards a jab (+3), and P1 throws on its first free frame. The throw's first active frame
     // is P2's last blockstun frame and doesn't grab; the second is P2's first free frame and does.
+    // (Waits after a jab include its hitstop: 6 frames on block, 8 on hit.)
     "throw-meaty" => Runs(
         (Buttons.Right, Buttons.None, 46),
         (Buttons.LightPunch, Buttons.Right, 1),
-        (Buttons.None, Buttons.Right, 10),
+        (Buttons.None, Buttons.Right, 16),
         (Buttons.LightPunch | Buttons.LightKick, Buttons.Right, 1),
         (Buttons.None, Buttons.Right, 60)),
 
@@ -466,7 +467,7 @@ static List<FrameInput>? Scripts(string name) => name switch
     "throw-tech-first" => Runs(
         (Buttons.Right, Buttons.None, 46),
         (Buttons.LightPunch, Buttons.Right, 1),
-        (Buttons.None, Buttons.Right, 9),
+        (Buttons.None, Buttons.Right, 15),
         (Buttons.None, Buttons.Right | Buttons.LightPunch | Buttons.LightKick, 1),
         (Buttons.LightPunch | Buttons.LightKick, Buttons.Right, 1),
         (Buttons.None, Buttons.Right, 40)),
@@ -475,7 +476,7 @@ static List<FrameInput>? Scripts(string name) => name switch
     "throw-tech-last" => Runs(
         (Buttons.Right, Buttons.None, 46),
         (Buttons.LightPunch, Buttons.Right, 1),
-        (Buttons.None, Buttons.Right, 10),
+        (Buttons.None, Buttons.Right, 16),
         (Buttons.LightPunch | Buttons.LightKick, Buttons.Right, 1),
         (Buttons.None, Buttons.Right, 9),
         (Buttons.None, Buttons.Right | Buttons.LightPunch | Buttons.LightKick, 1),
@@ -494,7 +495,7 @@ static List<FrameInput>? Scripts(string name) => name switch
     "throw-hitstun" => Runs(
         (Buttons.Right, Buttons.None, 46),
         (Buttons.LightPunch, Buttons.None, 1),
-        (Buttons.None, Buttons.None, 10),
+        (Buttons.None, Buttons.None, 18),
         (Buttons.LightPunch | Buttons.LightKick, Buttons.None, 1),
         (Buttons.None, Buttons.None, 40)),
 
@@ -512,7 +513,7 @@ static List<FrameInput>? Scripts(string name) => name switch
     "plink-link" => Runs(
         (Buttons.Right, Buttons.None, 46),
         (Buttons.LightPunch, Buttons.None, 1),
-        (Buttons.None, Buttons.None, 8),
+        (Buttons.None, Buttons.None, 16),
         (Buttons.LightPunch, Buttons.None, 1),
         (Buttons.LightPunch | Buttons.MediumPunch, Buttons.None, 1),
         (Buttons.None, Buttons.None, 30)),

@@ -10,7 +10,8 @@ namespace StickFighter.Sim;
 [InlineArray(Depth)]
 public struct InputHistory
 {
-    public const int Depth = 16;
+    // Enough for the buffer window to reach back across the longest hitstop (Combat.Hitstop).
+    public const int Depth = 32;
 
     // The longest window a query may ask about: each frame needs the one before it for edges.
     public const int MaxWindow = Depth - 1;

@@ -17,7 +17,7 @@ public struct GameState
     public const int MaxProjectiles = 2;
 
     public const int EncodedSize =
-        4 + 16
+        4 + 16 + 4 + 4
         + PlayerCount * InputHistory.EncodedSize
         + PlayerCount * FighterState.EncodedSize
         + MaxProjectiles * ProjectileState.EncodedSize
@@ -32,6 +32,11 @@ public struct GameState
     // Mutable struct: call it in place (`state.Rng.NextInt(…)` on a `ref` state).
     // `var r = state.Rng; r.NextInt(…)` advances a copy and the match's RNG never moves.
     public Rng Rng;
+
+    // Hitstop: frames FreezeFrom up to (not including) FreezeUntil are frozen (see Combat.Hitstop).
+    // Both 0 in a new match, so nothing is.
+    public int FreezeFrom;
+    public int FreezeUntil;
 
     // Each player's recent input, written by Step before anything reads it.
     public InputHistories Inputs;
@@ -81,6 +86,8 @@ public struct GameState
         writer.Write(Frame);
         writer.Write(Rng.State);
         writer.Write(Rng.Increment);
+        writer.Write(FreezeFrom);
+        writer.Write(FreezeUntil);
         for (var i = 0; i < PlayerCount; i++)
             Inputs[i].Encode(ref writer);
         for (var i = 0; i < PlayerCount; i++)

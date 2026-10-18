@@ -240,6 +240,17 @@ public sealed record Move(
         Strength.Medium => 14,
         _ => 18,
     };
+
+    // Frames both fighters freeze when this move connects. There are no reliable SF4 numbers, so
+    // these are placeholders by strength, on the playtest queue: 8/10/12 on hit, 2 less on block.
+    public int HitstopOnHit => Strength switch
+    {
+        Strength.Light => 8,
+        Strength.Medium => 10,
+        _ => 12,
+    };
+
+    public int HitstopOnBlock => HitstopOnHit - 2;
 }
 
 public sealed record Character(

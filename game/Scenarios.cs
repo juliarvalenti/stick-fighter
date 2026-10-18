@@ -166,6 +166,19 @@ public static class Scenarios
                 return s;
             }),
 
+        // Hitstop, boxes on: P1's heavy punch lands at point-blank on frame 8 and both freeze for 12
+        // frames. At the contact (9) and mid-freeze (15) the fighters hold the same pose in the same
+        // place on the stage (the camera is still easing in, so the whole view shifts a little); at
+        // 22 the freeze is over and P2 reels.
+        new Scenario("hitstop", 1, f => new FrameInput(f == 1 ? Buttons.HeavyPunch : default, default),
+            Captures: new[] { 9, 15, 22 }, Frames: 22, Boxes: true,
+            Setup: s =>
+            {
+                s.Fighters[0].Position = new FixVec2(Fix.FromInt(610), s.Fighters[0].Position.Y);
+                s.Fighters[1].Position = new FixVec2(Fix.FromInt(670), s.Fighters[1].Position.Y);
+                return s;
+            }),
+
         // The data-driven poses at minimum distance (pushboxes touching), boxes on: standing, then
         // crouching, then both walking forward into each other. The arms must not cross.
         new Scenario("poses", 1, f => f < 20 ? default : f < 40 ? new FrameInput(Buttons.Down, Buttons.Down) : WalkIn,

@@ -16,6 +16,15 @@ public static class Simulation
         for (var i = 0; i < GameState.PlayerCount; i++)
             state.Inputs[i].Record(state.Frame, input.For(i).Cleaned());
 
+        // Hitstop: input is recorded (above), and nothing else happens. The round timer and the
+        // match's phase clock pause too, so a KO's freeze plays out before the round end counts.
+        if (Hitstop.Frozen(state, state.Frame))
+        {
+            state.Rng.NextUInt();
+            state.Frame++;
+            return;
+        }
+
         // Where both stood when the frame began: Pushing measures movement from here, so walking and
         // hit pushback both count as moving away when the separation limit applies.
         var p1Before = state.Fighters[0].Position.X;
@@ -194,7 +203,7 @@ public static class Simulation
         // Free to act. Normals don't cancel into each other yet (Specials, cancels, links).
         var crouching = Numpad.Vertical(direction) < 0;
         var wasLow = IsLow(fighter, character);
-        var move = BufferedNormal(history, now, fighter.LastMoveFrame, crouching ? NormalStance.Crouching : NormalStance.Standing);
+        var move = BufferedNormal(state, history, fighter.LastMoveFrame, crouching ? NormalStance.Crouching : NormalStance.Standing);
         if (move >= 0)
         {
             StartMove(ref fighter, move, now, move == Normals.Throw && Blocking.HoldingBack(state, player));
@@ -288,7 +297,7 @@ public static class Simulation
         }
         else
         {
-            var move = fighter.AirAttackUsed || !canAct ? -1 : BufferedNormal(state.Inputs[player], now, fighter.LastMoveFrame, NormalStance.Airborne);
+            var move = fighter.AirAttackUsed || !canAct ? -1 : BufferedNormal(state, state.Inputs[player], fighter.LastMoveFrame, NormalStance.Airborne);
             if (move >= 0)
             {
                 fighter.Action = (int)FighterAction.Attack;
@@ -317,10 +326,12 @@ public static class Simulation
     // The earliest unused attack press within the buffer window, as a move index, or -1. Earliest,
     // because that's the button the player committed to: a plink (MP, then LP a frame later, an SF4
     // habit) comes out as MP. Standing LP+LK is a throw rather than either normal, including LP then
-    // LK within the throw leniency (there are no air throws).
-    private static int BufferedNormal(in InputHistory history, int now, int lastMoveFrame, NormalStance stance)
+    // LK within the throw leniency (there are no air throws). The window counts only unfrozen
+    // frames, so a press made during hitstop is still buffered when it ends.
+    private static int BufferedNormal(in GameState state, in InputHistory history, int lastMoveFrame, NormalStance stance)
     {
-        var oldest = now - Normals.BufferWindow + 1;
+        var now = state.Frame;
+        var oldest = Hitstop.WindowStart(state, now, Normals.BufferWindow);
         for (var frame = oldest > lastMoveFrame ? oldest : lastMoveFrame + 1; frame <= now; frame++)
         {
             var pressed = history.PressedOn(frame, now) & Buttons.Attacks;
