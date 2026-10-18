@@ -22,7 +22,8 @@ public struct GameState
         + PlayerCount * FighterState.EncodedSize
         + MaxProjectiles * ProjectileState.EncodedSize
         + Stage.EncodedSize
-        + MatchState.EncodedSize;
+        + MatchState.EncodedSize
+        + SimEventRing.EncodedSize + 4;
 
     // How far each fighter starts from the middle of the stage.
     public const int StartOffset = 200;
@@ -49,6 +50,11 @@ public struct GameState
 
     // Rounds, the timer and the score (Versus), or nothing to track (Training).
     public MatchState Match;
+
+    // What happened on the last few frames (hits, blocks, throws, knockdowns, KOs), for the
+    // presentation's effects; NextEvent is the slot the next one goes in. See SimEvents.
+    public SimEventRing Events;
+    public int NextEvent;
 
     public static GameState NewMatch(ulong seed) => NewMatch(seed, Stage.Training);
 
@@ -96,6 +102,9 @@ public struct GameState
             Projectiles[i].Encode(ref writer);
         Stage.Encode(ref writer);
         Match.Encode(ref writer);
+        for (var i = 0; i < SimEventRing.Capacity; i++)
+            Events[i].Encode(ref writer);
+        writer.Write(NextEvent);
     }
 
     // 64-bit FNV-1a over the canonical encoding. Same state, same checksum, on every machine.

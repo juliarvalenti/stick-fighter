@@ -41,11 +41,23 @@ public partial class StageCamera : Camera2D
     public void Cut() => _placed = false;
 
     // Shakes the screen from now, fading over `frames` frames.
-    public void Shake(float amplitude, int frames)
+    public void Shake(float amplitude, int frames) => Shake(amplitude, frames, _frame);
+
+    // Shakes the screen from a given simulation frame (an effect's, so it's where the hit was even if
+    // several frames ran since), fading over `frames` frames. The shake is a function of the frame,
+    // so drawing a frame again draws the same shake.
+    public void Shake(float amplitude, int frames, int fromFrame)
     {
         _shakeAmplitude = amplitude;
         _shakeDuration = frames;
-        _shakeStart = _frame;
+        _shakeStart = fromFrame;
+    }
+
+    // Stops a shake that started on this frame (its cause was rolled back); a later one keeps going.
+    public void CancelShake(int fromFrame)
+    {
+        if (_shakeStart == fromFrame)
+            _shakeDuration = 0;
     }
 
     // Zooms toward a point over `inFrames`, holds, then eases back over `outFrames`.

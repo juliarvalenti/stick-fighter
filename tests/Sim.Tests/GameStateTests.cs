@@ -134,7 +134,7 @@ public class GameStateTests
         Assert.Equal(PinnedChecksum, state.Checksum());
     }
 
-    private const ulong PinnedChecksum = 6611480395373933804;
+    private const ulong PinnedChecksum = 7128124342516595116;
 
     private static GameState Busy()
     {

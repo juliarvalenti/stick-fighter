@@ -8,4 +8,4 @@ input 0008 0004 23
 input 0090 0090 1
 input 0000 0000 30
 at 53 p1 1210 600 1 Stand 28 1000 p2 1350 600 -1 Stand 28 1000 match Fight 0 0 0 0
-final e00630919021fbf4
+final 7bcc4cb9723a3534

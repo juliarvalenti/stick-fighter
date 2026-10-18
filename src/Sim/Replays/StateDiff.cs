@@ -33,6 +33,11 @@ public static class StateDiff
                 for (var i = 0; i < GameState.MaxProjectiles; i++)
                     Compare($"{field.Name}[{i}]", expected.Projectiles[i], actual.Projectiles[i], lines);
             }
+            else if (field.FieldType == typeof(SimEventRing))
+            {
+                for (var i = 0; i < SimEventRing.Capacity; i++)
+                    Compare($"{field.Name}[{i}]", expected.Events[i], actual.Events[i], lines);
+            }
             else
             {
                 Compare(field.Name, field.GetValue(expected)!, field.GetValue(actual)!, lines);

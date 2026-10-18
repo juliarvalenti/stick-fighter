@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <Compile Include="../../game/CameraMath.cs" Link="Linked/CameraMath.cs" />
+    <Compile Include="../../game/fx/EffectLedger.cs" Link="Linked/EffectLedger.cs" />
     <Compile Include="../../game/ui/Notation.cs" Link="Linked/Notation.cs" />
     <Compile Include="../../game/training/InputLog.cs" Link="Linked/InputLog.cs" />
     <Compile Include="../../game/training/InputDemo.cs" Link="Linked/InputDemo.cs" />

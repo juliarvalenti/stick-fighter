@@ -65,6 +65,7 @@ public partial class Main : Node2D
     private string? _heldAction;
     private (int Frame, ulong Checksum, int SimFrame)? _pauseCheck;
     private MatchPresenter _presenter = null!;
+    private FX.EffectsView _effects = null!;
     private CanvasLayer _screens = null!;
     private StageCamera _camera = null!;
     private StageBackdrop _backdrop = null!;
@@ -100,6 +101,9 @@ public partial class Main : Node2D
         AddChild(_backdrop);
         _presenter = new MatchPresenter();
         AddChild(_presenter);
+        _effects = new FX.EffectsView();
+        _effects.Attach(_camera);
+        AddChild(_effects);
         _screens = new CanvasLayer { Layer = 10 };
         AddChild(_screens);
 
@@ -150,6 +154,7 @@ public partial class Main : Node2D
         _presenter.Visible = false;
         _state = GameState.NewMatch(MatchSeed);
         _camera.Cut();
+        _effects.Clear();
         ShowScreen(new UI.Screens.TitleScreen());
     }
 
@@ -204,6 +209,7 @@ public partial class Main : Node2D
         _input = _scenario is { Flow: true } ? new Scenarios.Source(_scenario) : _recorder;
         _driver = new TickDriver();
         _camera.Cut();
+        _effects.Clear();
         _presenter.Begin(new[] { settings.P1Color, settings.P2Color });
         _flow = Flow.Match;
         _paused = null;
@@ -421,6 +427,7 @@ public partial class Main : Node2D
         _inputDisplay.Present(_state);
         _frameData.Present(_state);
         _presenter.Present(_state);
+        _effects.Present(_state);
         if (_flow == Flow.Match && _paused is null && _state.Match is { Phase: MatchPhase.MatchEnd, PhaseFrame: >= UI.MatchHud.ResultsDelay })
             ShowResults();
         _clock?.At(_state.Frame);
