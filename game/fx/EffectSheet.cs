@@ -44,15 +44,15 @@ public partial class EffectSheet : Control, IScenarioClock
                 (Effect.HitLight, "Hit, light"), (Effect.HitMedium, "Hit, medium"), (Effect.HitHeavy, "Hit, heavy"),
                 (Effect.CounterHit, "Counter hit"), (Effect.Block, "Block (attacker on the left)"),
             })
-                y = Row(effect, name, y, cell: new Vector2(88, 88), scale: 0.62f);
+                y = Row(effect, name, y, cell: new Vector2(80, 88), scale: 0.52f);
         }
         else
         {
-            y = Row(Effect.Fireball, "Fireball (loops)", y, new Vector2(76, 76), 0.62f, color: Look.P1);
-            y = Row(Effect.FireballDissipate, "Fireball dissipating", y, new Vector2(76, 76), 0.62f, color: Look.P2);
-            y = Row(Effect.Dust, "Dust (landing, dashing)", y, new Vector2(76, 76), 0.62f);
-            y = Row(Effect.KoFlash, "K.O. flash (whole screen)", y, new Vector2(96, 54), 1, fullScreen: true);
-            Row(Effect.SuperFlash, "Super start (whole screen)", y, new Vector2(96, 54), 1, fullScreen: true);
+            y = Row(Effect.Fireball, "Fireball (loops)", y, new Vector2(80, 64), 0.55f, color: Look.P1);
+            y = Row(Effect.FireballDissipate, "Fireball dissipating", y, new Vector2(80, 64), 0.55f, color: Look.P2);
+            y = Row(Effect.Dust, "Dust (landing, dashing)", y, new Vector2(80, 64), 0.55f);
+            y = Row(Effect.KoFlash, "K.O. flash (whole screen)", y, new Vector2(88, 50), 1, fullScreen: true);
+            Row(Effect.SuperFlash, "Super start (whole screen)", y, new Vector2(88, 50), 1, fullScreen: true);
         }
     }
 
@@ -60,14 +60,14 @@ public partial class EffectSheet : Control, IScenarioClock
     // y below the row.
     private float Row(Effect effect, string name, float y, Vector2 cell, float scale, Color? color = null, bool fullScreen = false)
     {
-        this.Text(new Rect2(Left, y, 600, 20), name, Look.UiBold, Look.UiSmall, Look.Ink, HorizontalAlignment.Left);
-        y += 22;
+        this.Text(new Rect2(Left, y, 600, 18), name, Look.UiBold, Look.UiSmall, Look.Ink, HorizontalAlignment.Left);
+        y += 18;
         var gap = 6f;
         var perRow = (int)((Size.X - 2 * Left + gap) / (cell.X + gap));
         var frames = Effects.Length(effect);
         for (var f = 0; f < frames; f++)
         {
-            var box = new Rect2(Left + f % perRow * (cell.X + gap), y + f / perRow * (cell.Y + 18), cell.X, cell.Y);
+            var box = new Rect2(Left + f % perRow * (cell.X + gap), y + f / perRow * (cell.Y + 14), cell.X, cell.Y);
             if (fullScreen)
             {
                 DrawRect(box, Look.PaperShade);
@@ -80,9 +80,9 @@ public partial class EffectSheet : Control, IScenarioClock
                 Effects.Draw(this, effect, f, Vector2.Zero, color: color);
                 DrawSetTransform(Vector2.Zero);
             }
-            this.Text(new Rect2(box.Position.X, box.End.Y, cell.X, 16), f.ToString(), Look.Ui, 12, Look.InkMuted);
+            this.Text(new Rect2(box.Position.X, box.End.Y, cell.X, 14), f.ToString(), Look.Ui, 12, Look.InkMuted);
         }
         var rows = (frames + perRow - 1) / perRow;
-        return y + rows * (cell.Y + 18) + 6;
+        return y + rows * (cell.Y + 14) + 4;
     }
 }

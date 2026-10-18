@@ -93,27 +93,30 @@ public static class Effects
     // hits rings that expand.
     private static void Burst(CanvasItem item, Vector2 at, float t, int frame, float radius, int rays, float width, Color color, int rings)
     {
-        var outT = EaseOut(Mathf.Min(1, t * 1.8f));
-        var w = width * (1 - 0.75f * t);
+        // Rays shoot out to full length almost at once as long streaks from the core, then their
+        // inner ends chase the outer ones, so each ray shortens and thins as it flies.
+        var outT = EaseOut(Mathf.Min(1, 0.45f + t * 2));
+        var w = width * (1 - 0.6f * t);
         for (var i = 0; i < rays; i++)
         {
             var angle = (i + Jitter[i % Jitter.Length]) * Mathf.Tau / rays;
             var dir = Vector2.FromAngle(angle);
             var length = radius * Reach[i % Reach.Length];
-            var inner = length * (0.2f + 0.8f * EaseOut(t));
-            var outer = length * (0.45f + 0.55f * outT);
+            var inner = length * (0.12f + 0.88f * Mathf.Pow(t, 1.6f));
+            var outer = length * (0.3f + 0.7f * outT);
             if (outer - inner < 1)
                 continue;
             item.Stroke(at + dir * inner, at + dir * outer, Look.Ink, w + 4);
             item.Stroke(at + dir * inner, at + dir * outer, color, w);
         }
 
+        // Heavier hits send out thin rings early.
         for (var r = 0; r < rings; r++)
         {
-            var k = Mathf.Clamp(t * 1.4f - r * 0.2f, 0, 1);
+            var k = Mathf.Clamp(t * 1.8f - r * 0.25f, 0, 1);
             if (k <= 0 || k >= 1)
                 continue;
-            item.DrawArc(at, radius * (0.5f + 0.7f * EaseOut(k)), 0, Mathf.Tau, 48, color, width * (1 - k) + 1, true);
+            item.DrawArc(at, radius * (0.55f + 0.75f * EaseOut(k)), 0, Mathf.Tau, 48, color, 3.5f * (1 - k) + 0.5f, true);
         }
 
         if (frame <= 2)
