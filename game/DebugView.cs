@@ -6,7 +6,8 @@ using StickFighter.Sim.Collision;
 namespace StickFighter;
 
 // Draws what the simulation sees, over the fighters: skeleton joints, hurtboxes, hitboxes,
-// pushboxes and projectile shapes, plus the frame number and state checksum. Toggled with F2.
+// pushboxes and projectile shapes, the walls and a ruler along the floor, plus the frame number
+// and state checksum. Toggled with F2.
 // Read only: it gets a copy of the state each frame and never writes back.
 // Training mode's hitbox view will reuse it.
 public partial class DebugView : Node2D
@@ -17,22 +18,37 @@ public partial class DebugView : Node2D
     private static readonly Color SpentHitColor = new(0.5f, 0.05f, 0.1f);
     private static readonly Color PushColor = new(0.2f, 0.4f, 0.95f);
     private static readonly Color ProjectileColor = new(0.95f, 0.55f, 0.1f);
+    private static readonly Color RulerColor = new(0.1f, 0.1f, 0.12f, 0.5f);
     private const float Line = 2f;
+    private const int RulerStep = 160;
 
     private GameState _state;
     private Label _info = null!;
 
+    // Screen-anchored: the frame and checksum stay put while the camera moves the stage.
+    private CanvasLayer _hud = null!;
+
     public override void _Ready()
     {
         ZIndex = 10;
+        _hud = new CanvasLayer { Layer = 10 };
         _info = new Label { Position = new Vector2(1280 - 330, 12), Size = new Vector2(318, 40) };
         _info.HorizontalAlignment = HorizontalAlignment.Right;
         _info.AddThemeFontSizeOverride("font_size", 16);
         _info.AddThemeColorOverride("font_color", JointColor);
-        AddChild(_info);
+        _hud.AddChild(_info);
+        AddChild(_hud);
 
         // `-- --debug` starts with it on.
         Visible = System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--debug") >= 0;
+        _hud.Visible = Visible;
+    }
+
+    // A CanvasLayer doesn't inherit visibility, so the label follows this node by hand.
+    public override void _Notification(int what)
+    {
+        if (what == NotificationVisibilityChanged && _hud is not null)
+            _hud.Visible = Visible;
     }
 
     public override void _UnhandledInput(InputEvent @event)
@@ -53,7 +69,7 @@ public partial class DebugView : Node2D
 
     public override void _Draw()
     {
-        DrawSetTransform(new Vector2(-Main.ViewLeft(_state, GetViewportRect().Size.X), 0));
+        DrawStage(_state.Stage);
         for (var i = 0; i < GameState.PlayerCount; i++)
             DrawFighter(_state.Fighters[i]);
 
@@ -62,6 +78,25 @@ public partial class DebugView : Node2D
             var projectile = _state.Projectiles[slot];
             if (projectile.Active)
                 DrawCapsule(Contacts.ProjectileShape(projectile), ProjectileColor);
+        }
+    }
+
+    // The walls, and a tick every RulerStep px under the floor labeled with its stage x, so
+    // captures show where on the stage the camera is.
+    private void DrawStage(in Stage stage)
+    {
+        var left = stage.LeftWall.ToFloat();
+        var right = stage.RightWall.ToFloat();
+        var floor = stage.Floor.ToFloat();
+        DrawLine(new Vector2(left, 0), new Vector2(left, floor), PushColor, Line);
+        DrawLine(new Vector2(right, 0), new Vector2(right, floor), PushColor, Line);
+
+        var font = ThemeDB.FallbackFont;
+        for (var x = stage.LeftWall.FloorToInt(); x <= stage.RightWall.FloorToInt(); x += RulerStep)
+        {
+            DrawLine(new Vector2(x, floor), new Vector2(x, floor + 12), RulerColor, Line);
+            DrawString(font, new Vector2(x + 4, floor + 30), x.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                HorizontalAlignment.Left, -1, 14, RulerColor);
         }
     }
 
