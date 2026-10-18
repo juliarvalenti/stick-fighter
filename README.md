@@ -52,7 +52,7 @@ Every PR has to pass these:
   - Under 600 frames (the combat replays): every depth 1 to 8, after every frame.
   - Longer: depths 1, 4 and 8 after every frame, and every depth after every 30th frame. So a bug that only one depth shows is still caught, within 30 frames of where it starts.
 
-  The replays run in parallel, and the output is printed in file order with the total time. It catches state the step reads but `GameState` doesn't hold, such as a static, a cache, or anything a load doesn't restore, in the PR that adds it rather than online. Run it on one replay with `ReplayRunner synctest replays/hit.sfr`. A failure says where, and then what. Here a step bumped P2's hitstun from a static counter:
+  The replays run in parallel, and the output is printed in file order with the total time. Before the replays, it runs deliberate rollback bugs in the same build (CI runs SyncTest in Release): a hidden counter, a misprediction's trace, and a bug only a 3-frame rollback shows, on short and long matches. Any bug that isn't caught fails the run, so the gate is proven to fail where it runs. It catches state the step reads but `GameState` doesn't hold, such as a static, a cache, or anything a load doesn't restore, in the PR that adds it rather than online. Run it on one replay with `ReplayRunner synctest replays/hit.sfr`. A failure says where, and then what. Here a step bumped P2's hitstun from a static counter:
 
   ```
   FAIL replays/hit.sfr  frame 9 differs after rolling back 4 frames: expected e528b4b49fc1fa65, got a8184677625171aa

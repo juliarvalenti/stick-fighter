@@ -133,9 +133,12 @@ static int SyncTestAll(string folder)
         return 1;
     }
 
+    // First, proof the gate still fails, in this very build: deliberate rollback bugs must be caught.
+    var clock = System.Diagnostics.Stopwatch.StartNew();
+    var selfCheckFailures = SyncTestSelfCheck();
+
     // The replays are independent, so they run in parallel; each one's lines are kept and printed
     // in file order, so the output reads the same whatever finished first.
-    var clock = System.Diagnostics.Stopwatch.StartNew();
     var reports = new string[files.Length];
     var failed = new bool[files.Length];
     System.Threading.Tasks.Parallel.For(0, files.Length, i =>
@@ -158,7 +161,84 @@ static int SyncTestAll(string folder)
     foreach (var report in reports)
         Console.WriteLine(report);
     Console.WriteLine($"synctest: {files.Length} replays in {clock.Elapsed.TotalSeconds:F1} s");
-    return failed.Any(f => f) ? 1 : 0;
+    return failed.Any(f => f) || selfCheckFailures > 0 ? 1 : 0;
+}
+
+// Deliberate rollback bugs SyncTest must catch, run in the same build as the gate (CI runs it in
+// Release), on a short match and on a long one (where depths are tiered): a counter kept outside
+// GameState, a trace left behind by a misprediction, and a bug only a 3-frame rollback shows. A bug
+// that isn't caught fails the run: the gate has stopped being one.
+static int SyncTestSelfCheck()
+{
+    // P1 steps right and left on alternate frames while P2 jabs now and then: no input is held two
+    // frames running, so only a predicted (held) input looks like a hold.
+    static FrameInput[] Alternating(int frames) => Enumerable.Range(0, frames)
+        .Select(i => new FrameInput(i % 2 == 0 ? Buttons.Right : Buttons.Left, i % 7 == 3 ? Buttons.LightPunch : Buttons.None))
+        .ToArray();
+
+    static Stepper HiddenCounter(int from)
+    {
+        var calls = 0;
+        return (ref GameState state, in FrameInput input) =>
+        {
+            Simulation.Step(ref state, input);
+            if (state.Frame > from && ++calls % 5 == 0)
+                state.Fighters[0].Health--;
+        };
+    }
+
+    static Stepper MispredictionTrace(int from)
+    {
+        var last = default(FrameInput);
+        var run = 0;
+        var tainted = false;
+        return (ref GameState state, in FrameInput input) =>
+        {
+            run = input.Player1 == last.Player1 && input.Player2 == last.Player2 ? run + 1 : 1;
+            last = input;
+            tainted |= run >= 3 && state.Frame > from;
+            Simulation.Step(ref state, input);
+            if (tainted)
+                state.Fighters[0].Health--;
+        };
+    }
+
+    static Stepper OnlyAtDepth3(int from)
+    {
+        int highest = -1, previous = -1;
+        return (ref GameState state, in FrameInput input) =>
+        {
+            var frame = state.Frame;
+            var depth3 = frame <= previous && highest - frame == 2;
+            highest = frame > highest ? frame : highest;
+            previous = frame;
+            Simulation.Step(ref state, input);
+            if (depth3 && frame > from)
+                state.Fighters[0].Health--;
+        };
+    }
+
+    var bugs = new (string Name, int Frames, Stepper Step)[]
+    {
+        ("hidden counter, short", 60, HiddenCounter(0)),
+        ("hidden counter, long, from frame 1500", 2000, HiddenCounter(1500)),
+        ("misprediction trace, short", 60, MispredictionTrace(0)),
+        ("misprediction trace, long, from frame 1500", 2000, MispredictionTrace(1500)),
+        ("only at depth 3, long, from frame 700", 2000, OnlyAtDepth3(700)),
+    };
+
+    var failures = 0;
+    foreach (var (name, frames, step) in bugs)
+    {
+        if (SyncTest.Run(1, Stage.Training, Alternating(frames), step) is { } caught)
+        {
+            Console.WriteLine($"ok   self-check: {name}: caught at frame {caught.Frame}, {caught.Depth} back");
+            continue;
+        }
+        failures++;
+        Console.WriteLine($"FAIL self-check: {name}: not caught; SyncTest no longer catches this kind of bug");
+    }
+    return failures;
 }
 
 // Rewrites each replay from its inputs and says what changed, for the PR body: nothing, the
