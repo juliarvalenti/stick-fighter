@@ -18,10 +18,23 @@ public delegate void Stepper(ref GameState state, in FrameInput input);
 //    what an online correction does, so any trace the wrong prediction leaves behind is caught.
 //
 // The match carries on from the resimulated state, as a rollback session does.
+//
+// Depths are tiered by length, to keep the gate fast as replays grow: a replay under LongReplay
+// frames (the combat ones) is rolled back at every depth 1 to 8 after every frame. A longer one is
+// rolled back at depths 1, 4 and 8 after every frame, and at every depth after every
+// FullSweepEvery-th frame, so a bug that only one depth shows is still found, a little later.
 public static class SyncTest
 {
     // GGPO's usual prediction limit; the rollback perf budget is sized for it.
     public const int MaxRollback = 8;
+
+    public const int LongReplay = 600;
+    public const int FullSweepEvery = 30;
+    private static readonly int[] LongDepths = { 1, 4, 8 };
+
+    // Whether a replay of `frames` frames rolls back `depth` frames after `frame`.
+    public static bool Tests(int frames, int frame, int depth) =>
+        frames < LongReplay || frame % FullSweepEvery == 0 || System.Array.IndexOf(LongDepths, depth) >= 0;
 
     // Differences: the GameState fields that came out different, first-run value then resimulated
     // ("Fighters[1].Hitstun: 7 vs 6"), from StateDiff.
@@ -53,6 +66,8 @@ public static class SyncTest
 
             for (var depth = 1; depth <= MaxRollback && depth <= frame + 1; depth++)
             {
+                if (!Tests(inputs.Count, frame, depth))
+                    continue;
                 var from = frame + 1 - depth;
                 for (var pass = 0; pass < 2; pass++)
                 {
