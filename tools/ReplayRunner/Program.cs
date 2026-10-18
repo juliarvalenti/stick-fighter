@@ -545,6 +545,31 @@ static List<FrameInput>? Scripts(string name) => name switch
         Mash(Buttons.None, Buttons.LightPunch, 40),
         Runs((Buttons.None, Buttons.None, 20))),
 
+    // Knockdowns. P1 sweeps P2: a hard knockdown, 31 frames down, though P2 mashes down and buttons
+    // while down (no quick rise from a hard knockdown), stopping a few frames before it gets up.
+    "sweep-knockdown" => Concat(
+        Runs((Buttons.Right, Buttons.None, 46), (Buttons.Down | Buttons.HeavyKick, Buttons.None, 1), (Buttons.Down, Buttons.None, 10)),
+        Mash(Buttons.None, Buttons.Down | Buttons.LightPunch | Buttons.LightKick, 34),
+        Runs((Buttons.None, Buttons.None, 30))),
+
+    // P1 jumps at point-blank and P2's jab knocks it out of the air; P1 presses down just before it
+    // lands, so the soft knockdown is a quick rise.
+    "quick-rise" => Runs(
+        (Buttons.Right, Buttons.None, 46),
+        (Buttons.Up, Buttons.None, 3),
+        (Buttons.None, Buttons.LightPunch, 1),
+        (Buttons.None, Buttons.None, 22),
+        (Buttons.Down, Buttons.None, 10),
+        (Buttons.None, Buttons.None, 40)),
+
+    // P2 in the corner. P1 lands a standing heavy punch (200 stun) as soon as it's free, five times:
+    // +3 on hit isn't a link, so each starts a new combo at full stun, and they come faster than the
+    // gauge's recovery delay. The fifth fills it, and P2 is dizzy once out of hitstun.
+    "dizzy" => Concat(
+        Runs((Buttons.Right, Buttons.Right, 300)),
+        Mash(Buttons.HeavyPunch, Buttons.None, 190),
+        Runs((Buttons.None, Buttons.None, 160))),
+
     // Both walk in and throw on the same frame: both tech and break apart.
     "throw-same-frame" => Runs(
         (Buttons.Right, Buttons.Left, 23),

@@ -1,6 +1,6 @@
 stick-fighter-replay 5
 seed 1
-data 83f2b2ac96d0c5df
+data a25ed9f5779f0a87
 stage 0 2560 600 1280
 mode training
 frames 351
@@ -18,4 +18,4 @@ at 179 p1 133.589996337890625 600 1 WalkBack 179 1000 p2 193.59002685546875 600 
 at 239 p1 30 600 1 WalkBack 239 1000 p2 90 600 -1 WalkForward 239 1000 match Fight 0 0 0 0
 at 299 p1 30 600 1 WalkBack 299 1000 p2 90 600 -1 WalkForward 299 1000 match Fight 0 0 0 0
 at 350 p1 30 600 1 Stand 13 1000 p2 90 600 -1 Stand 13 1000 match Fight 0 0 0 0
-final c8bc80c94e21f9f1
+final e97429db45e9fb31

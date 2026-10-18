@@ -245,6 +245,9 @@ public class ReplayTests
     [InlineData("combo-scaling", false, true)]
     [InlineData("crouch-hitstun", false, true)]
     [InlineData("air-no-juggle", true, false)]
+    [InlineData("sweep-knockdown", false, true)]
+    [InlineData("quick-rise", true, false)]
+    [InlineData("dizzy", false, true)]
     [InlineData("throw", false, true)]
     [InlineData("throw-back", false, true)]
     [InlineData("throw-meaty", false, true)]
@@ -421,20 +424,21 @@ public class ReplayTests
     }
 
     // P1 is hit rising and falls with juggle count 1. P2's next jab is active, its hitbox on P1's
-    // body, while P1 falls, and does nothing; P2's third jab hits P1 after it lands.
+    // body, while P1 falls, and does nothing; P1 lands knocked down, and nothing hits it there.
     [Fact]
     public void TheAirHitReplayCantBeJuggled()
     {
         var (states, _) = Play("air-no-juggle");
         var hits = Hits(states, 0);
-        Assert.Equal(2, hits.Count);
-        Assert.True(states[hits[0].Frame].Fighters[0].Airborne);
-        Assert.Equal(1, states[hits[0].Frame].Fighters[0].Juggle);
-        Assert.False(states[hits[1].Frame - 1].Fighters[0].Airborne); // the second hit is after the landing
+        var (first, _) = Assert.Single(hits);
+        Assert.True(states[first].Fighters[0].Airborne);
+        Assert.Equal(1, states[first].Fighters[0].Juggle);
+        var landed = states.FindIndex(first, s => !s.Fighters[0].Airborne);
+        Assert.True(states[landed].Fighters[0].KnockedDown);
 
         var jab = Characters.Characters.Placeholder.FindMove("5LP")!;
         var passedThrough = 0;
-        for (var i = hits[0].Frame + 1; i < hits[1].Frame; i++)
+        for (var i = first + 1; i < landed; i++)
         {
             var s = states[i];
             var p2 = s.Fighters[1];
@@ -445,6 +449,54 @@ public class ReplayTests
                 passedThrough++;
         }
         Assert.True(passedThrough > 0, "P2's jab should overlap the falling P1 at least once");
+    }
+
+    // Unfrozen frames from `from` while `down` holds for the fighter: how long it lay down.
+    private static int UnfrozenWhile(System.Collections.Generic.List<GameState> states, int from, Func<GameState, bool> down)
+    {
+        var frames = 0;
+        for (var i = from; i < states.Count && down(states[i]); i++)
+        {
+            if (!Hitstop.Frozen(states[i], states[i].Frame - 1))
+                frames++;
+        }
+        return frames;
+    }
+
+    [Fact]
+    public void TheSweepReplayIsAHardKnockdownDespiteMashing()
+    {
+        var (states, _) = Play("sweep-knockdown");
+        var (frame, damage) = Assert.Single(Hits(states, 1));
+        Assert.Equal(Characters.Characters.Placeholder.FindMove("2HK")!.Damage, damage);
+        Assert.True(states[frame].Fighters[1].KnockedDown);
+        var stats = Characters.Characters.Placeholder.Stats;
+        Assert.Equal(stats.KnockdownFrames, UnfrozenWhile(states, frame, s => s.Fighters[1].KnockedDown));
+    }
+
+    [Fact]
+    public void TheQuickRiseReplayGetsUpSooner()
+    {
+        var (states, _) = Play("quick-rise");
+        var (hit, _) = Assert.Single(Hits(states, 0));
+        Assert.Equal(1, states[hit].Fighters[0].Juggle);
+        var landed = states.FindIndex(hit, s => s.Fighters[0].KnockedDown);
+        var stats = Characters.Characters.Placeholder.Stats;
+        Assert.Equal(stats.QuickRiseFrames, UnfrozenWhile(states, landed, s => s.Fighters[0].KnockedDown));
+    }
+
+    [Fact]
+    public void TheDizzyReplayFillsTheGauge()
+    {
+        var (states, _) = Play("dizzy");
+        var hits = Hits(states, 1);
+        Assert.Equal(5, hits.Count);
+        Assert.All(hits, h => Assert.Equal(100, h.Damage)); // five separate combos, none scaled
+        var dizzy = states.FindIndex(s => s.Fighters[1].Action == (int)Characters.FighterAction.Dizzy);
+        Assert.True(dizzy > hits[4].Frame);
+        Assert.Equal(0, states[dizzy].Fighters[1].Stun);
+        var stats = Characters.Characters.Placeholder.Stats;
+        Assert.Equal(stats.DizzyFrames, UnfrozenWhile(states, dizzy, s => s.Fighters[1].Action == (int)Characters.FighterAction.Dizzy));
     }
 
     [Fact]

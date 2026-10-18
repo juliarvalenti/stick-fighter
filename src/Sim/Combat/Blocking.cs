@@ -24,7 +24,7 @@ public static class Blocking
     // Never in the air (no air blocking), in pre-jump frames (committed to the jump), mid-dash, or in
     // the true-recovery frames of a landing after an air attack.
     public static bool CanGuard(in FighterState fighter) =>
-        fighter.Hitstun == 0 && fighter.Action != (int)FighterAction.Attack && !fighter.KnockedDown
+        fighter.Hitstun == 0 && fighter.Action != (int)FighterAction.Dizzy && fighter.Action != (int)FighterAction.Attack && !fighter.KnockedDown
         && !fighter.Airborne && fighter.Action != (int)FighterAction.PreJump && !Movement.Dashing.IsDashing(fighter)
         && !(fighter.Action == (int)FighterAction.Landing && fighter.AirAttackUsed && fighter.ActionFrame < Simulation.LandingLockFrames);
 

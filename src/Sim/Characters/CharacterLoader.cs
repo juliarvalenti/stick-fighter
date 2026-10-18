@@ -21,7 +21,7 @@ public static class CharacterLoader
     private static readonly string[] PoseNames =
     {
         "stand", "crouch", "walkForward", "walkBack", "hitstun", "blockStand", "blockCrouch", "crouchDown",
-        "thrown", "throwHold", "knockdown", "preJump", "jump", "landing", "dashForward", "dashBack",
+        "thrown", "throwHold", "knockdown", "preJump", "jump", "landing", "dashForward", "dashBack", "dizzy",
     };
 
     // `json` is the character (stats, skeleton, stance poses); `movesJson` is its compiled moves
@@ -47,6 +47,8 @@ public static class CharacterLoader
                 throw new CharacterDataException("stats: backDashInvincibleFrames is longer than the back-dash");
             if (stats.DashInputWindow > InputHistory.MaxWindow)
                 throw new CharacterDataException($"stats: dashInputWindow is at most {InputHistory.MaxWindow} (the input history's depth)");
+            if (stats.QuickRiseWindow > InputHistory.MaxWindow)
+                throw new CharacterDataException($"stats: quickRiseWindow is at most {InputHistory.MaxWindow} (the input history's depth)");
             var skeleton = ReadSkeleton(Obj(root, "skeleton"), hash);
 
             var poses = Obj(root, "poses");
@@ -131,7 +133,12 @@ public static class CharacterLoader
         CrouchHitstunBonus: Int(s, "crouchHitstunBonus", h),
         LowLifeReduction: Flag(s, "lowLifeReduction", h),
         AirHitRise: Fix.FromRatio(Int(s, "airHitRise", h), 1000),
-        AirHitDrift: Fix.FromRatio(Int(s, "airHitDrift", h), 1000));
+        AirHitDrift: Fix.FromRatio(Int(s, "airHitDrift", h), 1000),
+        QuickRiseFrames: Positive(s, "quickRiseFrames", h),
+        QuickRiseWindow: Positive(s, "quickRiseWindow", h),
+        DizzyFrames: Positive(s, "dizzyFrames", h),
+        StunRecoveryDelay: Int(s, "stunRecoveryDelay", h),
+        StunRecoveryRate: Int(s, "stunRecoveryRate", h));
 
     // A share from 1 to 1000.
     private static int PerMille(JsonElement s, string key, DataHasher h)
@@ -208,6 +215,7 @@ public static class CharacterLoader
                 JuggleStart: OptionalInt(m, "juggleStart", h) ?? 1,
                 JuggleIncrease: OptionalInt(m, "juggleIncrease", h) ?? 1,
                 JuggleLimit: OptionalInt(m, "juggleLimit", h) ?? 0,
+                HardKnockdown: Flag(m, "hardKnockdown", h),
                 HitstunOverride: OptionalInt(m, "hitstun", h),
                 BlockstunOverride: OptionalInt(m, "blockstun", h),
                 HitboxLimb: limb,

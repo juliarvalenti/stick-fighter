@@ -41,7 +41,13 @@
     "crouchHitstunBonus": 1,
     "lowLifeReduction": true,
     "airHitRise": 8000,
-    "airHitDrift": 3000
+    "airHitDrift": 3000,
+    "comment-knockdowns": "Knockdowns: knockdownFrames is SF4's face-up wakeup (31), for throws, sweeps (hard: no quick rise) and juggle landings (soft). A quick rise (down, or two attack buttons, pressed within quickRiseWindow frames before landing from a juggle) gets up after quickRiseFrames instead. Stun: each hit adds its scaled stun to the gauge; at the character's stun (1000) the fighter, once out of hitstun, is dizzy for dizzyFrames and the gauge resets. The gauge recovers stunRecoveryRate a frame once stunRecoveryDelay frames have passed since the last hit, and resets on a knockdown (unless full: then the fighter gets up dizzy). quickRiseFrames, dizzyFrames and the recovery numbers aren't sourced: placeholders for the playtest.",
+    "quickRiseFrames": 21,
+    "quickRiseWindow": 8,
+    "dizzyFrames": 120,
+    "stunRecoveryDelay": 60,
+    "stunRecoveryRate": 2
   },
   "comment-stats": "crouchTransitionFrames: frames from standing to the crouch pose, counting as crouching throughout (SF4's figure). pushShare: walking into a fighter who isn't walking in, how much of the walker's step moves them along, per mille; the walker keeps the same share, so the pair moves together at that fraction of walking speed. pushHeight here is the standing pushbox; a pose may set its own. The jump arc: jumpVelocity (up, at takeoff) and gravity (each frame) in px/1000, chosen so it lands in exactly airborneFrames (the loader checks) with its apex at 294 px, SF4's 1.76 units; jumpForward and jumpBack are the sideways drift (placeholders for the playtest).",
 
@@ -68,6 +74,14 @@
         { "frame": 15, "hip": [0, -110], "angles": { "spine": 0, "neck": 0, "backShoulder": 291, "backElbow": -519, "frontShoulder": -27, "frontElbow": -1830, "backHip": -55, "backKnee": 397, "frontHip": -331, "frontKnee": 412 } },
         { "frame": 30, "hip": [0, -111], "angles": { "spine": 0, "neck": 0, "backShoulder": 291, "backElbow": -519, "frontShoulder": -27, "frontElbow": -1830, "backHip": -37, "backKnee": 359, "frontHip": -312, "frontKnee": 375 } },
         { "frame": 35, "hip": [0, -112], "angles": { "spine": 0, "neck": 0, "backShoulder": 291, "backElbow": -519, "frontShoulder": -27, "frontElbow": -1830, "backHip": -18, "backKnee": 317, "frontHip": -291, "frontKnee": 335 } }
+      ]
+    },
+    "dizzy": {
+      "comment": "Swaying on the spot, arms hanging, head lolling: a 40-frame loop. It sways back and upright, never forward, so heads don't meet at point-blank.",
+      "length": 40,
+      "keys": [
+        { "frame": 0, "hip": [-6, -110], "angles": { "spine": -140, "neck": -160, "backShoulder": 120, "backElbow": -200, "frontShoulder": 60, "frontElbow": -180, "backHip": 3, "backKnee": 296, "frontHip": -293, "frontKnee": 316 } },
+        { "frame": 20, "hip": [0, -110], "angles": { "spine": 0, "neck": -60, "backShoulder": 20, "backElbow": -160, "frontShoulder": 40, "frontElbow": -180, "backHip": 3, "backKnee": 296, "frontHip": -293, "frontKnee": 316 } }
       ]
     },
     "hitstun": {

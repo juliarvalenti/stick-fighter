@@ -44,9 +44,13 @@ public enum FighterAction
     DashForward = 14,
     DashBack = 15,
 
+    // Dizzy: the stun gauge filled. Can't act or guard for the character's dizzy frames; a hit
+    // ends it.
+    Dizzy = 16,
+
     // Performing a move; the pose comes from the move's track, not a stance pose. Last, because
     // every action before it has a stance pose at the same index.
-    Attack = 16,
+    Attack = 17,
 }
 
 public enum Strength
@@ -138,7 +142,16 @@ public sealed record Stats(
     int CrouchHitstunBonus,
     bool LowLifeReduction,
     Fix AirHitRise,
-    Fix AirHitDrift);
+    Fix AirHitDrift,
+    // Knockdowns and stun (see the comment in the character data): a quick rise (down or two buttons
+    // within QuickRiseWindow frames before landing from a juggle) gets up after QuickRiseFrames
+    // instead of KnockdownFrames; a full stun gauge (Stun) means DizzyFrames dizzy; the gauge
+    // recovers StunRecoveryRate a frame once StunRecoveryDelay frames have passed since the last hit.
+    int QuickRiseFrames,
+    int QuickRiseWindow,
+    int DizzyFrames,
+    int StunRecoveryDelay,
+    int StunRecoveryRate);
 
 public sealed record SkeletonSize(
     Fix Spine,
@@ -223,6 +236,9 @@ public sealed record Move(
     int JuggleStart,
     int JuggleIncrease,
     int JuggleLimit,
+    // A hit on a grounded fighter knocks it down instead of into hitstun, with no quick rise
+    // (sweeps). Air hits are soft knockdowns anyway, when the fall lands.
+    bool HardKnockdown,
     Limb HitboxLimb,
     Fix HitboxRadius,
     Fix ActiveBonus,

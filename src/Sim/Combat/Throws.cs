@@ -150,10 +150,7 @@ public static class Throws
 
         thrown.Grab = -1;
         thrown.Techable = false;
-        thrown.Knockdown = stats.KnockdownFrames;
-        thrown.KnockedDown = true;
-        thrown.Action = (int)FighterAction.Knockdown;
-        thrown.ActionFrame = 0;
+        Knockdowns.KnockDown(ref thrown, stats.KnockdownFrames, stats); // a hard knockdown
     }
 
     private static void Release(ref FighterState f)

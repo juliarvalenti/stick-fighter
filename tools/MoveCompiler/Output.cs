@@ -61,8 +61,11 @@ public static class Output
             if (s.TryGetProperty(key, out var value))
                 Field(text, key, value.GetInt32().ToString(CultureInfo.InvariantCulture));
         }
-        if (s.TryGetProperty("chipKo", out var chipKo))
-            Field(text, "chipKo", chipKo.GetBoolean() ? "true" : "false");
+        foreach (var key in new[] { "chipKo", "hardKnockdown" })
+        {
+            if (s.TryGetProperty(key, out var flag))
+                Field(text, key, flag.GetBoolean() ? "true" : "false");
+        }
         foreach (var key in new[] { "pushbackHit", "pushbackBlock", "hitstun", "blockstun" })
         {
             if (s.TryGetProperty(key, out var value))
