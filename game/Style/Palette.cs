@@ -38,6 +38,9 @@ public static class Palette
     // player 1's color) is answered by changing this one line.
     public const string LowHealth = Danger;
 
+    // Effects: landing and dash dust, a shade darker than the stage paper.
+    public const string Dust = "#D3CAB3";
+
     public static readonly string[] Players = { P1, P2, P1Alt, P2Alt };
 
     // Every pairing of text over a background that the UI uses. Each must reach WCAG AA (4.5:1).

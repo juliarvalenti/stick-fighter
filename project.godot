@@ -13,6 +13,7 @@ config_version=5
 config/name="Stick Fighter"
 run/main_scene="res://game/Main.tscn"
 config/features=PackedStringArray("4.7", "C#")
+config/icon="res://assets/icon/icon.png"
 
 [display]
 

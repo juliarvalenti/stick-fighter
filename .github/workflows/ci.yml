@@ -213,6 +213,15 @@ jobs:
           unzip -q build/StickFighter.zip -d build/app
           "build/app/Stick Fighter.app/Contents/MacOS/Stick Fighter" --headless -- --smoke | tee build/launch.log
           grep -q "smoke ok" build/launch.log
+      # The app carries our icon (assets/icon/StickFighter.icns, from tools/icon/make_icon.py),
+      # not Godot's default.
+      - name: Icon check on the exported app
+        shell: bash
+        run: |
+          plist="build/app/Stick Fighter.app/Contents/Info.plist"
+          icon=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIconFile" "$plist")
+          echo "CFBundleIconFile: $icon"
+          cmp assets/icon/StickFighter.icns "build/app/Stick Fighter.app/Contents/Resources/${icon%.icns}.icns"
       # The zip keeps the app's executable bits, which a bare .app upload would lose.
       - uses: actions/upload-artifact@v4
         with:
