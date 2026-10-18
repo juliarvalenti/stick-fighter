@@ -1,8 +1,8 @@
-stick-fighter-replay 5
+stick-fighter-replay 6
 seed 1
 data a25ed9f5779f0a87
 stage 0 2560 600 1280
-mode training
+mode sandbox
 frames 44
 input 0004 0000 1
 input 0000 0000 2
