@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Globalization;
 using System.Text.Json;
@@ -86,6 +87,14 @@ public static class CharacterLoader
                     if (moves[i].Input == moves[j].Input)
                         throw new CharacterDataException($"move {moves[j].Input}: input is used by two moves");
                 }
+                CheckCancels(moves[i], moves);
+            }
+            // The cancel window opens on contact and counts unfrozen frames, so a motion done during
+            // the normal reaches back across its hitstop too: motion, buffer and freeze must all fit.
+            for (var i = 0; i < moves.Count; i++)
+            {
+                if (moves[i].HitstopOnHit + Combat.Normals.BufferWindow + stats.MotionWindow > InputHistory.MaxWindow)
+                    throw new CharacterDataException($"move {moves[i].Input}: hitstop {moves[i].HitstopOnHit} plus the buffer and motionWindow is more than the input history holds ({InputHistory.MaxWindow})");
             }
 
             return new Character(name, stats, skeleton, tracks.MoveToImmutable(), pushHeights.MoveToImmutable(), moves.ToImmutable(), hash.Value);
@@ -144,6 +153,8 @@ public static class CharacterLoader
         StunRecoveryRate: Int(s, "stunRecoveryRate", h),
         MotionWindow: Positive(s, "motionWindow", h),
         MotionButtonLeniency: Int(s, "motionButtonLeniency", h),
+        CancelWindow: Positive(s, "cancelWindow", h),
+        ChainWindow: Positive(s, "chainWindow", h),
         ProjectileSpeedLight: Fix.FromRatio(Positive(s, "projectileSpeedLight", h), 1000),
         ProjectileSpeedMedium: Fix.FromRatio(Positive(s, "projectileSpeedMedium", h), 1000),
         ProjectileSpeedHeavy: Fix.FromRatio(Positive(s, "projectileSpeedHeavy", h), 1000));
@@ -224,6 +235,8 @@ public static class CharacterLoader
                 JuggleIncrease: OptionalInt(m, "juggleIncrease", h) ?? 1,
                 JuggleLimit: OptionalInt(m, "juggleLimit", h) ?? 0,
                 HardKnockdown: Flag(m, "hardKnockdown", h),
+                SpecialCancel: Flag(m, "specialCancel", h),
+                Chains: Inputs(m, "chains", h),
                 HitstunOverride: OptionalInt(m, "hitstun", h),
                 BlockstunOverride: OptionalInt(m, "blockstun", h),
                 HitboxLimb: limb,
@@ -332,6 +345,50 @@ public static class CharacterLoader
         }
         h.Add(value ? 1 : 0);
         return value;
+    }
+
+    // Cancels only go forwards: only ground normals cancel or chain, and only into ground normals (a
+    // special never cancels into a normal, nor into another special).
+    private static void CheckCancels(Move move, IReadOnlyList<Move> moves)
+    {
+        var groundNormal = move.Kind == MoveKind.Normal && !move.Input.StartsWith("j.", StringComparison.Ordinal);
+        if ((move.SpecialCancel || move.Chains.Length > 0) && !groundNormal)
+            throw new CharacterDataException($"move {move.Input}: only ground normals can cancel or chain");
+        foreach (var input in move.Chains)
+        {
+            Move? target = null;
+            foreach (var m in moves)
+            {
+                if (m.Input == input)
+                    target = m;
+            }
+            if (target is null)
+                throw new CharacterDataException($"move {move.Input}: chains into '{input}', which isn't a move");
+            if (target.Kind != MoveKind.Normal || target.Input.StartsWith("j.", StringComparison.Ordinal))
+                throw new CharacterDataException($"move {move.Input}: chains into '{input}', which isn't a ground normal");
+        }
+    }
+
+    // An optional list of move inputs (e.g. ["5LP", "2LP"]); missing means none. Checked against the
+    // moves once they're all read.
+    private static ImmutableArray<string> Inputs(JsonElement e, string key, DataHasher h)
+    {
+        var list = ImmutableArray.CreateBuilder<string>();
+        if (e.TryGetProperty(key, out var element))
+        {
+            if (element.ValueKind != JsonValueKind.Array)
+                throw new CharacterDataException($"'{key}' must be a list of move inputs");
+            foreach (var item in element.EnumerateArray())
+            {
+                if (item.ValueKind != JsonValueKind.String || item.GetString() is not { Length: > 0 } input)
+                    throw new CharacterDataException($"'{key}' must be a list of move inputs, found {item.GetRawText()}");
+                list.Add(input);
+            }
+        }
+        h.Add(list.Count);
+        foreach (var input in list)
+            h.Add(input);
+        return list.ToImmutable();
     }
 
     private static int IntValue(JsonElement value, string key, DataHasher? h)

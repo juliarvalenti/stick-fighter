@@ -61,10 +61,17 @@ public static class Output
             if (s.TryGetProperty(key, out var value))
                 Field(text, key, value.GetInt32().ToString(CultureInfo.InvariantCulture));
         }
-        foreach (var key in new[] { "chipKo", "hardKnockdown" })
+        foreach (var key in new[] { "chipKo", "hardKnockdown", "specialCancel" })
         {
             if (s.TryGetProperty(key, out var flag))
                 Field(text, key, flag.GetBoolean() ? "true" : "false");
+        }
+        if (s.TryGetProperty("chains", out var chains))
+        {
+            var inputs = new List<string>();
+            foreach (var input in chains.EnumerateArray())
+                inputs.Add(Str(input.GetString()!));
+            Field(text, "chains", "[" + string.Join(", ", inputs) + "]");
         }
         foreach (var key in new[] { "pushbackHit", "pushbackBlock", "hitstun", "blockstun" })
         {

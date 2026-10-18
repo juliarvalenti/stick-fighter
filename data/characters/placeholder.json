@@ -51,6 +51,9 @@
     "comment-specials": "Specials: a motion (236) counts if its directions come in order within motionWindow frames, anything in between allowed, and its button (pressed, or released: negative edge) comes within motionButtonLeniency frames of the last direction (SF4-style leniency). Fireball speeds by the punch, px/1000 per frame: placeholders for the playtest.",
     "motionWindow": 12,
     "motionButtonLeniency": 4,
+    "comment-cancels": "Cancels: a normal that connects (hit or block, never a whiff) can be cut short. Specials can cancel it for cancelWindow frames after the contact; normals in its chain list (lights into lights) can for chainWindow. Neither window counts hitstop, so the cancel can come on the first frame after the freeze, from a press or a motion made during the normal. SF4 has no single sourced figure: placeholders for the playtest.",
+    "cancelWindow": 4,
+    "chainWindow": 4,
     "projectileSpeedLight": 6000,
     "projectileSpeedMedium": 8000,
     "projectileSpeedHeavy": 10000

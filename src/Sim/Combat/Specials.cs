@@ -26,7 +26,10 @@ public static class Specials
             var punches = (history.PressedOn(frame, now) | history.ReleasedOn(frame, now)) & Buttons.Punches;
             if (punches == Buttons.None)
                 continue;
-            if (Motions.QuarterCircleForward(history, frame, now, fighter.Facing, stats.MotionWindow, stats.MotionButtonLeniency))
+            // The motion's window and the button's leniency count unfrozen frames, like the buffer.
+            var start = Hitstop.WindowStart(state, frame, stats.MotionWindow);
+            var forwardStart = Hitstop.WindowStart(state, frame, stats.MotionButtonLeniency + 1);
+            if (Motions.QuarterCircleForward(history, frame, now, fighter.Facing, start, forwardStart))
                 return punches.Has(Buttons.HeavyPunch) ? 2 : punches.Has(Buttons.MediumPunch) ? 1 : 0;
         }
         return -1;

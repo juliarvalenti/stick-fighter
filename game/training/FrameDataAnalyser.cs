@@ -18,7 +18,8 @@ public sealed record FrameReport(
     int? LinkWindow, // when this hit linked from a recovered attacker: frames it could have started in
     bool MissedFrames, // the display skipped frames, so these numbers aren't trustworthy
     bool Contact = true, // false: the move hasn't touched anyone (yet, or at all: see Whiffed)
-    bool Whiffed = false); // the move finished without touching anyone
+    bool Whiffed = false, // the move finished without touching anyone
+    string? CancelledFrom = null); // the move this one cancelled or chained out of (so it's no link)
 
 // Training mode's frame data, measured from the simulation rather than looked up: it watches the
 // game state after every frame and reports what actually happened, so it catches what the data
@@ -211,8 +212,12 @@ public sealed class FrameDataAnalyser
             x.Gap,
             x.Blocked ? 0 : _combo,
             x.Link,
-            _missed);
+            _missed,
+            CancelledFrom: CancelledFrom(watch));
     }
+
+    private string? CancelledFrom(in MoveWatch watch) =>
+        watch.CancelledFrom >= 0 ? _character.Moves[watch.CancelledFrom].Input : null;
 
     // A move that hasn't touched anyone: its own frames, and once it's over, a whiff.
     private void ReportMoveOnly(int player)
@@ -231,7 +236,8 @@ public sealed class FrameDataAnalyser
             LinkWindow: null,
             _missed,
             Contact: false,
-            Whiffed: watch.End is not null);
+            Whiffed: watch.End is not null,
+            CancelledFrom: CancelledFrom(watch));
     }
 
     private struct MoveWatch

@@ -67,6 +67,9 @@ public enum MoveKind
 
     // Grabs an opponent within throw range on its active frames; has no hitbox.
     Throw,
+
+    // A special move, done with a motion (236P). Normals cancel into it, never the other way.
+    Special,
 }
 
 public enum Guard
@@ -156,6 +159,10 @@ public sealed record Stats(
     // MotionButtonLeniency frames after the last direction. A fireball flies at its strength's speed.
     int MotionWindow,
     int MotionButtonLeniency,
+    // Cancels: a move that connected can be special-cancelled for CancelWindow frames after the
+    // contact, and chained for ChainWindow, neither counting hitstop.
+    int CancelWindow,
+    int ChainWindow,
     Fix ProjectileSpeedLight,
     Fix ProjectileSpeedMedium,
     Fix ProjectileSpeedHeavy);
@@ -246,6 +253,10 @@ public sealed record Move(
     // A hit on a grounded fighter knocks it down instead of into hitstun, with no quick rise
     // (sweeps). Air hits are soft knockdowns anyway, when the fall lands.
     bool HardKnockdown,
+    // Cancels (normals only, Combat.Cancels): once the move connects, on hit or block, it can be cut
+    // short by a special (SpecialCancel) or by one of the normals in Chains (their inputs, e.g. "2LP").
+    bool SpecialCancel,
+    ImmutableArray<string> Chains,
     Limb HitboxLimb,
     Fix HitboxRadius,
     Fix ActiveBonus,

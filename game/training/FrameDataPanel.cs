@@ -72,11 +72,14 @@ public partial class FrameDataPanel : Control
         var color = r.Advantage is { } v ? (v >= 0 ? Look.Accent : Look.Danger) : Look.TextMuted;
         Stat(new Rect2(inner.End.X - 160, top, 160, 52), r.Blocked ? "ON BLOCK" : "ON HIT", adv, color, HorizontalAlignment.Right);
 
-        // Strings, combos, links; or a warning if frames were missed.
-        var note = r.MissedFrames ? "Frames were skipped: do it again for exact numbers"
-            : r.Blocked && r.Gap is { } gap ? (gap == 0 ? "True block string" : $"Gap: {gap}f in the block string")
+        // Cancels, strings, combos, links; or a warning if frames were missed.
+        var cancel = r.CancelledFrom is { } from ? $"Cancelled from {from}" : "";
+        var detail = r.Blocked && r.Gap is { } gap ? (gap == 0 ? "True block string" : $"Gap: {gap}f in the block string")
             : r.LinkWindow is { } window ? (window > 0 ? $"Link: {window}f window" : $"Not a link: {1 - window}f too slow")
             : "";
+        var note = r.MissedFrames ? "Frames were skipped: do it again for exact numbers"
+            : cancel.Length > 0 && detail.Length > 0 ? $"{cancel} · {detail}"
+            : cancel + detail;
         this.Text(new Rect2(inner.Position.X, inner.End.Y - 20, inner.Size.X, 20), note, Look.Ui, Look.UiSmall,
             r.MissedFrames ? Look.Danger : Look.TextMuted, HorizontalAlignment.Left);
     }

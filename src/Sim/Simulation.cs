@@ -35,6 +35,8 @@ public static class Simulation
         var p2Proximity = Blocking.ProximityGuard(state, 1);
         var p1Stunned = Throws.Stunned(state.Fighters[0]);
         var p2Stunned = Throws.Stunned(state.Fighters[1]);
+        var p1Blockstun = state.Fighters[0].Blockstun > 0;
+        var p2Blockstun = state.Fighters[1].Blockstun > 0;
 
         // Outside the fight phase (a versus match's intro and round end), fighters can't start
         // anything and nothing lands; what's already under way (a fall, hitstun) plays out.
@@ -57,7 +59,7 @@ public static class Simulation
 
             // Every contact is found from both fighters' poses before any is applied, so trades hit both.
             var contacts = Contacts.Find(state, Body.Shapes(state.Fighters[0]), Body.Shapes(state.Fighters[1]));
-            Hits.Apply(ref state, contacts);
+            Hits.Apply(ref state, contacts, p1Blockstun, p2Blockstun);
             Pushing.Resolve(ref state, p1Before, p2Before);
         }
 
@@ -167,6 +169,11 @@ public static class Simulation
             return;
         }
 
+        // A normal that connected can be cut short within its window: by a special, or by the next
+        // normal in its chain. Only forwards (Cancels).
+        if (canAct && fighter.Action == (int)FighterAction.Attack && Cancel(ref state, player))
+            return;
+
         if (fighter.Action == (int)FighterAction.Attack && fighter.ActionFrame + 1 < character.Moves[fighter.Move].TotalFrames)
         {
             fighter.ActionFrame++;
@@ -231,8 +238,7 @@ public static class Simulation
             return;
         }
 
-        // Free to act. A special comes out ahead of the normal its button would give. Normals don't
-        // cancel into each other or into specials yet (cancels, links).
+        // Free to act. A special comes out ahead of the normal its button would give.
         var special = Specials.FireballStrength(state, player, fighter.LastMoveFrame);
         if (special >= 0)
         {
@@ -396,6 +402,41 @@ public static class Simulation
                 return move;
         }
         return -1;
+    }
+
+    // Cancels the fighter's move, if it connected and is still in its window, into a buffered special
+    // (if the move is special-cancelable) or a buffered normal its chain allows. The buffer reaches
+    // back over the hitstop, so a press or motion made during the normal comes out on the first
+    // frame after the freeze.
+    private static bool Cancel(ref GameState state, int player)
+    {
+        ref var fighter = ref state.Fighters[player];
+        var stats = Characters.Characters.Placeholder.Stats;
+        var now = state.Frame;
+
+        if (Cancels.SpecialCancelable(fighter, stats.CancelWindow))
+        {
+            var special = Specials.FireballStrength(state, player, fighter.LastMoveFrame);
+            if (special >= 0)
+            {
+                StartMove(ref fighter, Specials.Fireball, now, backThrow: false);
+                fighter.SpecialStrength = special;
+                return true;
+            }
+        }
+
+        if (Cancels.Open(fighter, stats.ChainWindow))
+        {
+            var history = state.Inputs[player];
+            var crouching = Numpad.Vertical(Numpad.Direction(history.At(now, now), fighter.Facing)) < 0;
+            var next = BufferedNormal(state, history, fighter.LastMoveFrame, crouching ? NormalStance.Crouching : NormalStance.Standing);
+            if (Cancels.Chains(fighter.Move, next))
+            {
+                StartMove(ref fighter, next, now, backThrow: false);
+                return true;
+            }
+        }
+        return false;
     }
 
     // LP+LK completed on this frame or within the throw leniency after it (up to now).
