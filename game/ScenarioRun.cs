@@ -44,21 +44,32 @@ public partial class ScenarioRun : Node
             DirAccess.MakeDirRecursiveAbsolute(_goldenDir);
     }
 
-    // Called by Main after each display frame's simulation step.
-    public async void AfterStep(GameState state, int ticks)
+    // Called by Main after each display frame's simulation step, with the scenario's frame: the
+    // sim's frame, or for a Flow scenario the display frame (the sim doesn't tick on the menus).
+    public async void AfterStep(int frame, int ticks)
     {
         if (_finishing)
             return;
         _ticksPerFrame.Add(ticks);
 
-        if (_pending.Remove(state.Frame))
+        if (_pending.Remove(frame))
         {
             await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
-            Capture(state.Frame);
+            Capture(frame);
         }
 
-        if (state.Frame >= _scenario.Frames && _pending.Count == 0)
+        if (frame >= _scenario.Frames && _pending.Count == 0)
             Finish();
+    }
+
+    // A check the scenario makes along the way (the pause leaving the match untouched): a failure
+    // fails the run like a golden mismatch.
+    public void Check(bool ok, string what)
+    {
+        if (ok)
+            GD.Print($"ok   {_scenario.Name}: {what}");
+        else
+            Fail($"{_scenario.Name}: {what}");
     }
 
     private void Capture(int frame)

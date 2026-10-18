@@ -35,17 +35,35 @@ public partial class Main : Node2D
     private Training.InputDisplay _inputDisplay = null!;
     private Training.FrameDataPanel _frameData = null!;
 
-    // The loop: title, a match, its results, and a rematch or back to the title. Character select
-    // and the rest of the menus come with Menus; for now Versus goes straight into a match.
+    // The menus' flow: press start, the main menu, character select (versus; training skips it), the
+    // match, its results, and from there a rematch, select or the title. Back steps one screen back
+    // anywhere. Pause is an overlay on the match that stops the simulation outright. Menus never
+    // touch the match except to start one with its settings and seed.
     private enum Flow
     {
-        Title,
+        PressStart,
+        Menu,
+        Select,
         Match,
         Results,
     }
 
+    private const string PauseAction = "pause";
+
     private Flow _flow = Flow.Match;
     private int _matchNumber;
+    private Menus.MatchSettings _settings = Menus.MatchSettings.Training;
+    private static readonly Color DefaultP1 = new(0.85f, 0.2f, 0.25f);
+    private static readonly Color DefaultP2 = new(0.2f, 0.4f, 0.85f);
+
+    // Paused: the match is frozen (no ticks run) under the pause screens. Local only: online play
+    // can't stop the other player's clock, so it will need its own rule (a mutual pause, or none).
+    private UI.Screens.PauseScreen.Page? _paused;
+
+    // Flow scenarios count display frames, and check the paused match doesn't move.
+    private int _displayFrame;
+    private string? _heldAction;
+    private (int Frame, ulong Checksum, int SimFrame)? _pauseCheck;
     private MatchPresenter _presenter = null!;
     private FX.EffectsView _effects = null!;
     private CanvasLayer _screens = null!;
@@ -110,10 +128,13 @@ public partial class Main : Node2D
             return;
         }
 
+        EnsurePauseAction();
+        UI.Screens.SelectScreen.EnsureColorAction();
+
         if (Arg(args, "--scenario") is { } name)
             StartScenario(name, args);
         else
-            ShowTitle();
+            ShowPressStart();
         PresentView(0);
     }
 
@@ -125,69 +146,174 @@ public partial class Main : Node2D
             _screens.AddChild(screen);
     }
 
-    // The title's menu over the fighters standing ready. Options come with Menus.
-    private void ShowTitle()
+    // The title, waiting for start (or confirm), over the fighters standing ready.
+    private void ShowPressStart()
     {
-        _flow = Flow.Title;
+        _flow = Flow.PressStart;
+        _paused = null;
         _presenter.Visible = false;
         _state = GameState.NewMatch(MatchSeed);
         _camera.Cut();
         _effects.Clear();
-        var title = new UI.Screens.TitleScreen(menu: true);
-        title.Chosen += item =>
+        ShowScreen(new UI.Screens.TitleScreen());
+    }
+
+    // The main menu. Options arrive with the options task.
+    private void ShowMenu()
+    {
+        _flow = Flow.Menu;
+        var menu = new UI.Screens.TitleScreen(menu: true);
+        menu.Chosen += item =>
         {
             switch (item)
             {
                 case "Versus":
-                    StartMatch(MatchMode.Versus);
+                    ShowSelect();
                     break;
                 case "Training":
-                    StartMatch(MatchMode.Training);
+                    StartMatch(Menus.MatchSettings.Training); // training goes straight in
                     break;
                 case "Quit":
                     GetTree().Quit();
                     break;
             }
         };
-        ShowScreen(title);
+        ShowScreen(menu);
     }
 
-    // A new match from the start positions, recording its own replay. Each match gets the next
-    // seed, so a session's matches are each reproducible from the match number.
-    private void StartMatch(MatchMode mode)
+    // Character select for versus; then the match. One stage, so no stage select yet.
+    private void ShowSelect()
     {
+        _flow = Flow.Select;
+        var select = new UI.Screens.SelectScreen(interactive: true, seed: NextSeed);
+        select.Done += (p1, p2) => StartMatch(new Menus.MatchSettings(MatchMode.Versus, p1, p2));
+        select.Back += ShowMenu;
+        ShowScreen(select);
+    }
+
+    // The seed the next match will have: each match gets the next, so a session's matches are each
+    // reproducible from the match number.
+    private ulong NextSeed => MatchSeed + (ulong)_matchNumber;
+
+    // A new match from the start positions, recording its own replay.
+    private void StartMatch(Menus.MatchSettings settings)
+    {
+        var seed = NextSeed;
         _matchNumber++;
-        var seed = MatchSeed + (ulong)(_matchNumber - 1);
-        _state = GameState.NewMatch(seed, Stage.Training, mode);
-        _recorder = new ReplayRecorder(seed, Stage.Training, new DeviceInputSource(), mode);
-        _input = _recorder;
+        _settings = settings;
+        _playerColors = settings.Colors(DefaultP1, DefaultP2);
+        _state = GameState.NewMatch(seed, Stage.Training, settings.Mode);
+        _recorder = new ReplayRecorder(seed, Stage.Training, new DeviceInputSource(), settings.Mode);
+
+        // A flow scenario plays its scripted players instead of the devices.
+        _input = _scenario is { Flow: true } ? new Scenarios.Source(_scenario) : _recorder;
         _driver = new TickDriver();
         _camera.Cut();
         _effects.Clear();
-        _presenter.Begin();
+        _presenter.Begin(new[] { settings.P1Color, settings.P2Color });
         _flow = Flow.Match;
+        _paused = null;
         ShowScreen(null);
     }
 
     // The match is decided: results over the stage, rematch focused. Rematch skips select (the
-    // same characters, the next seed); character select comes with Menus.
+    // same characters and colors, the next seed).
     private void ShowResults()
     {
         _flow = Flow.Results;
-        var results = new UI.Screens.ResultsScreen(_presenter.Results(_state));
+        var results = new UI.Screens.ResultsScreen(_presenter.Results(_state), new[] { _settings.P1Color, _settings.P2Color });
         results.Chosen += item =>
         {
             switch (item)
             {
                 case "Rematch":
-                    StartMatch(_state.Match.Mode);
+                    StartMatch(_settings);
+                    break;
+                case "Character select":
+                    ShowSelect();
                     break;
                 case "Title":
-                    ShowTitle();
+                    ShowPressStart();
                     break;
             }
         };
         ShowScreen(results);
+    }
+
+    // Pause, or a page of it. The sim stops while any is up (see _Process).
+    private void Pause(UI.Screens.PauseScreen.Page page, string focus = UI.Screens.PauseScreen.Resume)
+    {
+        _paused = page;
+        var screen = new UI.Screens.PauseScreen(page, focus);
+        screen.Chosen += item =>
+        {
+            switch (item)
+            {
+                case UI.Screens.PauseScreen.Resume:
+                    Unpause();
+                    break;
+                case UI.Screens.PauseScreen.MoveListItem:
+                    Pause(UI.Screens.PauseScreen.Page.MoveList);
+                    break;
+                case UI.Screens.PauseScreen.CommandListItem:
+                    Pause(UI.Screens.PauseScreen.Page.Commands);
+                    break;
+                case UI.Screens.PauseScreen.Quit:
+                    Pause(UI.Screens.PauseScreen.Page.ConfirmQuit);
+                    break;
+                case UI.Screens.PauseScreen.Stay:
+                    Pause(UI.Screens.PauseScreen.Page.Menu, UI.Screens.PauseScreen.Quit);
+                    break;
+                case UI.Screens.PauseScreen.QuitConfirmed:
+                    _paused = null;
+                    _presenter.Visible = false;
+                    ShowMenu();
+                    break;
+            }
+        };
+        ShowScreen(screen);
+    }
+
+    private void Unpause()
+    {
+        _paused = null;
+        _pauseCheck = null;
+        ShowScreen(null);
+    }
+
+    // Back, one screen: from a pause page to the pause menu, from pause to the match, from the menu
+    // to the title. Select handles its own (undoing P1's pick first).
+    private void GoBack()
+    {
+        switch (_flow)
+        {
+            case Flow.Match when _paused is UI.Screens.PauseScreen.Page.MoveList:
+                Pause(UI.Screens.PauseScreen.Page.Menu, UI.Screens.PauseScreen.MoveListItem);
+                break;
+            case Flow.Match when _paused is UI.Screens.PauseScreen.Page.Commands:
+                Pause(UI.Screens.PauseScreen.Page.Menu, UI.Screens.PauseScreen.CommandListItem);
+                break;
+            case Flow.Match when _paused is UI.Screens.PauseScreen.Page.ConfirmQuit:
+                Pause(UI.Screens.PauseScreen.Page.Menu, UI.Screens.PauseScreen.Quit);
+                break;
+            case Flow.Match when _paused is not null:
+                Unpause();
+                break;
+            case Flow.Menu:
+                ShowPressStart();
+                break;
+        }
+    }
+
+    // Start on a pad, Escape or P on the keyboard.
+    private static void EnsurePauseAction()
+    {
+        if (InputMap.HasAction(PauseAction))
+            return;
+        InputMap.AddAction(PauseAction);
+        InputMap.ActionAddEvent(PauseAction, new InputEventJoypadButton { ButtonIndex = JoyButton.Start });
+        InputMap.ActionAddEvent(PauseAction, new InputEventKey { PhysicalKeycode = Key.Escape });
+        InputMap.ActionAddEvent(PauseAction, new InputEventKey { PhysicalKeycode = Key.P });
     }
 
     // The camera first, then the backdrop, which scrolls by where the camera ended up.
@@ -250,6 +376,10 @@ public partial class Main : Node2D
             System.Array.IndexOf(args, "--update-goldens") >= 0);
         AddChild(_scenarioRun);
         GD.Print($"scenario {_scenario.Name}: seed {_scenario.Seed}, {_scenario.Frames} frames");
+
+        // A flow scenario plays the real menus from the title.
+        if (_scenario.Flow)
+            ShowPressStart();
     }
 
     private static string? Arg(string[] args, string key)
@@ -276,11 +406,20 @@ public partial class Main : Node2D
                 _camera.Cut();
         }
 
+        if (_scenario is { Flow: true } flow)
+            PressScenarioActions(flow);
+
         var start = Stopwatch.GetTimestamp();
         var elapsed = _pacer.ToMicroseconds((long)System.Math.Round(delta * 1_000_000_000));
-        // On the title the fighters stand still: nothing to simulate until a match starts.
-        var ticks = _flow == Flow.Title ? 0 : _driver.Update(ref _state, elapsed, _input);
+
+        // Only a match (and its results) runs the simulation: on the menus the fighters stand still,
+        // and paused, no ticks run at all, so the match is exactly as it was when play resumes.
+        // (Not calling the driver also keeps it from banking time to catch up on afterwards.)
+        var running = _flow is Flow.Match or Flow.Results && _paused is null;
+        var ticks = running ? _driver.Update(ref _state, elapsed, _input) : 0;
         var simMs = Stopwatch.GetElapsedTime(start).TotalMilliseconds;
+        if (_scenario is { Flow: true })
+            CheckPauseHolds();
 
         _overlay.Record(delta * 1000, simMs, ticks, _driver.DroppedTicks, _state.Frame);
         PresentView(ticks);
@@ -289,12 +428,49 @@ public partial class Main : Node2D
         _frameData.Present(_state);
         _presenter.Present(_state);
         _effects.Present(_state);
-        if (_flow == Flow.Match && _state.Match is { Phase: MatchPhase.MatchEnd, PhaseFrame: >= UI.MatchHud.ResultsDelay })
+        if (_flow == Flow.Match && _paused is null && _state.Match is { Phase: MatchPhase.MatchEnd, PhaseFrame: >= UI.MatchHud.ResultsDelay })
             ShowResults();
         _clock?.At(_state.Frame);
         QueueRedraw();
 
-        _scenarioRun?.AfterStep(_state, ticks);
+        _scenarioRun?.AfterStep(_scenario is { Flow: true } ? _displayFrame : _state.Frame, ticks);
+        _displayFrame++;
+    }
+
+    // A flow scenario's scripted UI actions: pressed on their display frame, released on the next.
+    private void PressScenarioActions(Scenario scenario)
+    {
+        if (_heldAction is { } held)
+        {
+            Input.ParseInputEvent(new InputEventAction { Action = held, Pressed = false });
+            _heldAction = null;
+        }
+        if (scenario.Actions?.TryGetValue(_displayFrame, out var action) == true)
+        {
+            Input.ParseInputEvent(new InputEventAction { Action = action, Pressed = true });
+            _heldAction = action;
+        }
+    }
+
+    // The pause test: 60 display frames into a pause, the match must be exactly as it was (same
+    // frame, same checksum).
+    private void CheckPauseHolds()
+    {
+        if (_paused is null)
+        {
+            _pauseCheck = null;
+            return;
+        }
+        if (_pauseCheck is not { } check)
+        {
+            _pauseCheck = (_displayFrame, _state.Checksum(), _state.Frame);
+            return;
+        }
+        if (_displayFrame - check.Frame == 60)
+        {
+            _scenarioRun?.Check(_state.Checksum() == check.Checksum && _state.Frame == check.SimFrame,
+                $"60 frames paused: sim frame {check.SimFrame} -> {_state.Frame}, checksum {check.Checksum:x16} -> {_state.Checksum():x16}");
+        }
     }
 
     // Snap frame deltas to the current screen's refresh rate; a new screen means a new rate.
@@ -345,7 +521,33 @@ public partial class Main : Node2D
     public override void _UnhandledInput(InputEvent @event)
     {
         if (@event is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.F9 })
+        {
             SaveReplay();
+            return;
+        }
+
+        // Pause (Start, Escape or P) first: in a match it pauses, and while paused it steps back
+        // like cancel (Escape is both), so one press never does two things.
+        if (@event.IsActionPressed(PauseAction))
+        {
+            if (_flow == Flow.PressStart)
+                ShowMenu();
+            else if (_flow == Flow.Match && _paused is null && _scenario is null or { Flow: true })
+                Pause(UI.Screens.PauseScreen.Page.Menu);
+            else if (_paused is not null)
+                GoBack();
+            GetViewport().SetInputAsHandled();
+        }
+        else if (@event.IsActionPressed("ui_accept") && _flow == Flow.PressStart)
+        {
+            ShowMenu();
+            GetViewport().SetInputAsHandled();
+        }
+        else if (@event.IsActionPressed("ui_cancel"))
+        {
+            GoBack();
+            GetViewport().SetInputAsHandled();
+        }
     }
 
     // Saves the match so far. Copy the file into replays/ to make it a CI test.

@@ -44,6 +44,9 @@ public abstract partial class Screen : Control, IScenarioClock
     // A menu row was pressed: its text. What it leads to is up to whoever shows the screen.
     public event System.Action<string>? Chosen;
 
+    // For choices that aren't menu rows (a dialog's answers).
+    protected void Choose(string item) => Chosen?.Invoke(item);
+
     protected Button Menu(VBoxContainer into, params string[] items)
     {
         Button? first = null;

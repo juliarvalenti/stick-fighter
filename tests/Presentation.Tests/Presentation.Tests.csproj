@@ -21,6 +21,7 @@
     <Compile Include="../../game/ui/HealthTrail.cs" Link="Linked/HealthTrail.cs" />
     <Compile Include="../../game/ui/Announcer.cs" Link="Linked/Announcer.cs" />
     <Compile Include="../../game/ui/RoundLog.cs" Link="Linked/RoundLog.cs" />
+    <Compile Include="../../game/flow/Triggerable.cs" Link="Linked/Triggerable.cs" />
   </ItemGroup>
 
   <!-- The characters' moves, to check every notation they use reads as glyphs. -->

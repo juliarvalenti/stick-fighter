@@ -22,6 +22,12 @@ public partial class Hud : Control
 
     public HudModel Model { get; set; } = new();
 
+    // Each player's color choice (0 their own, 1 their alternate), so everything player-colored here
+    // matches the fighter on screen: name tags, meters, the combo count.
+    public int[] ColorChoices { get; set; } = { 0, 0 };
+
+    private Color PlayerColor(int index) => Look.Player(index, ColorChoices[index]);
+
     public Hud()
     {
         Size = new Vector2(1280, 720);
@@ -86,7 +92,7 @@ public partial class Hud : Control
     {
         var size = new Vector2(168, 32);
         var tag = new Rect2(mirrored ? anchor.X - size.X : anchor.X, anchor.Y, size.X, size.Y);
-        this.Pill(tag, Look.Player(index));
+        this.Pill(tag, PlayerColor(index));
         this.Text(tag, $"P{index + 1}  {player.Name}", Look.UiBold, Look.UiMedium, Look.Text);
 
         const float pip = 10;
@@ -122,7 +128,7 @@ public partial class Hud : Control
             this.Text(levelBox, "-", Look.Display, Look.UiLarge, Look.InkMuted);
             return;
         }
-        this.Pill(Span(track.Grow(-4), (float)(meter / stocks), mirrored), Look.Player(index));
+        this.Pill(Span(track.Grow(-4), (float)(meter / stocks), mirrored), PlayerColor(index));
         this.Text(levelBox, ((int)meter).ToString(), Look.Display, Look.UiLarge, Look.Ink);
     }
 
@@ -132,7 +138,7 @@ public partial class Hud : Control
         var mirrored = combo.Player == 1;
         var align = mirrored ? HorizontalAlignment.Right : HorizontalAlignment.Left;
         var x = mirrored ? Size.X - Margin - 240 : Margin;
-        var color = Look.Player(combo.Player);
+        var color = PlayerColor(combo.Player);
         Outlined(new Rect2(x, 150, 240, 96), combo.Hits.ToString(), Look.Display, Look.DisplayLarge, color, Look.Paper, align);
         Outlined(new Rect2(x, 238, 240, 30), "HITS", Look.UiBold, Look.UiMedium, Look.Ink, Look.Paper, align);
         Outlined(new Rect2(x, 266, 240, 26), $"{combo.Damage} DAMAGE", Look.UiBold, Look.UiSmall, Look.InkMuted, Look.Paper, align);
