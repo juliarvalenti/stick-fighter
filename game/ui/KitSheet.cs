@@ -109,7 +109,7 @@ public partial class KitSheet : Control
     private void BuildOverlays()
     {
         var toasts = new VBoxContainer();
-        Place(toasts, new Vector2(800, 96), Vector2.Zero);
+        Place(toasts, new Vector2(912, 96), Vector2.Zero);
         toasts.AddChild(new Toast("Controller 2 connected"));
         toasts.AddChild(new Toast("Replay saved", Toast.Kind.Success));
         toasts.AddChild(new Toast("Connection is unstable", Toast.Kind.Warning));

@@ -16,7 +16,8 @@ public partial class Dialog : PanelContainer
         AddChild(column);
 
         column.AddChild(new Label { Text = title, ThemeTypeVariation = UiTheme.Heading });
-        column.AddChild(new Label { Text = body, AutowrapMode = TextServer.AutowrapMode.WordSmart });
+        // A wrapping label needs a width to wrap to, or its minimum height runs away.
+        column.AddChild(new Label { Text = body, AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(416, 0) });
 
         var buttons = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.End };
         column.AddChild(buttons);
