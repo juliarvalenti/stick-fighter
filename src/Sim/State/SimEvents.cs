@@ -45,13 +45,21 @@ public struct SimEvent
 // however often its frame is simulated, and one whose cause a rollback removed is cancelled.
 //
 // Window frames back is enough for the rollback limit and for the most ticks one display frame runs.
+// The ring holds Window frames' worth of the most events a frame can produce, so nothing in the
+// window is ever overwritten.
 [InlineArray(Capacity)]
 public struct SimEventRing
 {
-    public const int Capacity = 16;
-
     // How many frames back the ring is complete for.
     public const int Window = 8;
+
+    // The most events one frame can record. Each fighter's contact gives a hit (or counter hit, or
+    // block), and may add a knockdown (a sweep) and a KO: 3 each, 6 for a trade. Each fighter can
+    // also land from a juggle that frame, a knockdown each: 2 more. A completed throw gives 3 (throw,
+    // knockdown, KO), but grabbed fighters have no hitboxes, so it can't coincide with the contacts.
+    public const int MaxPerFrame = 8;
+
+    public const int Capacity = Window * MaxPerFrame;
 
     public const int EncodedSize = Capacity * SimEvent.EncodedSize;
 

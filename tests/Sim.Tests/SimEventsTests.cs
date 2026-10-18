@@ -85,13 +85,49 @@ public class SimEventsTests
         Assert.Equal(SimEventRing.Capacity + 2, moves[^1]);
     }
 
-    // The ring has to cover the rollback window even in a busy frame: two events a frame (a trade, or
-    // a hit and a KO) for every frame of the window still fit.
     [Fact]
-    public void TheRingCoversTheWindowAtTwoEventsAFrame()
+    public void TheWindowCoversRollbackAndATick()
     {
-        Assert.True(SimEventRing.Capacity >= 2 * SimEventRing.Window);
         Assert.True(SimEventRing.Window >= Replays.SyncTest.MaxRollback);
         Assert.True(SimEventRing.Window >= TickDriver.MaxTicksPerUpdate);
+    }
+
+    // The worst case: every frame of the window records the most events a frame can. All of them are
+    // still there; the next frame's overwrite only the oldest frame's, which has left the window.
+    [Fact]
+    public void AFullWindowIsNeverOverwritten()
+    {
+        var state = GameState.NewMatch(1);
+        for (var frame = 0; frame < SimEventRing.Window; frame++)
+        {
+            state.Frame = frame;
+            for (var e = 0; e < SimEventRing.MaxPerFrame; e++)
+                SimEvents.Add(ref state, EventKind.Hit, 0, 1, frame * 100 + e, default);
+        }
+
+        var kept = new HashSet<int>();
+        for (var slot = 0; slot < SimEventRing.Capacity; slot++)
+            kept.Add(state.Events[slot].Move);
+        Assert.Equal(SimEventRing.Window * SimEventRing.MaxPerFrame, kept.Count);
+
+        state.Frame = SimEventRing.Window;
+        for (var e = 0; e < SimEventRing.MaxPerFrame; e++)
+            SimEvents.Add(ref state, EventKind.Hit, 0, 1, SimEventRing.Window * 100 + e, default);
+        for (var slot = 0; slot < SimEventRing.Capacity; slot++)
+            Assert.True(state.Events[slot].Frame >= 1, "only frame 0's events were overwritten");
+    }
+
+    // A real busy frame: both fighters' jabs trade, and both are on their last point of health.
+    // Four events on one frame (two hits, two KOs), all kept.
+    [Fact]
+    public void ATradeKoRecordsFourEventsOnOneFrame()
+    {
+        var state = Apart(60);
+        state.Fighters[0].Health = 1;
+        state.Fighters[1].Health = 1;
+        var events = Events(state, 20, f => f == 0 ? new FrameInput(Buttons.LightPunch, Buttons.LightPunch) : default);
+        Assert.Equal(4, events.Count);
+        Assert.All(events, e => Assert.Equal(events[0].Frame, e.Frame));
+        Assert.Equal(2, events.FindAll(e => e.Kind == EventKind.Ko).Count);
     }
 }
