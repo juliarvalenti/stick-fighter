@@ -1,0 +1,6 @@
+# effects volume 80 (-3.9 dB), 6 voices
+# music volume 80 (-3.9 dB, -10 dB more paused)
+display frame    0  music Menu
+display frame   22  music Match
+display frame   51  music ducked
+display frame   81  music back up
