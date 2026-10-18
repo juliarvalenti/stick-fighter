@@ -162,6 +162,12 @@ public static class Scenarios
         // The loser is down (crouching, until knockdowns exist).
         new Scenario("style-results", 1, _ => new FrameInput(Buttons.None, Buttons.Down), Captures: new[] { 30 },
             Frames: 30, Setup: s => Place(s, 260, 1020), StyleFrame: () => new ResultsFrame()),
+
+        // The UI kit: every component in every state, then the input glyphs.
+        new Scenario("ui-kit", 1, _ => default, Captures: new[] { 2 }, Frames: 2,
+            StyleFrame: () => new UI.KitSheet(UI.KitSheet.Page.Components)),
+        new Scenario("ui-glyphs", 1, _ => default, Captures: new[] { 2 }, Frames: 2,
+            StyleFrame: () => new UI.KitSheet(UI.KitSheet.Page.Glyphs)),
     };
 
     // Puts the fighters at these screen x positions. The view centers on the fighters, so a pair
