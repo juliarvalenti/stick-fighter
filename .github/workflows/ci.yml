@@ -79,7 +79,9 @@ jobs:
 
   scenarios:
     name: Scenarios and golden images
-    runs-on: ubuntu-latest
+    # Pinned: Mesa comes from this image's apt, and a new rasterizer can shift every golden at once.
+    # Bump it deliberately, with tools/update-goldens.sh in the same PR.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -151,6 +153,9 @@ jobs:
           dest="$HOME/Library/Application Support/Godot/export_templates/${GODOT_VERSION}.stable.mono"
           mkdir -p "$dest"
           mv templates/templates/* "$dest/"
+      # Replays on arm64 macOS too, so the cross-platform determinism check runs both ways.
+      - name: Replays
+        run: dotnet run --project tools/ReplayRunner -- check replays
       - run: $GODOT --headless --import
       - name: Export
         run: |
