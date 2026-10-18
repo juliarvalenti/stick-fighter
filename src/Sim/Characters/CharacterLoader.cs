@@ -19,11 +19,14 @@ public static class CharacterLoader
 
     private static readonly string[] PoseNames = { "stand", "crouch", "walkForward", "walkBack" };
 
-    public static Character Load(string json, string source)
+    // `json` is the character (stats, skeleton, stance poses); `movesJson` is its compiled moves
+    // (tools/MoveCompiler's output), or null for a character with no moves yet.
+    public static Character Load(string json, string? movesJson, string source)
     {
         try
         {
             using var doc = JsonDocument.Parse(json);
+            using var movesDoc = movesJson is null ? null : JsonDocument.Parse(movesJson);
             var root = doc.RootElement;
             var hash = new DataHasher();
 
@@ -41,8 +44,11 @@ public static class CharacterLoader
             }
 
             var moves = ImmutableArray.CreateBuilder<Move>();
-            foreach (var move in Obj(root, "moves", isArray: true).EnumerateArray())
-                moves.Add(ReadMove(move, hash));
+            if (movesDoc is not null)
+            {
+                foreach (var move in Obj(movesDoc.RootElement, "moves", isArray: true).EnumerateArray())
+                    moves.Add(ReadMove(move, hash));
+            }
             for (var i = 0; i < moves.Count; i++)
             {
                 for (var j = i + 1; j < moves.Count; j++)
@@ -101,10 +107,30 @@ public static class CharacterLoader
             var active = Positive(m, "active", h);
             var recovery = Int(m, "recovery", h);
             var hitbox = Obj(m, "hitbox");
-            var limbName = Str(hitbox, "limb");
-            if (!Enum.TryParse<Limb>(limbName, ignoreCase: true, out var limb))
-                throw new CharacterDataException($"hitbox limb '{limbName}' is not a limb ({string.Join(", ", Enum.GetNames<Limb>())})");
-            h.Add((int)limb);
+            var limb = Parse<Limb>(hitbox, "limb", h);
+            var total = startup - 1 + active + recovery;
+
+            var hurt = ImmutableArray.CreateBuilder<HurtModifier>();
+            if (m.TryGetProperty("hurt", out var hurtList))
+            {
+                foreach (var entry in hurtList.EnumerateArray())
+                {
+                    var from = Int(entry, "from", h);
+                    var to = Int(entry, "to", h);
+                    if (from < 0 || to < from || to >= total)
+                        throw new CharacterDataException($"hurt frames {from}..{to} are outside the move (0..{total - 1})");
+                    hurt.Add(new HurtModifier(Parse<Limb>(entry, "limb", h), Parse<HurtMode>(entry, "mode", h), from, to));
+                }
+            }
+
+            Spawn? spawn = null;
+            if (m.TryGetProperty("spawn", out var spawnEntry))
+            {
+                var frame = Int(spawnEntry, "frame", h);
+                if (frame < 0 || frame >= total)
+                    throw new CharacterDataException($"spawn frame {frame} is outside the move (0..{total - 1})");
+                spawn = new Spawn(frame, Parse<Joint>(spawnEntry, "from", h));
+            }
 
             var move = new Move(
                 Name: name,
@@ -123,7 +149,9 @@ public static class CharacterLoader
                 HitboxLimb: limb,
                 HitboxRadius: Fix.FromInt(Positive(hitbox, "radius", h)),
                 ActiveBonus: Fix.FromInt(Int(hitbox, "activeBonus", h)),
-                Track: ReadTrack(Obj(m, "keys", isArray: true), startup - 1 + active + recovery, "pose", h));
+                Hurt: hurt.ToImmutable(),
+                Spawn: spawn,
+                Track: ReadTrack(Obj(m, "keys", isArray: true), total, "pose", h));
             return move;
         }
         catch (CharacterDataException e)

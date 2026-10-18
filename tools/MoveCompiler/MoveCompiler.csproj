@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Compiles move scripts (data/moves) into the integer pose data the game loads. Outside src/Sim,
+       so it may use floats: everything it emits is rounded to integers and checked by the sim's FK. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <RootNamespace>StickFighter.MoveCompiler</RootNamespace>
+    <AssemblyName>StickFighter.MoveCompiler</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/Sim/Sim.csproj" />
+  </ItemGroup>
+</Project>

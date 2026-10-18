@@ -16,7 +16,8 @@ A real-time 2D fighting game in Godot 4 (C#), in the spirit of Street Fighter 4,
 | `tests/Sim.Tests/` | xUnit tests for the simulation. They run without Godot. |
 | `game/` | Presentation: Godot scenes and nodes that draw the simulation and poll input. |
 | `project.godot`, `StickFighter.csproj` | The Godot project. It references `src/Sim`. |
-| `data/characters/` | Character data: stats, skeleton, keyed poses and moves, as integer JSON. Embedded in the Sim assembly and validated at load; bad data fails naming the move and key. |
+| `data/characters/` | Character data: stats, skeleton, stance poses (`<name>.json`) and compiled moves (`<name>.moves.json`, generated), as integer JSON. Embedded in the Sim assembly and validated at load; bad data fails naming the move and key. |
+| `data/moves/` | Move scripts (`<name>.scripts.json`) and the key-pose library. `tools/MoveCompiler` compiles them into `data/characters/<name>.moves.json`; edit the scripts, never the compiled file. |
 
 The simulation never depends on the presentation. The rules for the game live in the room's `context/rules`.
 
@@ -45,7 +46,10 @@ Every PR has to pass these:
 - **Replays.** Every `replays/*.sfr` must replay to the same checksum on every frame. `ReplayRunner check` prints the first diverging frame. In the game, **F9** saves the current match to `user://replays/`; copy it into `replays/` to turn a bug into a test. After a deliberate behavior change, `ReplayRunner rerecord replays` rewrites the checksums. Review that diff.
 - **Scenarios and golden images.** Each scenario in `game/Scenarios.cs` is a scripted match. The game renders its own viewport to PNG at chosen frames and compares each capture with `tests/golden/`. CI uploads every capture, plus a `.diff.png` on a mismatch, as the `scenarios` artifact. Reviewers look at those instead of opening a build. The `pacing` scenario fails if any jittered 60 Hz frame runs other than one tick. Every visible feature adds a scenario.
 
+- **Moves.** `tools/MoveCompiler --check` fails if the compiled moves don't match their scripts, or if any frame breaks the body checks (elbows or knees bending backwards, no planted foot, a foot through the floor, a shin through the torso). Each move has a `sheet-<input>` scenario: every frame side by side with boxes, compared with its golden image.
+
 ```sh
+dotnet run --project tools/MoveCompiler       # after editing data/moves/: recompile, then commit both
 dotnet format StickFighter.sln --verify-no-changes
 dotnet run -c Release --project tools/Bench
 dotnet run --project tools/ReplayRunner -- check replays

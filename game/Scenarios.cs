@@ -19,13 +19,29 @@ public sealed record Scenario(
     bool Boxes = false,
     bool Overlay = false,
     bool PacingCheck = false,
-    Func<GameState, GameState>? Setup = null);
+    Func<GameState, GameState>? Setup = null,
+    string? PoseSheet = null);
 
 public static class Scenarios
 {
     private static readonly FrameInput WalkIn = new(Buttons.Right, Buttons.Left);
 
-    public static readonly IReadOnlyList<Scenario> All = new[]
+    // Built on first use, after the static match scenarios below exist.
+    private static IReadOnlyList<Scenario>? _all;
+
+    public static IReadOnlyList<Scenario> All => _all ??= Build();
+
+    private static IReadOnlyList<Scenario> Build()
+    {
+        var all = new List<Scenario>(Match);
+
+        // One pose sheet per move: `sheet-5LP`, `sheet-j.HK`, ...
+        foreach (var move in Sim.Characters.Characters.Placeholder.Moves)
+            all.Add(new Scenario($"sheet-{move.Input}", 1, _ => default, Captures: new[] { 1 }, Frames: 1, PoseSheet: move.Input));
+        return all;
+    }
+
+    private static readonly Scenario[] Match =
     {
         // Both fighters walk together and stop at the pushboxes; boxes on.
         new Scenario("walk-in", 1, _ => WalkIn, Captures: new[] { 1, 30, 90 }, Frames: 90, Boxes: true),

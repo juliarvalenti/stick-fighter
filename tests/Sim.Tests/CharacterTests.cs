@@ -9,8 +9,9 @@ namespace StickFighter.Sim.Tests;
 
 public class CharacterDataTests
 {
-    private static readonly string FilePath = Path.Combine(RepoRoot(), "data", "characters", "placeholder.json");
-    private static string Json => File.ReadAllText(FilePath);
+    private static readonly string Dir = Path.Combine(RepoRoot(), "data", "characters");
+    private static string Json => File.ReadAllText(Path.Combine(Dir, "placeholder.json"));
+    private static string Moves => File.ReadAllText(Path.Combine(Dir, "placeholder.moves.json"));
     private static Character Data => Characters.Characters.Placeholder;
 
     [Fact]
@@ -29,36 +30,69 @@ public class CharacterDataTests
     [Fact]
     public void LoadingTheSameFileTwiceGivesTheSameHash()
     {
-        var a = CharacterLoader.Load(Json, "a");
-        var b = CharacterLoader.Load(Json, "b");
+        var a = CharacterLoader.Load(Json, Moves, "a");
+        var b = CharacterLoader.Load(Json, Moves, "b");
         Assert.Equal(a.DataHash, b.DataHash);
-        Assert.Equal(Data.DataHash, a.DataHash); // the embedded copy is the same file
+        Assert.Equal(Data.DataHash, a.DataHash); // the embedded copies are the same files
     }
 
     [Fact]
     public void WhitespaceDoesNotChangeTheHashButANumberDoes()
     {
         var reformatted = Json.Replace("\n", "\n  ", StringComparison.Ordinal);
-        Assert.Equal(Data.DataHash, CharacterLoader.Load(reformatted, "x").DataHash);
+        Assert.Equal(Data.DataHash, CharacterLoader.Load(reformatted, Moves, "x").DataHash);
 
         var tweaked = Json.Replace("\"walkForward\": 7517", "\"walkForward\": 7518", StringComparison.Ordinal);
-        Assert.NotEqual(Data.DataHash, CharacterLoader.Load(tweaked, "x").DataHash);
+        Assert.NotEqual(Data.DataHash, CharacterLoader.Load(tweaked, Moves, "x").DataHash);
+
+        var tweakedMove = ReplaceFirst(Moves, "\"damage\": 20", "\"damage\": 21");
+        Assert.NotEqual(Data.DataHash, CharacterLoader.Load(Json, tweakedMove, "x").DataHash);
     }
 
+    // Breaks the first occurrence in the compiled moves (5LP is the first move).
     [Theory]
-    [InlineData("\"frame\": 5, \"hip\": [0, -112], \"angles\": { \"spine\": 30", "\"frame\": 1, \"hip\": [0, -112], \"angles\": { \"spine\": 30", "move 5LP: pose key 3: frame 1 is not after")]
-    [InlineData("\"startup\": 4", "\"startup\": 4.5", "move 5LP: 'startup' must be a whole number")]
-    [InlineData("\"limb\": \"frontForearm\"", "\"limb\": \"tail\"", "move 5LP: hitbox limb 'tail' is not a limb")]
+    [InlineData("\"frame\": 7, \"hip\"", "\"frame\": 3, \"hip\"", "move 5LP: pose key 5: frame 3 is not after the previous key's frame 6")]
+    [InlineData("\"startup\": 4,", "\"startup\": 4.5,", "move 5LP: 'startup' must be a whole number")]
+    [InlineData("\"limb\": \"frontForearm\"", "\"limb\": \"tail\"", "move 5LP: 'limb' = 'tail' is not one of")]
     [InlineData("\"strength\": \"light\"", "\"strength\": \"mighty\"", "move 5LP: 'strength' = 'mighty' is not one of")]
-    [InlineData("\"walkBack\": 5011", "\"walkBack\": 0", "'walkBack' must be positive")]
-    [InlineData("\"frame\": 8, \"hip\"", "\"frame\": 11, \"hip\"", "move 5LP: pose key 4: frame 11 is past the end (length 11)")]
-    public void BadDataFailsLoudlyNamingWhere(string find, string replace, string message)
+    [InlineData("\"frame\": 10, \"hip\"", "\"frame\": 11, \"hip\"", "move 5LP: pose key 8: frame 11 is past the end (length 11)")]
+    public void BadMoveDataFailsLoudlyNamingWhere(string find, string replace, string message)
     {
-        var broken = Json.Replace(find, replace, StringComparison.Ordinal);
-        Assert.NotEqual(Json, broken);
-        var error = Assert.Throws<FormatException>(() => CharacterLoader.Load(broken, "placeholder.json"));
+        var broken = ReplaceFirst(Moves, find, replace);
+        var error = Assert.Throws<FormatException>(() => CharacterLoader.Load(Json, broken, "placeholder.json"));
         Assert.Contains(message, error.Message, StringComparison.Ordinal);
         Assert.StartsWith("placeholder.json: ", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BadCharacterDataFailsLoudly()
+    {
+        var broken = Json.Replace("\"walkBack\": 5011", "\"walkBack\": 0", StringComparison.Ordinal);
+        var error = Assert.Throws<FormatException>(() => CharacterLoader.Load(broken, Moves, "placeholder.json"));
+        Assert.Contains("'walkBack' must be positive", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AllBaselineNormalsAndTheFireballAreLoaded()
+    {
+        string[] inputs =
+        {
+            "5LP", "5MP", "5HP", "5LK", "5MK", "5HK", "2LP", "2MP", "2HP", "2LK", "2MK", "2HK",
+            "j.LP", "j.MP", "j.HP", "j.LK", "j.MK", "j.HK", "236P",
+        };
+        foreach (var input in inputs)
+            Assert.NotNull(Data.FindMove(input));
+        Assert.Equal(inputs.Length, Data.Moves.Length);
+        Assert.Equal(Guard.Low, Data.FindMove("2HK")!.Guard);
+        Assert.Equal(15, Data.FindMove("2MK")!.Blockstun);
+        Assert.NotNull(Data.FindMove("236P")!.Spawn);
+    }
+
+    private static string ReplaceFirst(string text, string find, string replace)
+    {
+        var at = text.IndexOf(find, StringComparison.Ordinal);
+        Assert.True(at >= 0, $"'{find}' not found");
+        return string.Concat(text.AsSpan(0, at), replace, text.AsSpan(at + find.Length));
     }
 
     [Fact]

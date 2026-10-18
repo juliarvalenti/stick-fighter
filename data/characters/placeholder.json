@@ -31,7 +31,7 @@
   },
 
   "poses": {
-    "comment": "Keyed poses that hold until the next key. Angles are local: spine from straight up, neck from the spine, shoulders and hips from straight down the spine, elbows and knees from their parent bone. Guard hands stay within 16 px of the centre line, so two fighters at minimum distance (pushboxes touching) never cross arms.",
+    "comment": "Keyed poses that hold until the next key. Angles are local: spine from straight up, neck from the spine, shoulders from straight down the spine, hips from straight down (so leaning keeps the feet planted), elbows and knees from their parent bone. Guard hands stay within 16 px of the centre line, so two fighters at minimum distance (pushboxes touching) never cross arms.",
     "stand": {
       "length": 1,
       "keys": [
@@ -56,36 +56,13 @@
     "walkBack": {
       "length": 32,
       "keys": [
-        { "frame": 0, "hip": [0, -115], "angles": { "spine": -20, "neck": 0, "backShoulder": 222, "backElbow": -417, "frontShoulder": 40, "frontElbow": -1769, "backHip": -163, "backKnee": 280, "frontHip": -73, "frontKnee": 281 } },
-        { "frame": 8, "hip": [0, -112], "angles": { "spine": -20, "neck": 0, "backShoulder": 289, "backElbow": -527, "frontShoulder": -46, "frontElbow": -1783, "backHip": -271, "backKnee": 335, "frontHip": 2, "frontKnee": 317 } },
-        { "frame": 16, "hip": [0, -115], "angles": { "spine": -20, "neck": 0, "backShoulder": 222, "backElbow": -417, "frontShoulder": 40, "frontElbow": -1769, "backHip": -41, "backKnee": 262, "frontHip": -170, "frontKnee": 272 } },
-        { "frame": 24, "hip": [0, -112], "angles": { "spine": -20, "neck": 0, "backShoulder": 289, "backElbow": -527, "frontShoulder": -46, "frontElbow": -1783, "backHip": 23, "backKnee": 296, "frontHip": -273, "frontKnee": 316 } }
+        { "frame": 0, "hip": [0, -115], "angles": { "spine": -20, "neck": 0, "backShoulder": 222, "backElbow": -417, "frontShoulder": 40, "frontElbow": -1769, "backHip": -183, "backKnee": 280, "frontHip": -93, "frontKnee": 281 } },
+        { "frame": 8, "hip": [0, -112], "angles": { "spine": -20, "neck": 0, "backShoulder": 289, "backElbow": -527, "frontShoulder": -46, "frontElbow": -1783, "backHip": -291, "backKnee": 335, "frontHip": -18, "frontKnee": 317 } },
+        { "frame": 16, "hip": [0, -115], "angles": { "spine": -20, "neck": 0, "backShoulder": 222, "backElbow": -417, "frontShoulder": 40, "frontElbow": -1769, "backHip": -61, "backKnee": 262, "frontHip": -190, "frontKnee": 272 } },
+        { "frame": 24, "hip": [0, -112], "angles": { "spine": -20, "neck": 0, "backShoulder": 289, "backElbow": -527, "frontShoulder": -46, "frontElbow": -1783, "backHip": 3, "backKnee": 296, "frontHip": -293, "frontKnee": 316 } }
       ]
     }
   },
 
-  "moves": [
-    {
-      "comment": "Startup includes the first active frame, so the hitbox is out on frames startup-1 .. startup-1+active-1 (0-based). Not executed yet: Normals and getting hit uses it.",
-      "name": "Standing light punch",
-      "input": "5LP",
-      "startup": 4,
-      "active": 2,
-      "recovery": 6,
-      "damage": 20,
-      "stun": 50,
-      "strength": "light",
-      "guard": "mid",
-      "pushbackHit": 12,
-      "pushbackBlock": 14,
-      "hitbox": { "limb": "frontForearm", "radius": 8, "activeBonus": 4 },
-      "keys": [
-        { "frame": 0, "hip": [0, -112], "angles": { "spine": 0, "neck": 0, "backShoulder": 291, "backElbow": -519, "frontShoulder": -27, "frontElbow": -1830, "backHip": -18, "backKnee": 317, "frontHip": -291, "frontKnee": 335 } },
-        { "frame": 2, "hip": [0, -112], "angles": { "spine": 30, "neck": 0, "backShoulder": 291, "backElbow": -519, "frontShoulder": -700, "frontElbow": -500, "backHip": -18, "backKnee": 317, "frontHip": -291, "frontKnee": 335 } },
-        { "frame": 3, "hip": [0, -112], "angles": { "spine": 60, "neck": -30, "backShoulder": 291, "backElbow": -519, "frontShoulder": -1000, "frontElbow": 0, "backHip": -18, "backKnee": 317, "frontHip": -291, "frontKnee": 335 } },
-        { "frame": 5, "hip": [0, -112], "angles": { "spine": 30, "neck": 0, "backShoulder": 291, "backElbow": -519, "frontShoulder": -700, "frontElbow": -500, "backHip": -18, "backKnee": 317, "frontHip": -291, "frontKnee": 335 } },
-        { "frame": 8, "hip": [0, -112], "angles": { "spine": 0, "neck": 0, "backShoulder": 291, "backElbow": -519, "frontShoulder": -27, "frontElbow": -1830, "backHip": -18, "backKnee": 317, "frontHip": -291, "frontKnee": 335 } }
-      ]
-    }
-  ]
+  "comment-moves": "Moves live in placeholder.moves.json, compiled from the scripts in data/moves/placeholder/ by tools/MoveCompiler."
 }
