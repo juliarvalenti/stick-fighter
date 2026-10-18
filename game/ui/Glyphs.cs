@@ -19,12 +19,18 @@ public static partial class Glyphs
 
     // A control that shows a notation's glyphs, sized to fit. `onPanel` draws light-on-dark.
     public static Control For(string notation, float height = DefaultHeight, bool onPanel = false) =>
-        new GlyphStrip(notation, height, onPanel);
+        new GlyphStrip(Notation.Parse(notation), height, onPanel);
 
-    public static float Width(string notation, float height = DefaultHeight)
+    // The same for glyphs that aren't a whole move (a dash, 66, has no button).
+    public static Control For(IReadOnlyList<Glyph> glyphs, float height = DefaultHeight, bool onPanel = false) =>
+        new GlyphStrip(glyphs, height, onPanel);
+
+    public static float Width(string notation, float height = DefaultHeight) => Width(Notation.Parse(notation), height);
+
+    public static float Width(IReadOnlyList<Glyph> glyphs, float height = DefaultHeight)
     {
         var width = 0f;
-        foreach (var glyph in Notation.Parse(notation))
+        foreach (var glyph in glyphs)
             width += WidthOf(glyph, height) + Gap;
         return width - Gap;
     }
@@ -159,19 +165,19 @@ public static partial class Glyphs
 
     private sealed partial class GlyphStrip : Control
     {
-        private readonly string _notation;
+        private readonly IReadOnlyList<Glyph> _glyphs;
         private readonly float _height;
         private readonly bool _onPanel;
 
-        public GlyphStrip(string notation, float height, bool onPanel)
+        public GlyphStrip(IReadOnlyList<Glyph> glyphs, float height, bool onPanel)
         {
-            _notation = notation;
+            _glyphs = glyphs;
             _height = height;
             _onPanel = onPanel;
-            CustomMinimumSize = new Vector2(Width(notation, height), height);
+            CustomMinimumSize = new Vector2(Width(glyphs, height), height);
             MouseFilter = MouseFilterEnum.Ignore;
         }
 
-        public override void _Draw() => Glyphs.Draw(this, Vector2.Zero, _notation, _height, _onPanel);
+        public override void _Draw() => Glyphs.Draw(this, Vector2.Zero, _glyphs, _height, _onPanel);
     }
 }
