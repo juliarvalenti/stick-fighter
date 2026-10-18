@@ -29,7 +29,11 @@ public sealed record Scenario(
     Dictionary<int, string>? Actions = null,
     Action<Training.TrainingSession>? Training = null,
     int TrainingMenuAt = -1,
-    Dictionary<int, (int Device, bool Connected)>? Pads = null);
+    Dictionary<int, (int Device, bool Connected)>? Pads = null,
+    bool SoundLog = false);
+
+// A SoundLog scenario logs every combat sound started or cancelled, with its frame, and compares the
+// log with a text golden (tests/golden/<name>.txt): the evidence for sound, since CI can't hear.
 
 // A Flow scenario runs the game's own menus from the title: its frames, captures and Actions are
 // counted in display frames (the sim doesn't tick on the menus), and Actions are Godot input actions
@@ -66,6 +70,7 @@ public static class Scenarios
             Throws(),
             VersusMatch(),
             Sparks(),
+            SoundCombat(),
             TrainingRoom(),
         };
 
@@ -105,6 +110,59 @@ public static class Scenarios
     // its spark (11, 51, 91): a hit spark, the block spark (P2 holding back), and the counter-hit
     // spark (P2 starts a heavy kick as P1 punches, so the punch lands in its startup).
     private const int SparkPeriod = 40;
+
+    // Every combat sound, one step every SoundPeriod frames from a reset, P1 attacking P2 at
+    // point-blank (gap 60) unless said: a light, medium and heavy hit; a block (P2 holding back); a
+    // counter hit (P2 starts a heavy kick as P1's punch lands); a whiff (a jab from 300 away); a
+    // throw (and its knockdown); a sweep (a hit and a knockdown); and the KO (P2 on 1 health). The
+    // log is the evidence: which sounds started on which frames.
+    private const int SoundPeriod = 50;
+
+    private static readonly (Buttons P1, Buttons Hold, Buttons P2, int Gap)[] SoundSteps =
+    {
+        (Buttons.LightPunch, default, default, 60),
+        (Buttons.MediumPunch, default, default, 60),
+        (Buttons.HeavyPunch, default, default, 60),
+        (Buttons.MediumPunch, default, Buttons.Right, 60),
+        (Buttons.MediumPunch, default, Buttons.HeavyKick, 60),
+        (Buttons.LightPunch, default, default, 300),
+        (Buttons.LightPunch | Buttons.LightKick, default, default, 60),
+        (Buttons.Down | Buttons.HeavyKick, Buttons.Down, default, 60),
+        (Buttons.HeavyPunch, default, default, 60),
+    };
+
+    private static Scenario SoundCombat()
+    {
+        FrameInput Script(int frame)
+        {
+            var k = frame / SoundPeriod;
+            var f = frame % SoundPeriod;
+            if (k >= SoundSteps.Length)
+                return default;
+            var step = SoundSteps[k];
+            var p1 = f == 1 ? step.P1 : f < 8 ? step.Hold : default;
+            var p2 = step.P2 == Buttons.Right ? step.P2 : f == 1 ? step.P2 : default; // holding back, or one press
+            return new FrameInput(p1, p2);
+        }
+
+        GameState Reset(GameState s)
+        {
+            var k = s.Frame / SoundPeriod;
+            if (s.Frame % SoundPeriod != 0 || k >= SoundSteps.Length)
+                return s;
+            var fresh = GameState.NewMatch(1);
+            s.Fighters[0] = fresh.Fighters[0];
+            s.Fighters[1] = fresh.Fighters[1];
+            s.Fighters[0].Position = new FixVec2(Fix.FromInt(610), s.Fighters[0].Position.Y);
+            s.Fighters[1].Position = new FixVec2(Fix.FromInt(610 + SoundSteps[k].Gap), s.Fighters[1].Position.Y);
+            if (k == SoundSteps.Length - 1)
+                s.Fighters[1].Health = 1;
+            return s;
+        }
+
+        return new Scenario("sound-combat", 1, Script, Array.Empty<int>(), SoundSteps.Length * SoundPeriod,
+            EachFrame: Reset, SoundLog: true);
+    }
 
     private static Scenario Sparks()
     {

@@ -1,0 +1,13 @@
+# effects volume 80 (-3.9 dB), 6 voices
+frame    4  HitLight    P1  pitch 1.007
+frame   57  HitMedium   P1  pitch 0.976
+frame  108  HitHeavy    P1  pitch 0.996
+frame  157  Block       P1  pitch 1.035
+frame  207  CounterHit  P1  pitch 1.043
+frame  254  Whiff       P1  pitch 0.989
+frame  310  Throw       P1  pitch 0.975
+frame  310  Knockdown   P1  pitch 1.032
+frame  357  HitHeavy    P1  pitch 1.023
+frame  357  Knockdown   P1  pitch 1.011
+frame  408  HitHeavy    P1  pitch 0.986
+frame  408  Ko          P1  pitch 1.033
