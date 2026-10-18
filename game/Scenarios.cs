@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using StickFighter.Sim;
 using StickFighter.Sim.Numerics;
+using StickFighter.StyleFrames;
 
 namespace StickFighter;
 
@@ -21,7 +22,8 @@ public sealed record Scenario(
     bool PacingCheck = false,
     Func<GameState, GameState>? Setup = null,
     string? PoseSheet = null,
-    Func<GameState, GameState>? EachFrame = null);
+    Func<GameState, GameState>? EachFrame = null,
+    Func<Godot.Control>? StyleFrame = null);
 
 public static class Scenarios
 {
@@ -126,7 +128,29 @@ public static class Scenarios
         // exactly one tick, or walking would stutter.
         new Scenario("pacing", 1, f => f % 120 < 60 ? WalkIn : default, Captures: Array.Empty<int>(), Frames: 600,
             PacingCheck: true),
+
+        // Style frames: mock screens in the style guide's palette, type and shapes, drawn over the
+        // real fighters. Placeholder data, no behavior; they're the look the screens are built to.
+        new Scenario("style-hud", 1, _ => default, Captures: new[] { 30 }, Frames: 30,
+            Setup: s => Place(s, 500, 780), StyleFrame: () => new HudFrame()),
+        new Scenario("style-title", 1, _ => default, Captures: new[] { 30 }, Frames: 30,
+            Setup: s => Place(s, 380, 900), StyleFrame: () => new TitleFrame()),
+        new Scenario("style-select", 1, _ => default, Captures: new[] { 30 }, Frames: 30,
+            Setup: s => Place(s, 300, 980), StyleFrame: () => new SelectFrame()),
+        // The loser is down (crouching, until knockdowns exist).
+        new Scenario("style-results", 1, _ => new FrameInput(Buttons.None, Buttons.Down), Captures: new[] { 30 },
+            Frames: 30, Setup: s => Place(s, 260, 1020), StyleFrame: () => new ResultsFrame()),
     };
+
+    // Puts the fighters at these screen x positions. The view centers on the fighters, so a pair
+    // placed symmetrically about the stage center lands where the style frame expects them.
+    private static GameState Place(GameState s, int x1, int x2)
+    {
+        var offset = s.Stage.Center - Fix.FromInt(Stage.ScreenWidth / 2);
+        s.Fighters[0].Position = new FixVec2(Fix.FromInt(x1) + offset, s.Fighters[0].Position.Y);
+        s.Fighters[1].Position = new FixVec2(Fix.FromInt(x2) + offset, s.Fighters[1].Position.Y);
+        return s;
+    }
 
     public static Scenario? Find(string name)
     {
