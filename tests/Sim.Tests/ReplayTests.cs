@@ -28,10 +28,21 @@ public class ReplayTests
     }
 
     [Fact]
-    public void ARecordedMatchReplaysToTheSameChecksums()
+    public void ARecordedMatchReplaysTheSame()
     {
         var replay = Recorded(240);
-        Assert.Equal(-1, replay.FirstDivergence(out _, out _));
+        Assert.Null(replay.Verify());
+    }
+
+    // Behavior every 60 frames and on the last, not a checksum per frame: 1,800 frames is 30 lines.
+    [Fact]
+    public void CheckpointsAreSparse()
+    {
+        var replay = Replay.Record(11, Stage.Training, Recorded(1800).Inputs);
+        Assert.Equal(30, replay.Checkpoints.Count);
+        Assert.Equal(59, replay.Checkpoints[0].Frame);
+        Assert.Equal(1799, replay.Checkpoints[^1].Frame);
+        Assert.Equal(2, Replay.Record(11, Stage.Training, Recorded(70).Inputs).Checkpoints.Count); // 59 and the last, 69
     }
 
     [Fact]
@@ -55,8 +66,16 @@ public class ReplayTests
 
         Assert.Equal(replay.Seed, read.Seed);
         Assert.Equal(replay.Frames, read.Frames);
-        Assert.Equal(replay.Checksums, read.Checksums);
+        Assert.Equal(replay.FinalChecksum, read.FinalChecksum);
+        Assert.Equal(replay.Checkpoints.Count, read.Checkpoints.Count);
         Assert.Equal(text, read.Write());
+    }
+
+    [Fact]
+    public void ACheckpointReadsAsBehavior()
+    {
+        var text = Replay.Record(1, Stage.Training, new FrameInput[60]).Write();
+        Assert.Contains("at 59 p1 1080 600 1 Stand 60 1000 p2 1480 600 -1 Stand 60 1000\n", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -66,28 +85,53 @@ public class ReplayTests
         Assert.Contains("input 0008 0014 10\n", text); // p1 Right, p2 Left + LP, for 10 frames
     }
 
+    // A changed input shows at the first checkpoint after it, naming what differs; a trace of that
+    // range on the original and the tampered replay narrows it to the frame.
     [Fact]
-    public void AChangedInputShowsTheFirstDivergingFrame()
+    public void AChangedInputShowsAtTheNextCheckpointAndTraceFindsTheFrame()
     {
         var replay = Recorded(100);
         var inputs = new FrameInput[replay.Frames];
         for (var i = 0; i < inputs.Length; i++)
             inputs[i] = replay.Inputs[i];
-        inputs[42] = new FrameInput(Buttons.Left, Buttons.Right);
+        inputs[42] = new FrameInput(Buttons.HeavyKick, Buttons.Left); // P1 kicks instead of walking in
 
-        var tampered = new Replay(replay.Seed, replay.DataHash, replay.Stage, inputs, replay.Checksums);
-        Assert.Equal(42, tampered.FirstDivergence(out var expected, out var actual));
-        Assert.NotEqual(expected, actual);
+        var tampered = new Replay(replay.Seed, replay.DataHash, replay.Stage, inputs, replay.Checkpoints, replay.FinalChecksum);
+        var mismatch = tampered.Verify();
+        Assert.NotNull(mismatch);
+        Assert.Equal(59, mismatch.Value.Frame);
+        Assert.Contains(mismatch.Value.Differences, d => d.StartsWith("P1 action: ", StringComparison.Ordinal));
+
+        var before = System.Linq.Enumerable.ToList(replay.Trace(0, 59));
+        var after = System.Linq.Enumerable.ToList(tampered.Trace(0, 59));
+        Assert.Equal(42, before.FindIndex(line => !after.Contains(line)));
+    }
+
+    // Same behavior at every checkpoint but a different final state: what a new field does. It's
+    // reported as such, not as a divergence somewhere.
+    [Fact]
+    public void AnEncodingOnlyDifferenceIsReportedAsSuch()
+    {
+        var replay = Recorded(100);
+        var other = new Replay(replay.Seed, replay.DataHash, replay.Stage, replay.Inputs, replay.Checkpoints, replay.FinalChecksum ^ 1);
+        var mismatch = replay.Compare(other);
+        Assert.NotNull(mismatch);
+        Assert.Equal(-1, mismatch.Value.Frame);
+        Assert.StartsWith("final checksum", mismatch.Value.Differences[0], StringComparison.Ordinal);
     }
 
     [Theory]
     [InlineData("not-a-replay 1\nseed 1\nframes 0\nfinal 0\n")]
     [InlineData("stick-fighter-replay 99\nseed 1\ndata 00\nframes 0\nfinal 0\n")]
-    [InlineData("stick-fighter-replay 3\nseed 1\ndata 00\nstage 0 2560 600 1280\nframes 2\ninput 0000 0000 1\nchecksum 00\nfinal 00\n")]
-    [InlineData("stick-fighter-replay 3\nseed 1\ndata 00\nstage 0 2560 600 1280\nframes 0\nbogus line\n")]
-    [InlineData("stick-fighter-replay 3\nseed 1\nstage 0 2560 600 1280\nframes 0\nfinal 0\n")] // no data line
-    [InlineData("stick-fighter-replay 3\nseed 1\ndata 00\nframes 0\nfinal 0\n")] // no stage line
-    [InlineData("stick-fighter-replay 3\nseed 1\ndata 00\nstage 0 2560 600\nframes 0\nfinal 0\n")] // short stage line
+    [InlineData("stick-fighter-replay 4\nseed 1\ndata 00\nstage 0 2560 600 1280\nframes 2\ninput 0000 0000 1\nfinal 00\n")] // too few inputs
+    [InlineData("stick-fighter-replay 4\nseed 1\ndata 00\nstage 0 2560 600 1280\nframes 1\ninput 0000 0000 1\nfinal 00\n")] // no checkpoint
+    [InlineData("stick-fighter-replay 4\nseed 1\ndata 00\nstage 0 2560 600 1280\nframes 1\ninput 0000 0000 1\nat 0 p1 1\nfinal 00\n")] // short checkpoint
+    [InlineData("stick-fighter-replay 4\nseed 1\ndata 00\nstage 0 2560 600 1280\nframes 0\nbogus line\n")]
+    [InlineData("stick-fighter-replay 4\nseed 1\ndata 00\nstage 0 2560 600 1280\nframes 0\n")] // no final checksum
+    [InlineData("stick-fighter-replay 4\nseed 1\nstage 0 2560 600 1280\nframes 0\nfinal 0\n")] // no data line
+    [InlineData("stick-fighter-replay 4\nseed 1\ndata 00\nframes 0\nfinal 0\n")] // no stage line
+    [InlineData("stick-fighter-replay 4\nseed 1\ndata 00\nstage 0 2560 600\nframes 0\nfinal 0\n")] // short stage line
+    [InlineData("stick-fighter-replay 3\nseed 1\ndata 00\nstage 0 2560 600 1280\nframes 1\ninput 0000 0000 1\nchecksum 00\nfinal 00\n")] // old: rerecord it
     public void MalformedReplaysAreRejected(string text)
     {
         Assert.Throws<FormatException>(() => Replay.Read(text));
@@ -102,17 +146,17 @@ public class ReplayTests
 
         var read = Replay.Read(replay.Write());
         Assert.Equal(stage, read.Stage);
-        Assert.Equal(-1, read.FirstDivergence(out _, out _));
+        Assert.Null(read.Verify());
     }
 
     [Fact]
     public void TheStageIsInTheChecksum()
     {
-        // The same inputs on another stage give other checksums from the very first frame, so a
-        // replay can't quietly pass on a stage it wasn't recorded on.
+        // The same inputs on another stage give another final checksum, so a replay can't quietly
+        // pass on a stage it wasn't recorded on.
         var inputs = Recorded(10).Inputs;
         var wider = Replay.Record(11, new Stage(0, 2560, 600, 1281), inputs);
-        Assert.NotEqual(Replay.Record(11, Stage.Training, inputs).Checksums[0], wider.Checksums[0]);
+        Assert.NotEqual(Replay.Record(11, Stage.Training, inputs).FinalChecksum, wider.FinalChecksum);
     }
 
     [Fact]
@@ -120,7 +164,7 @@ public class ReplayTests
     {
         const string v2 = "stick-fighter-replay 2\nseed 1\ndata 00\nframes 1\ninput 0000 0000 1\nchecksum 00\nfinal 0000000000000000\n";
         var error = Assert.Throws<FormatException>(() => Replay.Read(v2));
-        Assert.Contains("stage", error.Message, StringComparison.Ordinal);
+        Assert.Contains("rerecord", error.Message, StringComparison.Ordinal);
         Assert.Equal(Stage.Training, Replay.Read(v2, allowOldVersions: true).Stage);
     }
 
@@ -137,7 +181,7 @@ public class ReplayTests
     public void AReplayFromOtherDataIsFlagged()
     {
         var replay = Recorded(30);
-        var other = new Replay(replay.Seed, replay.DataHash ^ 1, replay.Stage, replay.Inputs, replay.Checksums);
+        var other = new Replay(replay.Seed, replay.DataHash ^ 1, replay.Stage, replay.Inputs, replay.Checkpoints, replay.FinalChecksum);
         Assert.False(other.MatchesLoadedData);
     }
 

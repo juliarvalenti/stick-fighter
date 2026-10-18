@@ -1,4 +1,4 @@
-stick-fighter-replay 3
+stick-fighter-replay 4
 seed 1
 data 5cd46efa9b5d33eb
 stage 0 2560 600 1280
@@ -6,58 +6,5 @@ frames 54
 input 0008 0004 23
 input 0010 0010 1
 input 0000 0000 30
-checksum 56d3ca2c61b11cb4
-checksum ca20fd07396dd4d7
-checksum 88639b3317e856ae
-checksum 4750993a370131c6
-checksum 9de8b72a1a926b29
-checksum 2f27c3387824562b
-checksum 90c8fd309ad701fe
-checksum b7476d8715602f98
-checksum f75103b0f6520fc9
-checksum 7bd6720a3a767a6a
-checksum 875ebc02f08147fb
-checksum 2719837b82920ca4
-checksum 5fcefbd762ba3968
-checksum e80c0233075f67e7
-checksum 1be816436269e8f8
-checksum 5d6695800930b2f6
-checksum acef4edc43b210e6
-checksum 6fdcd071e907e2aa
-checksum 10e470c20d567388
-checksum 9351c416efb6977b
-checksum a61bdb3b7c170228
-checksum f42589407a172305
-checksum 9cd77690919e765c
-checksum 3857feb70fc2db56
-checksum 16c6661813db2f4f
-checksum 8dacdfea3c42b4f4
-checksum e585e3fc8e0a1bf3
-checksum 4013577151aa8dfc
-checksum bc5756a046f756e4
-checksum 9f7efa3e97448539
-checksum 1ae9f8da70c824b0
-checksum f64d9d4eff325343
-checksum 7cef79238a6c154b
-checksum d76192a55654412e
-checksum 71ecb7c53dfe6f78
-checksum 259d39331605fe52
-checksum c2d86be2182676f4
-checksum 20717e6bdeafed80
-checksum 083723c3736a30be
-checksum 7017e472193e9d89
-checksum fabe83c3ba00b991
-checksum dc509ebce788fc94
-checksum 7f14779fca9dbb50
-checksum 03ce3d1cb28b9b80
-checksum 3a218c70080364df
-checksum 6810ccab94f9ea7f
-checksum 1df75558d185d373
-checksum 276bb5726a4540fd
-checksum 19573381091040c9
-checksum 5f9b9d978f728a71
-checksum e755a671bcf1cdd3
-checksum 727411edad8eab94
-checksum 41e4dfcd72cfd041
-checksum 1d41d3a849bd51ae
+at 53 p1 1238 600 1 Stand 13 980 p2 1322 600 -1 Stand 13 980
 final 1d41d3a849bd51ae
