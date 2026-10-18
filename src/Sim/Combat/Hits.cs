@@ -18,6 +18,9 @@ public static class Hits
         var p1Guarding = Guarding(state, 0, out var p1Crouching);
         var p2Guarding = Guarding(state, 1, out var p2Crouching);
 
+        // The longest hitstop among this frame's hits and blocks: in a trade both freeze for it.
+        var freeze = 0;
+
         for (var c = 0; c < contacts.Count; c++)
         {
             var contact = contacts[c];
@@ -38,8 +41,10 @@ public static class Hits
             if (guarding && Blocking.RightHeight(move.Guard, crouching))
             {
                 Block(ref attacker, ref defender, move, crouching, state.Stage);
+                freeze = move.HitstopOnBlock > freeze ? move.HitstopOnBlock : freeze;
                 continue;
             }
+            freeze = move.HitstopOnHit > freeze ? move.HitstopOnHit : freeze;
 
             defender.Blockstun = 0;
             defender.Health = defender.Health > move.Damage ? defender.Health - move.Damage : 0;
@@ -54,6 +59,8 @@ public static class Hits
 
             Push(ref attacker, ref defender, Fix.FromInt(move.PushbackHit), state.Stage);
         }
+
+        Hitstop.Start(ref state, freeze);
     }
 
     // Holding back (away from the attacker, by position) while free to guard.

@@ -14,6 +14,8 @@ public static class StateDiff
         var lines = new List<string>();
         Compare("Frame", expected.Frame, actual.Frame, lines);
         Compare("Rng", expected.Rng, actual.Rng, lines);
+        Compare("FreezeFrom", expected.FreezeFrom, actual.FreezeFrom, lines);
+        Compare("FreezeUntil", expected.FreezeUntil, actual.FreezeUntil, lines);
         for (var p = 0; p < GameState.PlayerCount; p++)
         {
             for (var slot = 0; slot < InputHistory.Depth; slot++)
