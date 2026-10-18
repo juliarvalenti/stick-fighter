@@ -3,6 +3,7 @@
 //   dotnet run --project tools/ReplayRunner -- check replays/          every *.sfr must reproduce
 //   dotnet run --project tools/ReplayRunner -- rerecord replays/       after a deliberate sim change
 //   dotnet run --project tools/ReplayRunner -- generate out.sfr SEED FRAMES
+//   dotnet run --project tools/ReplayRunner -- script out.sfr NAME      a scripted match, see Scripts
 //
 // check prints the first diverging frame of each failing replay and exits 1 if any fail.
 // rerecord keeps each replay's inputs and rewrites its checksums; review the diff, since this is
@@ -26,10 +27,9 @@ switch (args[0])
     case "rerecord":
         return Rerecord(args[1]);
     case "generate" when args.Length == 4:
-        var replay = Replay.Record(ulong.Parse(args[2]), Walkabout(ulong.Parse(args[2]), int.Parse(args[3])));
-        File.WriteAllText(args[1], replay.Write());
-        Console.WriteLine($"wrote {args[1]}: {replay.Frames} frames, final {replay.FinalChecksum:x16}");
-        return 0;
+        return Write(args[1], Replay.Record(ulong.Parse(args[2]), Stage.Training, Walkabout(ulong.Parse(args[2]), int.Parse(args[3]))));
+    case "script" when args.Length == 3 && Scripts(args[2]) is { } script:
+        return Write(args[1], Replay.Record(1, Stage.Training, script));
     default:
         return Usage();
 }
@@ -83,8 +83,8 @@ static int Rerecord(string folder)
 {
     foreach (var file in Files(folder))
     {
-        var old = Replay.Read(File.ReadAllText(file), allowVersion1: true);
-        var updated = Replay.Record(old.Seed, old.Inputs);
+        var old = Replay.Read(File.ReadAllText(file), allowOldVersions: true);
+        var updated = Replay.Record(old.Seed, old.Stage, old.Inputs);
         File.WriteAllText(file, updated.Write());
         Console.WriteLine($"rerecorded {file}: final {old.FinalChecksum:x16} -> {updated.FinalChecksum:x16}");
     }
@@ -116,8 +116,54 @@ static Buttons RandomButtons(ref Rng rng)
     return rng.Chance(1, 2) ? buttons & Buttons.Directions : buttons;
 }
 
+// Scripted matches on the training stage, as runs of (p1, p2, frames). P1 starts on the left
+// facing right and P2 on the right facing left, so Left is back for P1 and forward for P2.
+static List<FrameInput>? Scripts(string name) => name switch
+{
+    // Both walk back to the separation limit and stop; then P1 alone keeps walking back from a
+    // standing P2 (the moving invisible wall), and follows P2 as P2 walks back too.
+    "stage-apart" => Runs(
+        (Buttons.Left, Buttons.Right, 150),
+        (Buttons.Left, Buttons.None, 60),
+        (Buttons.Left, Buttons.Right, 60),
+        (Buttons.None, Buttons.Left, 60),
+        (Buttons.Left, Buttons.None, 60)),
+
+    // Both walk left into the left wall, then right into the right wall.
+    "stage-walls" => Runs(
+        (Buttons.Left, Buttons.Left, 300),
+        (Buttons.Right, Buttons.Right, 600)),
+
+    // P2 corners P1, then backs off to the separation limit while P1 holds back in the corner,
+    // then P1 walks out of the corner after P2.
+    "stage-corner" => Runs(
+        (Buttons.Left, Buttons.Left, 300),
+        (Buttons.Left, Buttons.Right, 300),
+        (Buttons.Right, Buttons.Right, 120)),
+
+    _ => null,
+};
+
+static List<FrameInput> Runs(params (Buttons P1, Buttons P2, int Frames)[] runs)
+{
+    var inputs = new List<FrameInput>();
+    foreach (var (p1, p2, frames) in runs)
+    {
+        for (var i = 0; i < frames; i++)
+            inputs.Add(new FrameInput(p1, p2));
+    }
+    return inputs;
+}
+
+static int Write(string file, Replay replay)
+{
+    File.WriteAllText(file, replay.Write());
+    Console.WriteLine($"wrote {file}: {replay.Frames} frames, final {replay.FinalChecksum:x16}");
+    return 0;
+}
+
 static int Usage()
 {
-    Console.WriteLine("usage: ReplayRunner check|rerecord <folder> | generate <file> <seed> <frames>");
+    Console.WriteLine("usage: ReplayRunner check|rerecord <folder> | generate <file> <seed> <frames> | script <file> <name>");
     return 2;
 }

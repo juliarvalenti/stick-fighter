@@ -132,7 +132,7 @@ public class PoseTests
 
     private static FighterState At(int x, int facing, FighterAction action, int frame = 0) => new()
     {
-        Position = new FixVec2(Fix.FromInt(x), Stage.Floor),
+        Position = new FixVec2(Fix.FromInt(x), Stage.Training.Floor),
         Facing = facing,
         Action = (int)action,
         ActionFrame = frame,
@@ -155,7 +155,7 @@ public class PoseTests
     {
         var joints = Body.Pose(At(640, 1, action, frame));
         foreach (var foot in new[] { Joint.BackFoot, Joint.FrontFoot })
-            Assert.InRange((joints[foot].Y - Stage.Floor).RoundToInt(), -2, 2);
+            Assert.InRange((joints[foot].Y - Stage.Training.Floor).RoundToInt(), -2, 2);
     }
 
     [Theory]

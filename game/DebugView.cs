@@ -52,6 +52,7 @@ public partial class DebugView : Node2D
 
     public override void _Draw()
     {
+        DrawSetTransform(new Vector2(-Main.ViewLeft(_state, GetViewportRect().Size.X), 0));
         for (var i = 0; i < GameState.PlayerCount; i++)
             DrawFighter(_state.Fighters[i]);
 

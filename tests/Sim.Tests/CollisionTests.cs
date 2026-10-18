@@ -81,8 +81,8 @@ public class PushingTests
     private static GameState Apart(int p1X, int p2X)
     {
         var state = GameState.NewMatch(1);
-        state.Fighters[0].Position = new FixVec2(Fix.FromInt(p1X), Stage.Floor);
-        state.Fighters[1].Position = new FixVec2(Fix.FromInt(p2X), Stage.Floor);
+        state.Fighters[0].Position = new FixVec2(Fix.FromInt(p1X), Stage.Training.Floor);
+        state.Fighters[1].Position = new FixVec2(Fix.FromInt(p2X), Stage.Training.Floor);
         return state;
     }
 
@@ -127,7 +127,7 @@ public class PushingTests
     public void OddOverlapIsNotGivenToEitherPlayer()
     {
         var state = Apart(600, 600);
-        state.Fighters[1].Position = new FixVec2(Fix.FromInt(600) + Fix.FromRaw(1), Stage.Floor);
+        state.Fighters[1].Position = new FixVec2(Fix.FromInt(600) + Fix.FromRaw(1), Stage.Training.Floor);
         var midpoint = (state.Fighters[0].Position.X + state.Fighters[1].Position.X).Raw;
         Pushing.Resolve(ref state);
         Assert.Equal(midpoint, (state.Fighters[0].Position.X + state.Fighters[1].Position.X).Raw);
@@ -145,25 +145,147 @@ public class PushingTests
 
     [Theory]
     [InlineData(40, 70)]     // P1 pinned in the left corner
-    [InlineData(1210, 1240)] // P2 pinned in the right corner
+    [InlineData(2490, 2520)] // P2 pinned in the right corner
     public void AFighterInTheCornerPushesTheOtherOut(int p1X, int p2X)
     {
         var state = Apart(p1X, p2X);
         Pushing.Resolve(ref state);
         Assert.True(state.Fighters[0].Position.X >= Body.PushHalfWidth);
-        Assert.True(state.Fighters[1].Position.X <= Stage.RightWall - Body.PushHalfWidth);
+        Assert.True(state.Fighters[1].Position.X <= Stage.Training.RightWall - Body.PushHalfWidth);
         Assert.Equal(Body.PushHalfWidth * 2, Gap(state));
     }
 
     [Fact]
-    public void WalkingIntoTheWallStops()
+    public void WalkingIntoEachWallStops()
     {
         var state = GameState.NewMatch(1);
-        var retreat = new FrameInput(Buttons.Left, Buttons.Right);
-        for (var i = 0; i < 300; i++)
-            Simulation.Step(ref state, retreat);
+        Run(ref state, 400, new FrameInput(Buttons.Left, Buttons.Left));
         Assert.Equal(Body.PushHalfWidth, state.Fighters[0].Position.X);
-        Assert.Equal(Stage.RightWall - Body.PushHalfWidth, state.Fighters[1].Position.X);
+        Assert.Equal(Body.PushHalfWidth * 3, state.Fighters[1].Position.X);
+
+        Run(ref state, 600, new FrameInput(Buttons.Right, Buttons.Right));
+        Assert.Equal(Stage.Training.RightWall - Body.PushHalfWidth, state.Fighters[1].Position.X);
+        Assert.Equal(Stage.Training.RightWall - Body.PushHalfWidth * 3, state.Fighters[0].Position.X);
+    }
+
+    [Fact]
+    public void FightersStartInTheMiddleOfAStageWiderThanTheLimit()
+    {
+        var stage = Stage.Training;
+        var state = GameState.NewMatch(1);
+        Assert.Equal(stage.Center * 2, state.Fighters[0].Position.X + state.Fighters[1].Position.X);
+        Assert.True(stage.RightWall - stage.LeftWall >= stage.MaxSeparation * 2);
+        Assert.Equal(Fix.FromInt(Stage.ScreenWidth), stage.MaxSeparation);
+    }
+
+    [Fact]
+    public void WalkingApartStopsBothAtTheLimit()
+    {
+        var state = GameState.NewMatch(1);
+        var apart = new FrameInput(Buttons.Left, Buttons.Right);
+        for (var i = 0; i < 200; i++)
+        {
+            Simulation.Step(ref state, apart);
+            Assert.True(Gap(state) <= Pushing.MaxGap(state.Stage), $"too far apart on frame {state.Frame}");
+        }
+        Assert.Equal(Pushing.MaxGap(state.Stage), Gap(state));
+
+        // Both walked back at the same speed, so they stay centered where they started.
+        Assert.Equal(Stage.Training.Center * 2, state.Fighters[0].Position.X + state.Fighters[1].Position.X);
+
+        // Pushboxes' outer edges span exactly one screen.
+        var outer = state.Fighters[1].Position.X + Body.PushHalfWidth - (state.Fighters[0].Position.X - Body.PushHalfWidth);
+        Assert.Equal(Fix.FromInt(Stage.ScreenWidth), outer);
+    }
+
+    [Fact]
+    public void WalkingBackFromAStandingOpponentStopsAtTheLimit()
+    {
+        var state = GameState.NewMatch(1);
+        var p2 = state.Fighters[1].Position.X;
+        Run(ref state, 300, new FrameInput(Buttons.Left, Buttons.None));
+        Assert.Equal(p2, state.Fighters[1].Position.X); // the standing fighter isn't dragged
+        Assert.Equal(p2 - Pushing.MaxGap(state.Stage), state.Fighters[0].Position.X);
+    }
+
+    [Fact]
+    public void TheLimitMovesWithTheOpponent()
+    {
+        var state = GameState.NewMatch(1);
+        Run(ref state, 300, new FrameInput(Buttons.Left, Buttons.None));
+        var p1 = state.Fighters[0].Position.X;
+
+        // P2 walks forward and P1 keeps walking back: P1 moves again at full speed, because P2
+        // closes the gap faster than P1 opens it.
+        Simulation.Step(ref state, new FrameInput(Buttons.Left, Buttons.Left));
+        Assert.Equal(p1 - Characters.Characters.Placeholder.Stats.WalkBack, state.Fighters[0].Position.X);
+
+        // Now P2 walks back from a standing P1, and it's P2 that stops at the limit.
+        p1 = state.Fighters[0].Position.X;
+        Run(ref state, 300, new FrameInput(Buttons.None, Buttons.Right));
+        Assert.Equal(p1, state.Fighters[0].Position.X);
+        Assert.Equal(Pushing.MaxGap(state.Stage), Gap(state));
+    }
+
+    [Fact]
+    public void BackingOffFromACorneredOpponentStopsAtTheLimit()
+    {
+        var state = GameState.NewMatch(1);
+        Run(ref state, 300, new FrameInput(Buttons.Left, Buttons.Left));
+        Run(ref state, 300, new FrameInput(Buttons.Left, Buttons.Right));
+        Assert.Equal(Body.PushHalfWidth, state.Fighters[0].Position.X);
+        Assert.Equal(Body.PushHalfWidth + Pushing.MaxGap(state.Stage), state.Fighters[1].Position.X);
+    }
+
+    [Fact]
+    public void TheLimitDoesNotFavorEitherPlayer()
+    {
+        // The same walk-apart with the players swapped (P2 on the left) ends in the same places.
+        var a = GameState.NewMatch(1);
+        var b = GameState.NewMatch(1);
+        (b.Fighters[0], b.Fighters[1]) = (a.Fighters[1], a.Fighters[0]);
+
+        for (var i = 0; i < 200; i++)
+        {
+            // The left fighter walks back alone at first and the right one joins later, so the
+            // limit pulls unevenly; then the left one turns around.
+            var left = i < 150 ? Buttons.Left : Buttons.Right;
+            var right = i < 50 ? Buttons.None : Buttons.Right;
+            Simulation.Step(ref a, new FrameInput(left, right));
+            Simulation.Step(ref b, new FrameInput(right, left));
+        }
+        Assert.Equal(a.Fighters[0].Position, b.Fighters[1].Position);
+        Assert.Equal(a.Fighters[1].Position, b.Fighters[0].Position);
+    }
+
+    [Fact]
+    public void ASetupTooFarApartIsPulledInEvenly()
+    {
+        var state = Apart(500, 2000);
+        Pushing.Resolve(ref state);
+        Assert.Equal(Pushing.MaxGap(state.Stage), Gap(state));
+        Assert.Equal(Fix.FromInt(2500), state.Fighters[0].Position.X + state.Fighters[1].Position.X);
+    }
+
+    [Fact]
+    public void TheStageComesFromTheMatch()
+    {
+        var narrow = new Stage(100, 900, 500, 600);
+        var state = GameState.NewMatch(1, narrow);
+        Assert.Equal(Fix.FromInt(500), state.Fighters[0].Position.Y);
+        Assert.Equal(Fix.FromInt(1000), state.Fighters[0].Position.X + state.Fighters[1].Position.X);
+
+        Run(ref state, 200, new FrameInput(Buttons.Left, Buttons.Right));
+        Assert.Equal(Fix.FromInt(600) - Body.PushHalfWidth * 2, Gap(state));
+
+        Run(ref state, 200, new FrameInput(Buttons.Left, Buttons.Left));
+        Assert.Equal(Fix.FromInt(100) + Body.PushHalfWidth, state.Fighters[0].Position.X);
+    }
+
+    private static void Run(ref GameState state, int frames, FrameInput input)
+    {
+        for (var i = 0; i < frames; i++)
+            Simulation.Step(ref state, input);
     }
 }
 
