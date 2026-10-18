@@ -19,6 +19,9 @@ public partial class DebugOverlay : CanvasLayer
     private Panel _panel = null!;
     private Label _label = null!;
 
+    // Scenario runs show fixed timings so captures are identical every run.
+    public bool Deterministic { get; set; }
+
     public override void _Ready()
     {
         Layer = 100;
@@ -50,6 +53,18 @@ public partial class DebugOverlay : CanvasLayer
 
         if (!Visible)
             return;
+
+        if (Deterministic)
+        {
+            // Scenario captures: wall-clock numbers would change every run, so show fixed ones.
+            _label.Text =
+                "FPS 60   frame 16.7 ms\n" +
+                $"sim 0.000 ms   ticks {_ticks}   dropped {_dropped}\n" +
+                "render cpu 0.00 ms   gpu 0.00 ms\n" +
+                $"rollback frames 0   sim frame {_frame}";
+            _panel.QueueRedraw();
+            return;
+        }
 
         var viewport = GetViewport().GetViewportRid();
         var renderCpu = RenderingServer.ViewportGetMeasuredRenderTimeCpu(viewport);

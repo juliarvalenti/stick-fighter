@@ -40,7 +40,8 @@ public partial class DebugView : Node2D
             Visible = !Visible;
     }
 
-    public void Show(in GameState state)
+    // Hands the view this frame's state. (Not Show(): CanvasItem.Show() means "make visible".)
+    public void Present(in GameState state)
     {
         _state = state;
         if (!Visible)

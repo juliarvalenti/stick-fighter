@@ -15,19 +15,29 @@ public partial class Main : Node2D
     private static readonly Color[] PlayerColors = { new(0.85f, 0.2f, 0.25f), new(0.2f, 0.4f, 0.85f) };
     private const float Stroke = 10f;
 
-    private GameState _state = GameState.NewMatch(MatchSeed);
-    private readonly TickDriver _driver = new();
     private const ulong MatchSeed = 1;
 
+    // Scenario runs assume a 60 Hz display, whatever the CI machine reports.
+    private const long ScenarioRefreshMilliHz = 60_000;
+
+    private GameState _state = GameState.NewMatch(MatchSeed);
+    private readonly TickDriver _driver = new();
+
     // Every match records its replay; F9 saves it to user://replays/.
-    private readonly ReplayRecorder _input = new(MatchSeed, new DeviceInputSource());
+    private readonly ReplayRecorder _recorder = new(MatchSeed, new DeviceInputSource());
+    private IInputSource _input = null!;
     private DebugOverlay _overlay = null!;
     private DebugView _debugView = null!;
     private FramePacer _pacer = new(0);
     private int _screen = -1;
 
+    private Scenario? _scenario;
+    private ScenarioRun? _scenarioRun;
+    private Sim.Numerics.Rng _jitter = Sim.Numerics.Rng.Create(2024);
+
     public override void _Ready()
     {
+        _input = _recorder;
         UpdatePacer();
 
         _overlay = new DebugOverlay();
@@ -35,32 +45,90 @@ public partial class Main : Node2D
         _debugView = new DebugView();
         AddChild(_debugView);
 
+        var args = OS.GetCmdlineUserArgs();
+
         // `--smoke` (after `--`) runs a few frames and exits 0: the headless check in CI.
-        if (System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--smoke") >= 0)
+        if (System.Array.IndexOf(args, "--smoke") >= 0)
         {
             for (var i = 0; i < 10; i++)
                 Simulation.Step(ref _state, default);
             GD.Print($"{GameInfo.Name}: smoke ok ({GameInfo.TicksPerSecond} ticks/s, frame {_state.Frame})");
             GetTree().CallDeferred(SceneTree.MethodName.Quit, 0);
+            return;
         }
+
+        // `--list-scenarios` prints one `scenario-name <name>` line each, for CI to loop over.
+        if (System.Array.IndexOf(args, "--list-scenarios") >= 0)
+        {
+            foreach (var scenario in Scenarios.All)
+                GD.Print($"scenario-name {scenario.Name}");
+            GetTree().CallDeferred(SceneTree.MethodName.Quit, 0);
+            return;
+        }
+
+        if (Arg(args, "--scenario") is { } name)
+            StartScenario(name, args);
+    }
+
+    private void StartScenario(string name, string[] args)
+    {
+        _scenario = Scenarios.Find(name);
+        if (_scenario is null)
+        {
+            GD.PrintErr($"FAIL unknown scenario '{name}'");
+            GetTree().CallDeferred(SceneTree.MethodName.Quit, 1);
+            return;
+        }
+
+        _state = GameState.NewMatch(_scenario.Seed);
+        if (_scenario.Setup is { } setup)
+            _state = setup(_state);
+        _input = new Scenarios.Source(_scenario);
+        _pacer = new FramePacer(ScenarioRefreshMilliHz);
+        _debugView.Visible = _scenario.Boxes;
+        _overlay.Visible = _scenario.Overlay;
+        _overlay.Deterministic = true;
+
+        _scenarioRun = new ScenarioRun(
+            _scenario,
+            Arg(args, "--out") ?? "user://scenarios",
+            Arg(args, "--golden"),
+            System.Array.IndexOf(args, "--update-goldens") >= 0);
+        AddChild(_scenarioRun);
+        GD.Print($"scenario {_scenario.Name}: seed {_scenario.Seed}, {_scenario.Frames} frames");
+    }
+
+    private static string? Arg(string[] args, string key)
+    {
+        var i = System.Array.IndexOf(args, key);
+        return i >= 0 && i + 1 < args.Length ? args[i + 1] : null;
     }
 
     public override void _Process(double delta)
     {
         UpdatePacer();
+
+        // The pacing scenario adds ±0.3 ms of vsync-like jitter to each frame (run with --fixed-fps 60).
+        if (_scenario is { PacingCheck: true })
+            delta += _jitter.NextInt(-300, 300) / 1_000_000.0;
+
         var start = Stopwatch.GetTimestamp();
         var elapsed = _pacer.ToMicroseconds((long)System.Math.Round(delta * 1_000_000_000));
         var ticks = _driver.Update(ref _state, elapsed, _input);
         var simMs = Stopwatch.GetElapsedTime(start).TotalMilliseconds;
 
         _overlay.Record(delta * 1000, simMs, ticks, _driver.DroppedTicks, _state.Frame);
-        _debugView.Show(_state);
+        _debugView.Present(_state);
         QueueRedraw();
+
+        _scenarioRun?.AfterStep(_state, ticks);
     }
 
     // Snap frame deltas to the current screen's refresh rate; a new screen means a new rate.
     private void UpdatePacer()
     {
+        if (_scenario is not null)
+            return;
         var screen = DisplayServer.WindowGetCurrentScreen();
         if (screen == _screen)
             return;
@@ -113,8 +181,8 @@ public partial class Main : Node2D
         DirAccess.MakeDirRecursiveAbsolute("user://replays");
         var path = $"user://replays/match-{Time.GetDatetimeStringFromSystem().Replace(':', '-')}.sfr";
         using var file = FileAccess.Open(path, FileAccess.ModeFlags.Write);
-        file.StoreString(_input.Build().Write());
-        GD.Print($"Saved replay ({_input.Frames} frames) to {ProjectSettings.GlobalizePath(path)}");
+        file.StoreString(_recorder.Build().Write());
+        GD.Print($"Saved replay ({_recorder.Frames} frames) to {ProjectSettings.GlobalizePath(path)}");
     }
 
     // Live play: devices are sampled once per simulation tick.

@@ -77,10 +77,54 @@ jobs:
           timeout 120 $GODOT --headless --path . --quit-after 600 -- --smoke | tee smoke.log
           grep -q "smoke ok" smoke.log
 
+  scenarios:
+    name: Scenarios and golden images
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+      - name: Install Godot and a software OpenGL stack
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q xvfb libgl1-mesa-dri libglx-mesa0
+          name="Godot_v${GODOT_VERSION}-stable_mono_linux_x86_64"
+          curl -fsSL -o godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/${name}.zip"
+          unzip -q godot.zip -d "$HOME/godot"
+          echo "GODOT=$HOME/godot/${name}/Godot_v${GODOT_VERSION}-stable_mono_linux.x86_64" >> "$GITHUB_ENV"
+      - run: dotnet build StickFighter.sln
+      - run: $GODOT --headless --import
+      # The game renders its own viewport offscreen (Compatibility renderer on Mesa's software
+      # rasterizer) and compares each capture with tests/golden/. No one's screen is involved.
+      - name: Render scenarios and compare with goldens
+        shell: bash
+        env:
+          LIBGL_ALWAYS_SOFTWARE: 1
+        run: |
+          out="$RUNNER_TEMP/scenarios"
+          names=$($GODOT --headless --path . -- --list-scenarios | sed -n 's/^scenario-name //p')
+          status=0
+          for name in $names; do
+            echo "::group::$name"
+            timeout 300 xvfb-run -a -s "-screen 0 1280x720x24" \
+              $GODOT --path . --rendering-method gl_compatibility --rendering-driver opengl3 --fixed-fps 60 \
+              -- --scenario "$name" --out "$out" --golden tests/golden || status=1
+            echo "::endgroup::"
+          done
+          exit $status
+      # Reviewers open these instead of a build. tools/update-goldens.sh copies them into tests/golden/.
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: scenarios
+          path: ${{ runner.temp }}/scenarios
+          retention-days: 30
+
   macos-build:
     name: macOS build
     runs-on: macos-latest
-    needs: [sim-tests, godot-smoke, perf]
+    needs: [sim-tests, godot-smoke, perf, scenarios]
     # Pushes to main, or run by hand (workflow_dispatch) to try the export on a branch.
     if: github.event_name != 'pull_request'
     steps:
@@ -113,6 +157,14 @@ jobs:
           mkdir -p build
           $GODOT --headless --export-release "macOS" build/StickFighter.zip
           test -s build/StickFighter.zip
+      # Proves the exported artifact itself starts, not just the editor build.
+      - name: Launch check on the exported app
+        shell: bash  # pipefail, so a crash fails the step even through tee
+        run: |
+          mkdir -p build/app
+          unzip -q build/StickFighter.zip -d build/app
+          "build/app/Stick Fighter.app/Contents/MacOS/Stick Fighter" --headless -- --smoke | tee build/launch.log
+          grep -q "smoke ok" build/launch.log
       # The zip keeps the app's executable bits, which a bare .app upload would lose.
       - uses: actions/upload-artifact@v4
         with:

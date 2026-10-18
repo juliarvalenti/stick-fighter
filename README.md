@@ -41,16 +41,25 @@ Every PR has to pass these:
 - **Allocations.** `tests/Sim.Tests/AllocationTests.cs` fails if a step or save allocates.
 - **Perf.** `tools/Bench` measures the p99 of one save + step against **1 ms**, and of a rollback frame (1 load + 9 × save + step) against **10 ms**. It also fails a PR that is more than 20% slower than its base branch, measured on the same runner. Differences under 50 µs are ignored as timer noise. Each mode stops after 15 s, so a slow step fails rather than hangs.
 
+- **Replays.** Every `replays/*.sfr` must replay to the same checksum on every frame. `ReplayRunner check` prints the first diverging frame. In the game, **F9** saves the current match to `user://replays/`; copy it into `replays/` to turn a bug into a test. After a deliberate behavior change, `ReplayRunner rerecord replays` rewrites the checksums. Review that diff.
+- **Scenarios and golden images.** Each scenario in `game/Scenarios.cs` is a scripted match. The game renders its own viewport to PNG at chosen frames and compares each capture with `tests/golden/`. CI uploads every capture, plus a `.diff.png` on a mismatch, as the `scenarios` artifact. Reviewers look at those instead of opening a build. The `pacing` scenario fails if any jittered 60 Hz frame runs other than one tick. Every visible feature adds a scenario.
+
 ```sh
 dotnet format StickFighter.sln --verify-no-changes
 dotnet run -c Release --project tools/Bench
+dotnet run --project tools/ReplayRunner -- check replays
+godot --path . --rendering-method gl_compatibility --fixed-fps 60 -- --scenario walk-in --out /tmp/shots
+tools/update-goldens.sh <ci-run-id>   # accept CI's captures as the new goldens after an intended change
 ```
+
+Goldens come from CI's software renderer, not a local machine, since GPUs anti-alias edges slightly differently.
 
 ## CI
 
 `.github/workflows/ci.yml` runs on every pull request and on every push to `main`:
 
-- **Build, lint and tests:** format check, the build with all analyzers, and `dotnet test`.
+- **Build, lint and tests:** format check, the build with all analyzers, `dotnet test` and the replays.
 - **Perf benchmark:** `tools/Bench`, compared against the base branch on PRs.
 - **Godot headless smoke test:** imports the project and runs the main scene headless.
-- **macOS build** (pushes to `main` only): exports a universal, ad-hoc signed app and attaches it to the run as an artifact.
+- **Scenarios and golden images:** renders every scenario under `xvfb` and compares with the goldens.
+- **macOS build** (pushes to `main`, or run by hand): exports a universal, ad-hoc signed app, checks that it launches, and attaches it to the run as an artifact.
