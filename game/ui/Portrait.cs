@@ -89,8 +89,8 @@ public partial class Portrait : Control
         {
             Spine = Angle.FromDegrees(-4),
             Neck = Angle.FromDegrees(-8),
-            FrontShoulder = Angle.FromDegrees(-140),
-            FrontElbow = Angle.FromDegrees(-50),
+            FrontShoulder = Angle.FromDegrees(-118),
+            FrontElbow = Angle.FromDegrees(-35),
             BackShoulder = Angle.FromDegrees(30),
             BackElbow = Angle.FromDegrees(-100),
             BackHip = Angle.FromDegrees(14),
