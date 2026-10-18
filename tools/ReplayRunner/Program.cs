@@ -98,7 +98,7 @@ static int Check(string folder, string? traceOut)
         foreach (var difference in mismatch.Differences)
             Console.WriteLine($"       {difference}");
         var from = previous > 0 ? previous : 0;
-        Console.WriteLine($"     it started after frame {(from > 0 ? from - 1 : 0)}; to find the frame, trace that range on both builds and diff:");
+        Console.WriteLine($"     it started between frames {from} and {mismatch.Frame}; to find the frame, trace that range on both builds and diff:");
         Console.WriteLine($"       ReplayRunner trace {file} {from} {mismatch.Frame}");
         if (traceOut is not null)
         {
