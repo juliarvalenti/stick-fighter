@@ -28,7 +28,8 @@ jobs:
       - name: Build
         run: dotnet build StickFighter.sln
       - name: Tests
-        run: dotnet test StickFighter.sln --no-build
+        # A test stuck in a loop fails after 2 minutes instead of holding the runner.
+        run: dotnet test StickFighter.sln --no-build --blame-hang-timeout 2m
 
   perf:
     name: Perf benchmark

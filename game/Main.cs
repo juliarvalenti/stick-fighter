@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using Godot;
 using StickFighter.Sim;
+using StickFighter.Sim.Collision;
+using StickFighter.Sim.Numerics;
 
 namespace StickFighter;
 
@@ -11,7 +13,6 @@ public partial class Main : Node2D
     private static readonly Color Ink = new(0.1f, 0.1f, 0.12f);
     private static readonly Color[] PlayerColors = { new(0.85f, 0.2f, 0.25f), new(0.2f, 0.4f, 0.85f) };
     private const float Stroke = 10f;
-    private const float FloorY = 600f;
 
     private GameState _state = GameState.NewMatch(1);
     private readonly TickDriver _driver = new();
@@ -63,25 +64,26 @@ public partial class Main : Node2D
     public override void _Draw()
     {
         var size = GetViewportRect().Size;
-        DrawLine(new Vector2(0, FloorY), new Vector2(size.X, FloorY), Ink, 4);
+        var floor = Stage.Floor.ToFloat();
+        DrawLine(new Vector2(0, floor), new Vector2(size.X, floor), Ink, 4);
 
         for (var i = 0; i < GameState.PlayerCount; i++)
             DrawFighter(_state.Fighters[i], PlayerColors[i]);
     }
 
-    private void DrawFighter(in FighterState fighter, Color color)
+    private void DrawFighter(FighterState fighter, Color color)
     {
-        var feet = fighter.Position.ToVector2();
-        var f = fighter.Facing;
-        var hip = feet + new Vector2(0, -110);
-        var neck = hip + new Vector2(0, -120);
+        // Drawn from the same joints the hurtboxes come from, so what you see is what gets hit.
+        Vector2 J(FixVec2 offset) => Body.Joint(fighter, offset).ToVector2();
+        var hip = J(Body.Hip);
+        var neck = J(Body.Neck);
 
-        Limb(hip, feet + new Vector2(-35 * f, 0), color);
-        Limb(hip, feet + new Vector2(35 * f, 0), color);
+        Limb(hip, J(Body.BackFoot), color);
+        Limb(hip, J(Body.FrontFoot), color);
         Limb(hip, neck, color);
-        Limb(neck, neck + new Vector2(-40 * f, 70), color);
-        Limb(neck, neck + new Vector2(70 * f, 20), color);
-        DrawCircle(neck + new Vector2(0, -36), 28, color);
+        Limb(neck, J(Body.BackHand), color);
+        Limb(neck, J(Body.FrontHand), color);
+        DrawCircle(J(Body.Head), Body.HeadSize.ToFloat(), color);
     }
 
     private void Limb(Vector2 from, Vector2 to, Color color)
