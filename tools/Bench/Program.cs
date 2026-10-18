@@ -59,7 +59,7 @@ return failures == 0 ? 0 : 1;
 
 static double[] RunTick()
 {
-    var state = new GameState();
+    var state = GameState.NewMatch(1);
     var saved = new GameState[RollbackFrames + 1];
     var samples = new double[Frames];
     var runStart = Stopwatch.GetTimestamp();
@@ -70,7 +70,7 @@ static double[] RunTick()
     {
         var start = Stopwatch.GetTimestamp();
         saved[frame % saved.Length] = state;
-        Simulation.Step(ref state);
+        Simulation.Step(ref state, Inputs.Walking);
         samples[frame] = Elapsed(start);
     }
     return samples[..Math.Max(frame, 1)];
@@ -78,7 +78,7 @@ static double[] RunTick()
 
 static double[] RunRollback()
 {
-    var state = new GameState();
+    var state = GameState.NewMatch(1);
     var saved = new GameState[RollbackFrames + 1];
     var samples = new double[Frames];
     var runStart = Stopwatch.GetTimestamp();
@@ -86,7 +86,7 @@ static double[] RunRollback()
     for (var i = 0; i < saved.Length; i++)
     {
         saved[i] = state;
-        Simulation.Step(ref state);
+        Simulation.Step(ref state, Inputs.Walking);
     }
 
     var frame = 0;
@@ -97,7 +97,7 @@ static double[] RunRollback()
         for (var i = 0; i <= RollbackFrames; i++)
         {
             saved[(frame + i) % saved.Length] = state;
-            Simulation.Step(ref state);
+            Simulation.Step(ref state, Inputs.Walking);
         }
         samples[frame] = Elapsed(start);
     }
@@ -107,7 +107,7 @@ static double[] RunRollback()
 static void Warmup(ref GameState state, long runStart)
 {
     for (var i = 0; i < 1_000 && !OutOfTime(runStart); i++)
-        Simulation.Step(ref state);
+        Simulation.Step(ref state, Inputs.Walking);
 }
 
 static bool OutOfTime(long runStart) => Elapsed(runStart) > ModeTimeLimitUs;
@@ -136,3 +136,9 @@ static int Regression(string mode, double p99, double baseline)
 }
 
 record Result(double TickP99Us, double RollbackP99Us);
+
+static class Inputs
+{
+    // Both fighters walking toward each other, so every step does real work.
+    public static readonly FrameInput Walking = new(FrameInput.Right, FrameInput.Left);
+}
