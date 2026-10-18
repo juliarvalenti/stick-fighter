@@ -4,8 +4,12 @@ namespace StickFighter.Sim.Net;
 // - its inputs from FirstFrame on, every one the other hasn't acknowledged yet, so a lost message
 //   costs nothing but a little delay (the next carries the same inputs);
 // - Ack: the last of the other's inputs it has, every frame up to it (it can stop resending those);
-// - a checksum of a confirmed frame, if it has one to compare (ChecksumFrame -1 if not).
-public sealed record NetMessage(int FirstFrame, Buttons[] Inputs, int Ack, int ChecksumFrame, ulong Checksum);
+// - a checksum of a confirmed frame, if it has one to compare (ChecksumFrame -1 if not);
+// - for time sync, the frame it's on and how far ahead of the other it thinks it is;
+// - after a desync, Trail: its checksum of every frame from TrailFirst up to the checksum frame
+//   that didn't match, so the other can find the first frame that differs.
+public sealed record NetMessage(int FirstFrame, Buttons[] Inputs, int Ack, int ChecksumFrame, ulong Checksum,
+    int Frame = 0, int Advantage = 0, int TrailFirst = -1, ulong[]? Trail = null);
 
 // One end of a connection. Send never blocks; TryReceive takes what has arrived, oldest first.
 public interface ITransport
