@@ -216,6 +216,80 @@ static List<FrameInput>? Scripts(string name) => name switch
         (Buttons.LightPunch, Buttons.LightPunch, 1),
         (Buttons.None, Buttons.None, 30)),
 
+    // P1 walks in and throws: P2 is held, then lands in front, knocked down, and gets up.
+    "throw" => Runs(
+        (Buttons.Right, Buttons.None, 46),
+        (Buttons.LightPunch | Buttons.LightKick, Buttons.None, 1),
+        (Buttons.None, Buttons.None, 60)),
+
+    // Holding back while throwing: P2 lands behind P1, and the two swap sides.
+    "throw-back" => Runs(
+        (Buttons.Right, Buttons.None, 46),
+        (Buttons.Left | Buttons.LightPunch | Buttons.LightKick, Buttons.None, 1),
+        (Buttons.Left, Buttons.None, 10),
+        (Buttons.None, Buttons.None, 50)),
+
+    // P2 guards a jab (+3), and P1 throws on its first free frame. The throw's first active frame
+    // is P2's last blockstun frame and doesn't grab; the second is P2's first free frame and does.
+    "throw-meaty" => Runs(
+        (Buttons.Right, Buttons.None, 46),
+        (Buttons.LightPunch, Buttons.Right, 1),
+        (Buttons.None, Buttons.Right, 10),
+        (Buttons.LightPunch | Buttons.LightKick, Buttons.Right, 1),
+        (Buttons.None, Buttons.Right, 60)),
+
+    // The meaty throw, teched on the first frame of the window: P2 presses LP+LK four frames
+    // before the grab, in blockstun, so P2's own throw comes out and is in startup when P1's lands.
+    "throw-tech-first" => Runs(
+        (Buttons.Right, Buttons.None, 46),
+        (Buttons.LightPunch, Buttons.Right, 1),
+        (Buttons.None, Buttons.Right, 9),
+        (Buttons.None, Buttons.Right | Buttons.LightPunch | Buttons.LightKick, 1),
+        (Buttons.LightPunch | Buttons.LightKick, Buttons.Right, 1),
+        (Buttons.None, Buttons.Right, 40)),
+
+    // The meaty throw, teched on the last frame of the window: seven frames into the grab.
+    "throw-tech-last" => Runs(
+        (Buttons.Right, Buttons.None, 46),
+        (Buttons.LightPunch, Buttons.Right, 1),
+        (Buttons.None, Buttons.Right, 10),
+        (Buttons.LightPunch | Buttons.LightKick, Buttons.Right, 1),
+        (Buttons.None, Buttons.Right, 9),
+        (Buttons.None, Buttons.Right | Buttons.LightPunch | Buttons.LightKick, 1),
+        (Buttons.None, Buttons.Right, 40)),
+
+    // P1 throws from just out of range and whiffs; P2's standing heavy kick lands in the recovery.
+    "throw-whiff-punished" => Runs(
+        (Buttons.Right, Buttons.None, 39),
+        (Buttons.LightPunch | Buttons.LightKick, Buttons.None, 1),
+        (Buttons.None, Buttons.None, 3),
+        (Buttons.None, Buttons.HeavyKick, 1),
+        (Buttons.None, Buttons.None, 40)),
+
+    // A jab hits (+6), and P1 throws on its first free frame: both active frames are hitstun, so
+    // it whiffs. P2 takes only the jab.
+    "throw-hitstun" => Runs(
+        (Buttons.Right, Buttons.None, 46),
+        (Buttons.LightPunch, Buttons.None, 1),
+        (Buttons.None, Buttons.None, 10),
+        (Buttons.LightPunch | Buttons.LightKick, Buttons.None, 1),
+        (Buttons.None, Buttons.None, 40)),
+
+    // P2 starts a standing heavy kick as P1 throws, and is grabbed in its startup: a counter-hit
+    // throw. P2's LP+LK two frames into the grab is in the window but can't tech, and the throw lands.
+    "throw-counterhit" => Runs(
+        (Buttons.Right, Buttons.None, 46),
+        (Buttons.LightPunch | Buttons.LightKick, Buttons.HeavyKick, 1),
+        (Buttons.None, Buttons.None, 3),
+        (Buttons.None, Buttons.LightPunch | Buttons.LightKick, 1),
+        (Buttons.None, Buttons.None, 60)),
+
+    // Both walk in and throw on the same frame: both tech and break apart.
+    "throw-same-frame" => Runs(
+        (Buttons.Right, Buttons.Left, 23),
+        (Buttons.LightPunch | Buttons.LightKick, Buttons.LightPunch | Buttons.LightKick, 1),
+        (Buttons.None, Buttons.None, 30)),
+
     _ => null,
 };
 

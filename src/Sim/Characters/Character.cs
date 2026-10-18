@@ -24,9 +24,18 @@ public enum FighterAction
     // starts crouching normals). Becomes Crouch after the character's crouch transition frames.
     CrouchDown = 7,
 
+    // Held in the opponent's throw, until it's teched or completes.
+    Thrown = 8,
+
+    // Holding a throw that connected, through the tech check and the follow-through.
+    Throwing = 9,
+
+    // Lying down after a throw (later, after sweeps too). Nothing hits a fighter lying down.
+    Knockdown = 10,
+
     // Performing a move; the pose comes from the move's track, not a stance pose. Last, because
     // every action before it has a stance pose at the same index.
-    Attack = 8,
+    Attack = 11,
 }
 
 public enum Strength
@@ -34,6 +43,15 @@ public enum Strength
     Light,
     Medium,
     Heavy,
+}
+
+public enum MoveKind
+{
+    // Strikes with its hitbox limb.
+    Normal,
+
+    // Grabs an opponent within throw range on its active frames; has no hitbox.
+    Throw,
 }
 
 public enum Guard
@@ -78,7 +96,17 @@ public sealed record Stats(
     int CrouchTransitionFrames,
     // Walking into a fighter who isn't walking in, the share of the walker's step that moves them
     // along (the walker keeps the same share, so the two move together at this fraction of its speed).
-    Fix PushShare);
+    Fix PushShare,
+    // Throws (see the comment in the character data): range feet to feet, tech timing, landing
+    // distance, how long the thrower holds on, and the knockdown and wakeup that follow.
+    Fix ThrowRange,
+    int TechFrame,
+    int TechWindow,
+    Fix TechSeparation,
+    Fix ThrowDistance,
+    int ThrowFollowThrough,
+    int KnockdownFrames,
+    int WakeupThrowInvulnerable);
 
 public sealed record SkeletonSize(
     Fix Spine,
@@ -146,6 +174,7 @@ public sealed record Move(
     int Recovery,
     int Damage,
     int Stun,
+    MoveKind Kind,
     Strength Strength,
     Guard Guard,
     int PushbackHit,

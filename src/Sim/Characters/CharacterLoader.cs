@@ -18,7 +18,10 @@ public static class CharacterLoader
     };
 
     // In FighterAction order; Attack has no stance pose (it plays its move's track).
-    private static readonly string[] PoseNames = { "stand", "crouch", "walkForward", "walkBack", "hitstun", "blockStand", "blockCrouch", "crouchDown" };
+    private static readonly string[] PoseNames =
+    {
+        "stand", "crouch", "walkForward", "walkBack", "hitstun", "blockStand", "blockCrouch", "crouchDown", "thrown", "throwHold", "knockdown",
+    };
 
     // `json` is the character (stats, skeleton, stance poses); `movesJson` is its compiled moves
     // (tools/MoveCompiler's output), or null for a character with no moves yet.
@@ -93,7 +96,15 @@ public static class CharacterLoader
         PushHeight: Fix.FromInt(Positive(s, "pushHeight", h)),
         ProximityGuard: Fix.FromInt(Positive(s, "proximityGuard", h)),
         CrouchTransitionFrames: Positive(s, "crouchTransitionFrames", h),
-        PushShare: Fix.FromRatio(PerMille(s, "pushShare", h), 1000));
+        PushShare: Fix.FromRatio(PerMille(s, "pushShare", h), 1000),
+        ThrowRange: Fix.FromInt(Positive(s, "throwRange", h)),
+        TechFrame: Positive(s, "techFrame", h),
+        TechWindow: Positive(s, "techWindow", h),
+        TechSeparation: Fix.FromInt(Int(s, "techSeparation", h)),
+        ThrowDistance: Fix.FromInt(Positive(s, "throwDistance", h)),
+        ThrowFollowThrough: Int(s, "throwFollowThrough", h),
+        KnockdownFrames: Positive(s, "knockdownFrames", h),
+        WakeupThrowInvulnerable: Int(s, "wakeupThrowInvulnerable", h));
 
     // A share from 1 to 1000.
     private static int PerMille(JsonElement s, string key, DataHasher h)
@@ -160,6 +171,7 @@ public static class CharacterLoader
                 Recovery: recovery,
                 Damage: Int(m, "damage", h),
                 Stun: Int(m, "stun", h),
+                Kind: m.TryGetProperty("kind", out _) ? Parse<MoveKind>(m, "kind", h) : MoveKind.Normal,
                 Strength: Parse<Strength>(m, "strength", h),
                 Guard: Parse<Guard>(m, "guard", h),
                 PushbackHit: Int(m, "pushbackHit", h),

@@ -148,6 +148,7 @@ public class NormalsTests
     {
         var state = Apart(60);
         state.Fighters[1].KnockedDown = true;
+        state.Fighters[1].Knockdown = 30;
         Simulation.Step(ref state, new FrameInput(Buttons.LightPunch, default));
         for (var i = 0; i < 10; i++)
             Simulation.Step(ref state, default);

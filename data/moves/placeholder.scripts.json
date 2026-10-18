@@ -80,6 +80,10 @@
       "do": ["startup: reach:back-foot hip 0.5", "lean:-10",
              "active: reach:back-foot opponent-shin 1.0", "lean:-16", "ease:overshoot", "hitbox:back-foot 10"] },
 
+    { "name": "Throw", "input": "LP+LK", "kind": "throw", "startup": 3, "active": 2, "recovery": 20, "damage": 130, "stun": 100, "strength": "heavy", "guard": "mid", "pushbackHit": 0, "pushbackBlock": 0,
+      "do": ["active: reach:both-hands opponent-chest 0.8", "lean:14", "hitbox:both-hands 8",
+             "recovery: hold:0.15", "lean:4", "pose:guard"] },
+
     { "name": "Fireball", "input": "236P", "startup": 13, "active": 2, "recovery": 31, "damage": 60, "stun": 100, "strength": "medium", "guard": "mid", "pushbackHit": 16, "pushbackBlock": 18,
       "do": ["startup: pose:windup-punch", "reach:both-hands hip 0.4", "lean:-8",
              "active: reach:both-hands opponent-chest 1.0", "lean:6", "ease:snap", "spawn:projectile from:both-hands", "hitbox:both-hands 8",
