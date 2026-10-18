@@ -1,0 +1,2 @@
+# Replays are written by tools/ReplayRunner; review the rerecord summary in the PR, not the files.
+replays/*.sfr linguist-generated=true

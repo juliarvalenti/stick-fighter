@@ -28,6 +28,10 @@ public partial class DebugView : Node2D
     // Screen-anchored: the frame and checksum stay put while the camera moves the stage.
     private CanvasLayer _hud = null!;
 
+    // Off in scenario captures: the checksum changes with any new state field, and golden images
+    // should change only when what's drawn does. The live F2 view keeps it.
+    public bool ShowChecksum { get; set; } = true;
+
     public override void _Ready()
     {
         ZIndex = 10;
@@ -63,7 +67,7 @@ public partial class DebugView : Node2D
         _state = state;
         if (!Visible)
             return;
-        _info.Text = $"frame {state.Frame}\nchecksum {state.Checksum():x16}";
+        _info.Text = ShowChecksum ? $"frame {state.Frame}\nchecksum {state.Checksum():x16}" : $"frame {state.Frame}";
         QueueRedraw();
     }
 

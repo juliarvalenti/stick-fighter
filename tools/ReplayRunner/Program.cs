@@ -4,20 +4,24 @@
 //   dotnet run --project tools/ReplayRunner -- synctest replays/       every frame survives rollback
 //                                                (check and synctest also take one .sfr file)
 //   dotnet run --project tools/ReplayRunner -- rerecord replays/       after a deliberate sim change
+//   dotnet run --project tools/ReplayRunner -- trace FILE FROM TO       every frame, to diff two builds
 //   dotnet run --project tools/ReplayRunner -- generate out.sfr SEED FRAMES
 //   dotnet run --project tools/ReplayRunner -- script out.sfr NAME      a scripted match, see Scripts
 //
-// check prints the first diverging frame of each failing replay and exits 1 if any fail.
+// check prints, for each failing replay, the first checkpoint whose behavior differs and how (or
+// that only the final state does), and exits 1 if any fail.
 // synctest plays each replay's inputs, rolling back 1 to 8 frames after every frame (see SyncTest),
 // and exits 1 if any resimulated frame comes out different, listing the GameState fields that differ.
-// rerecord keeps each replay's inputs and rewrites its checksums; review the diff, since this is
-// how an intended behavior change gets accepted.
+// rerecord keeps each replay's inputs, rewrites its checkpoints and final checksum, and prints a
+// line per replay saying whether behavior changed (and where and how) or only the encoding did. Paste
+// that summary into the PR: it's how an intended behavior change gets reviewed and accepted.
 
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using StickFighter.Sim;
+using StickFighter.Sim.Characters;
 using StickFighter.Sim.Numerics;
 using StickFighter.Sim.Replays;
 
@@ -26,21 +30,29 @@ if (args.Length < 2)
 
 switch (args[0])
 {
+    case "check" when args.Length == 4 && args[2] == "--trace-out":
+        return Check(args[1], args[3]);
     case "check":
-        return Check(args[1]);
+        return Check(args[1], null);
     case "synctest":
         return SyncTestAll(args[1]);
     case "rerecord":
         return Rerecord(args[1]);
+    case "trace" when args.Length == 4:
+        return Trace(args[1], int.Parse(args[2]), int.Parse(args[3]));
     case "generate" when args.Length == 4:
         return Write(args[1], Replay.Record(ulong.Parse(args[2]), Stage.Training, Walkabout(ulong.Parse(args[2]), int.Parse(args[3]))));
+    // Scripts named match-… are versus matches (rounds, timer, KO); the rest are training.
     case "script" when args.Length == 3 && Scripts(args[2]) is { } script:
-        return Write(args[1], Replay.Record(1, Stage.Training, script));
+        return Write(args[1], Replay.Record(1, Stage.Training, script,
+            args[2].StartsWith("match-", StringComparison.Ordinal) ? MatchMode.Versus : MatchMode.Training));
     default:
         return Usage();
 }
 
-static int Check(string folder)
+// traceOut: for each replay whose behavior differs, write <name>.range ("file from to") and this
+// build's trace of that range as <name>.head.trace, so CI can trace the base build and diff.
+static int Check(string folder, string? traceOut)
 {
     var files = Files(folder);
     if (files.Length == 0)
@@ -72,17 +84,43 @@ static int Check(string folder)
             continue;
         }
 
-        var frame = replay.FirstDivergence(out var expected, out var actual);
-        if (frame < 0)
+        if (replay.Verify() is not { } mismatch)
         {
             Console.WriteLine($"ok   {file}  {replay.Frames} frames  final {replay.FinalChecksum:x16}");
             continue;
         }
         failures++;
-        Console.WriteLine($"FAIL {file}  diverges at frame {frame}: expected {expected:x16}, got {actual:x16}");
-        Console.WriteLine($"     inputs on that frame: p1 {replay.Inputs[frame].Player1}, p2 {replay.Inputs[frame].Player2}");
+        if (mismatch.Frame < 0)
+        {
+            Console.WriteLine($"FAIL {file}  every checkpoint's behavior matches, but the final state differs ({mismatch.Differences[0]})");
+            Console.WriteLine("     a field changed without changing what players see: if intended, rerecord");
+            continue;
+        }
+        var previous = mismatch.Frame - Replay.CheckpointInterval + 1;
+        Console.WriteLine($"FAIL {file}  behavior differs at checkpoint frame {mismatch.Frame}:");
+        foreach (var difference in mismatch.Differences)
+            Console.WriteLine($"       {difference}");
+        var from = previous > 0 ? previous : 0;
+        Console.WriteLine($"     it started between frames {from} and {mismatch.Frame}; to find the frame, trace that range on both builds and diff:");
+        Console.WriteLine($"       ReplayRunner trace {file} {from} {mismatch.Frame}");
+        if (traceOut is not null)
+        {
+            Directory.CreateDirectory(traceOut);
+            var name = Path.GetFileNameWithoutExtension(file);
+            File.WriteAllText(Path.Combine(traceOut, name + ".range"), $"{file} {from} {mismatch.Frame}\n");
+            File.WriteAllLines(Path.Combine(traceOut, name + ".head.trace"), replay.Trace(from, mismatch.Frame));
+        }
     }
     return failures == 0 ? 0 : 1;
+}
+
+// Every frame in a range, behavior and checksum, for diffing two builds.
+static int Trace(string file, int from, int to)
+{
+    var replay = Replay.Read(File.ReadAllText(file));
+    foreach (var line in replay.Trace(from, to))
+        Console.WriteLine(line);
+    return 0;
 }
 
 static int SyncTestAll(string folder)
@@ -98,7 +136,7 @@ static int SyncTestAll(string folder)
     foreach (var file in files)
     {
         var replay = Replay.Read(File.ReadAllText(file));
-        if (SyncTest.Run(replay.Seed, replay.Stage, replay.Inputs) is { } failure)
+        if (SyncTest.Run(replay.Seed, replay.Stage, replay.Inputs, replay.Mode) is { } failure)
         {
             failures++;
             Console.WriteLine($"FAIL {file}  {failure}");
@@ -110,14 +148,27 @@ static int SyncTestAll(string folder)
     return failures == 0 ? 0 : 1;
 }
 
+// Rewrites each replay from its inputs and says what changed, for the PR body: nothing, the
+// encoding only (behavior identical at every checkpoint), or behavior, from which frame and how.
 static int Rerecord(string folder)
 {
     foreach (var file in Files(folder))
     {
         var old = Replay.Read(File.ReadAllText(file), allowOldVersions: true);
-        var updated = Replay.Record(old.Seed, old.Stage, old.Inputs);
+        var updated = Replay.Record(old.Seed, old.Stage, old.Inputs, old.Mode);
         File.WriteAllText(file, updated.Write());
-        Console.WriteLine($"rerecorded {file}: final {old.FinalChecksum:x16} -> {updated.FinalChecksum:x16}");
+
+        var name = Path.GetFileNameWithoutExtension(file);
+        if (old.Checkpoints.Count == 0)
+            Console.WriteLine($"{name}: upgraded to format {Replay.FormatVersion} (no behavior recorded before)");
+        else if (old.DataHash != updated.DataHash && old.Compare(updated) is null)
+            Console.WriteLine($"{name}: character data changed, behavior identical");
+        else if (old.Compare(updated) is not { } change)
+            Console.WriteLine($"{name}: unchanged");
+        else if (change.Frame < 0)
+            Console.WriteLine($"{name}: encoding changed, behavior identical");
+        else
+            Console.WriteLine($"{name}: behavior changed at frame {change.Frame}: {string.Join("; ", change.Differences)}");
     }
     return 0;
 }
@@ -473,8 +524,71 @@ static List<FrameInput>? Scripts(string name) => name switch
         (Buttons.LightPunch | Buttons.LightKick, Buttons.LightPunch | Buttons.LightKick, 1),
         (Buttons.None, Buttons.None, 30)),
 
+    // Versus matches, best of three, played round by round (see Played).
+    // P1 KOs P2 twice: 2-0.
+    "match-ko-ko" => Played(Plan.P1Kos, Plan.P1Kos),
+
+    // P1 lands one hit and then nobody does anything: P1 is ahead at time over. Then P1 KOs: 2-0.
+    "match-time-over" => Played(Plan.P1AheadOnTime, Plan.P1Kos),
+
+    // Both trade heavy punches from full health: a double KO, a round each (1-1). Then P2 KOs: 1-2.
+    "match-double-ko" => Played(Plan.Trade, Plan.P2Kos),
+
+    // A double KO (1-1), then a draw at time over (2-2), then a double KO in the final round: a
+    // drawn match.
+    "match-draw" => Played(Plan.Trade, Plan.Wait, Plan.Trade),
+
+    // P1 wins one, P2 wins one, then a double KO: 2-2 and a final round, which P2 wins.
+    "match-final-round" => Played(Plan.P1Kos, Plan.P2Kos, Plan.Trade, Plan.P2Kos),
+
     _ => null,
 };
+
+// A versus match played out against the live state, a plan per round, so a script needn't count
+// frames to a KO; then a second of the result. The replay is just the inputs it came to.
+static List<FrameInput> Played(params Plan[] rounds)
+{
+    var state = GameState.NewMatch(1, Stage.Training, MatchMode.Versus);
+    var inputs = new List<FrameInput>();
+    var after = 0;
+    while (after < GameInfo.TicksPerSecond)
+    {
+        if (state.Match.Phase == MatchPhase.MatchEnd)
+            after++;
+        else if (state.Match.Round > rounds.Length)
+            throw new InvalidOperationException($"the match went to round {state.Match.Round}, past the plans");
+        var plan = rounds[Math.Min(state.Match.Round, rounds.Length) - 1];
+        var input = new FrameInput(Plays(state, 0, plan), Plays(state, 1, plan));
+        inputs.Add(input);
+        Simulation.Step(ref state, input);
+    }
+    return inputs;
+}
+
+static Buttons Plays(in GameState state, int player, Plan plan)
+{
+    var full = Characters.Placeholder.Stats.Health;
+    var attacking = plan switch
+    {
+        Plan.P1Kos => player == 0,
+        Plan.P2Kos => player == 1,
+        Plan.Trade => true,
+        Plan.P1AheadOnTime => player == 0 && state.Fighters[1].Health == full,
+        _ => false,
+    };
+    return attacking ? Attack(state, player) : Buttons.None;
+}
+
+// Walk in, and heavy punch from close whenever free to. Both doing it from the mirrored start
+// trade on every hit.
+static Buttons Attack(in GameState state, int player)
+{
+    var me = state.Fighters[player];
+    var forward = me.Facing > 0 ? Buttons.Right : Buttons.Left;
+    var gap = Fix.Abs(state.Fighters[1].Position.X - state.Fighters[0].Position.X);
+    var free = me.Action is (int)FighterAction.Stand or (int)FighterAction.WalkForward;
+    return free && gap <= Fix.FromInt(70) ? Buttons.HeavyPunch : forward;
+}
 
 static List<FrameInput> Runs(params (Buttons P1, Buttons P2, int Frames)[] runs)
 {
@@ -496,6 +610,9 @@ static int Write(string file, Replay replay)
 
 static int Usage()
 {
-    Console.WriteLine("usage: ReplayRunner check|synctest|rerecord <folder> | generate <file> <seed> <frames> | script <file> <name>");
+    Console.WriteLine("usage: ReplayRunner check|synctest|rerecord <folder> | trace <file> <from> <to> | generate <file> <seed> <frames> | script <file> <name>");
     return 2;
 }
+
+// What each player does in a played round (see Played).
+enum Plan { P1Kos, P2Kos, Trade, P1AheadOnTime, Wait }

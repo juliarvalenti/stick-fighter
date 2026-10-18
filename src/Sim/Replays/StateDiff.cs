@@ -6,26 +6,38 @@ namespace StickFighter.Sim.Replays;
 
 // Which GameState fields differ between two states, as readable lines ("Fighters[1].Hitstun: 7 vs 6"),
 // for when a checksum says two states differ but not how. Diagnostics only: it reads fields by
-// reflection, in declaration order, so a field added to FighterState shows up here with no change.
+// reflection, in declaration order, so a field added to GameState or anything in it shows up here
+// with no change. The inline arrays (inputs, fighters, projectiles) are walked by index.
 public static class StateDiff
 {
     public static List<string> Between(in GameState expected, in GameState actual)
     {
         var lines = new List<string>();
-        Compare("Frame", expected.Frame, actual.Frame, lines);
-        Compare("Rng", expected.Rng, actual.Rng, lines);
-        Compare("FreezeFrom", expected.FreezeFrom, actual.FreezeFrom, lines);
-        Compare("FreezeUntil", expected.FreezeUntil, actual.FreezeUntil, lines);
-        for (var p = 0; p < GameState.PlayerCount; p++)
+        foreach (var field in PublicFields(typeof(GameState)))
         {
-            for (var slot = 0; slot < InputHistory.Depth; slot++)
-                Compare($"Inputs[{p}][{slot}]", expected.Inputs[p][slot], actual.Inputs[p][slot], lines);
+            if (field.FieldType == typeof(InputHistories))
+            {
+                for (var p = 0; p < GameState.PlayerCount; p++)
+                {
+                    for (var slot = 0; slot < InputHistory.Depth; slot++)
+                        Compare($"{field.Name}[{p}][{slot}]", expected.Inputs[p][slot], actual.Inputs[p][slot], lines);
+                }
+            }
+            else if (field.FieldType == typeof(FighterPair))
+            {
+                for (var p = 0; p < GameState.PlayerCount; p++)
+                    Compare($"{field.Name}[{p}]", expected.Fighters[p], actual.Fighters[p], lines);
+            }
+            else if (field.FieldType == typeof(ProjectileSlots))
+            {
+                for (var i = 0; i < GameState.MaxProjectiles; i++)
+                    Compare($"{field.Name}[{i}]", expected.Projectiles[i], actual.Projectiles[i], lines);
+            }
+            else
+            {
+                Compare(field.Name, field.GetValue(expected)!, field.GetValue(actual)!, lines);
+            }
         }
-        for (var p = 0; p < GameState.PlayerCount; p++)
-            Compare($"Fighters[{p}]", expected.Fighters[p], actual.Fighters[p], lines);
-        for (var i = 0; i < GameState.MaxProjectiles; i++)
-            Compare($"Projectiles[{i}]", expected.Projectiles[i], actual.Projectiles[i], lines);
-        Compare("Stage", expected.Stage, actual.Stage, lines);
         return lines;
     }
 

@@ -16,8 +16,8 @@ public static class Simulation
         for (var i = 0; i < GameState.PlayerCount; i++)
             state.Inputs[i].Record(state.Frame, input.For(i).Cleaned());
 
-        // Hitstop: input is recorded (above), and nothing else happens. Match phases will wrap
-        // this whole step, freeze included.
+        // Hitstop: input is recorded (above), and nothing else happens. The round timer and the
+        // match's phase clock pause too, so a KO's freeze plays out before the round end counts.
         if (Hitstop.Frozen(state, state.Frame))
         {
             state.Rng.NextUInt();
@@ -35,31 +35,41 @@ public static class Simulation
         var p2Proximity = Blocking.ProximityGuard(state, 1);
         var p1Stunned = Throws.Stunned(state.Fighters[0]);
         var p2Stunned = Throws.Stunned(state.Fighters[1]);
-        Act(ref state, 0, p1Proximity);
-        Act(ref state, 1, p2Proximity);
+
+        // Outside the fight phase (a versus match's intro and round end), fighters can't start
+        // anything and nothing lands; what's already under way (a fall, hitstun) plays out.
+        var fighting = Matches.MatchFlow.Fighting(state.Match);
+        Act(ref state, 0, p1Proximity, fighting);
+        Act(ref state, 1, p2Proximity, fighting);
 
         Pushing.Resolve(ref state, p1Before, p2Before);
         FaceEachOther(ref state);
 
-        // Throws before strikes: a fighter grabbed this frame has no hitbox, so a throw beats a strike.
-        Throws.Resolve(ref state, p1Stunned, p2Stunned);
-        Pushing.Resolve(ref state, p1Before, p2Before);
-        FaceEachOther(ref state);
+        if (fighting)
+        {
+            // Throws before strikes: a fighter grabbed this frame has no hitbox, so a throw beats a strike.
+            Throws.Resolve(ref state, p1Stunned, p2Stunned);
+            Pushing.Resolve(ref state, p1Before, p2Before);
+            FaceEachOther(ref state);
 
-        // Every contact is found from both fighters' poses before any is applied, so trades hit both.
-        var contacts = Contacts.Find(state, Body.Shapes(state.Fighters[0]), Body.Shapes(state.Fighters[1]));
-        Hits.Apply(ref state, contacts);
-        Pushing.Resolve(ref state, p1Before, p2Before);
+            // Every contact is found from both fighters' poses before any is applied, so trades hit both.
+            var contacts = Contacts.Find(state, Body.Shapes(state.Fighters[0]), Body.Shapes(state.Fighters[1]));
+            Hits.Apply(ref state, contacts);
+            Pushing.Resolve(ref state, p1Before, p2Before);
+        }
 
         // Placeholder: draw from the RNG every frame so the rollback tests prove its state restores.
         state.Rng.NextUInt();
+
+        // The round timer, KO and time over, and moving between rounds.
+        Matches.MatchFlow.Advance(ref state);
 
         state.Frame++;
     }
 
     // One fighter's frame: reeling in hitstun, guarding in blockstun, carrying on with a move,
     // starting a normal from a (possibly buffered) press, guarding by proximity, or moving.
-    private static void Act(ref GameState state, int player, bool proximityGuard)
+    private static void Act(ref GameState state, int player, bool proximityGuard, bool canAct)
     {
         ref var fighter = ref state.Fighters[player];
         var character = Characters.Characters.Placeholder;
@@ -95,7 +105,7 @@ public static class Simulation
 
         if (fighter.Airborne)
         {
-            ActAirborne(ref state, player);
+            ActAirborne(ref state, player, canAct);
             return;
         }
 
@@ -116,8 +126,8 @@ public static class Simulation
         }
 
         // LP then LK a frame later (or the other way round): the light normal that came out on the
-        // first press becomes the throw.
-        if (fighter.Action == (int)FighterAction.Attack && fighter.Move != Normals.Throw
+        // first press becomes the throw. Not once the round is over, though.
+        if (canAct && fighter.Action == (int)FighterAction.Attack && fighter.Move != Normals.Throw
             && now - fighter.LastMoveFrame < Normals.ThrowLeniency
             && Numpad.Vertical(Numpad.Direction(history.At(now, now), fighter.Facing)) >= 0
             && Normals.ThrowPressedOn(history, now, now))
@@ -176,6 +186,17 @@ public static class Simulation
                 Continue(ref fighter, Numpad.Vertical(direction) < 0 ? FighterAction.BlockCrouch : FighterAction.BlockStand);
             else
                 Continue(ref fighter, FighterAction.Landing);
+            return;
+        }
+
+        // Not allowed to act (a versus match's intro or round end): stand, letting a landing play
+        // out. Inputs are still recorded, so a press made now can come out once acting is allowed.
+        if (!canAct)
+        {
+            fighter.Velocity = FixVec2.Zero;
+            fighter.Move = -1;
+            var stillLanding = fighter.Action == (int)FighterAction.Landing && fighter.ActionFrame + 1 < character.Stats.LandingFrames;
+            Continue(ref fighter, stillLanding ? FighterAction.Landing : FighterAction.Stand);
             return;
         }
 
@@ -254,7 +275,7 @@ public static class Simulation
     // In the air: the jump arc, one air attack, hitstun. Touching down ends the jump: an attack or
     // hitstun in progress is cut short, and the landing is free after an empty jump, recovery
     // otherwise.
-    private static void ActAirborne(ref GameState state, int player)
+    private static void ActAirborne(ref GameState state, int player, bool canAct)
     {
         ref var fighter = ref state.Fighters[player];
         var character = Characters.Characters.Placeholder;
@@ -276,7 +297,7 @@ public static class Simulation
         }
         else
         {
-            var move = fighter.AirAttackUsed ? -1 : BufferedNormal(state, state.Inputs[player], fighter.LastMoveFrame, NormalStance.Airborne);
+            var move = fighter.AirAttackUsed || !canAct ? -1 : BufferedNormal(state, state.Inputs[player], fighter.LastMoveFrame, NormalStance.Airborne);
             if (move >= 0)
             {
                 fighter.Action = (int)FighterAction.Attack;

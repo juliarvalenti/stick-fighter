@@ -30,12 +30,16 @@ public static partial class Glyphs
     }
 
     // Draws a notation with its top-left at `at`; returns the width used.
-    public static float Draw(CanvasItem item, Vector2 at, string notation, float height, bool onPanel = false)
+    public static float Draw(CanvasItem item, Vector2 at, string notation, float height, bool onPanel = false) =>
+        Draw(item, at, Notation.Parse(notation), height, onPanel);
+
+    // Draws glyphs that aren't a whole move, such as an input-display row that's only a direction.
+    public static float Draw(CanvasItem item, Vector2 at, IReadOnlyList<Glyph> glyphs, float height, bool onPanel = false)
     {
         var ink = onPanel ? Look.Text : Look.Ink;
         var paper = onPanel ? Look.Surface : Look.Paper;
         var x = at.X;
-        foreach (var glyph in Notation.Parse(notation))
+        foreach (var glyph in glyphs)
         {
             var w = WidthOf(glyph, height);
             var box = new Rect2(x, at.Y, w, height);

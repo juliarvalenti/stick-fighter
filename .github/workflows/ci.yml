@@ -30,9 +30,34 @@ jobs:
       - name: Tests
         # A test stuck in a loop fails after 2 minutes instead of holding the runner.
         run: dotnet test StickFighter.sln --no-build --blame-hang-timeout 2m
-      # The determinism gate: every recorded match must replay to the same checksum on every frame.
+      # The determinism gate: every recorded match must replay to the same behavior at every
+      # checkpoint and the same final state.
       - name: Replays
-        run: dotnet run --no-build --project tools/ReplayRunner -- check replays
+        id: replays
+        run: dotnet run --no-build --project tools/ReplayRunner -- check replays --trace-out replay-traces
+      # On a behavior divergence in a PR, trace the same frames on the base commit and diff the two,
+      # so the log and the artifact name the exact frame it started.
+      - name: Trace the divergence against the base
+        if: failure() && steps.replays.outcome == 'failure' && github.event_name == 'pull_request'
+        run: |
+          git fetch --depth=1 origin ${{ github.event.pull_request.base.sha }}
+          git worktree add /tmp/base FETCH_HEAD
+          dotnet build /tmp/base/tools/ReplayRunner
+          for range in replay-traces/*.range; do
+            [ -e "$range" ] || continue
+            read -r file from to < "$range"
+            name=$(basename "$range" .range)
+            dotnet run --no-build --project /tmp/base/tools/ReplayRunner -- trace "$file" "$from" "$to" > "replay-traces/$name.base.trace" || true
+            if ! diff "replay-traces/$name.base.trace" "replay-traces/$name.head.trace" > "replay-traces/$name.diff"; then
+              echo "$name: first frame that differs from the base: $(grep -m1 '^>' "replay-traces/$name.diff" | awk '{print $3}')"
+            fi
+          done
+      - name: Upload replay traces
+        if: failure() && steps.replays.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: replay-traces
+          path: replay-traces/
       # The rollback gate (GGPO's SyncTest): every frame of every recorded match, rolled back 1 to 8
       # frames and resimulated, on the same inputs and after a misprediction, must come out the same.
       - name: SyncTest
@@ -213,6 +238,15 @@ jobs:
           unzip -q build/StickFighter.zip -d build/app
           "build/app/Stick Fighter.app/Contents/MacOS/Stick Fighter" --headless -- --smoke | tee build/launch.log
           grep -q "smoke ok" build/launch.log
+      # The app carries our icon (assets/icon/StickFighter.icns, from tools/icon/make_icon.py),
+      # not Godot's default.
+      - name: Icon check on the exported app
+        shell: bash
+        run: |
+          plist="build/app/Stick Fighter.app/Contents/Info.plist"
+          icon=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIconFile" "$plist")
+          echo "CFBundleIconFile: $icon"
+          cmp assets/icon/StickFighter.icns "build/app/Stick Fighter.app/Contents/Resources/${icon%.icns}.icns"
       # The zip keeps the app's executable bits, which a bare .app upload would lose.
       - uses: actions/upload-artifact@v4
         with:

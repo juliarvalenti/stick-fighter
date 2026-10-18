@@ -202,7 +202,7 @@ public static class Scenarios
         // The camera, boxes on (the ruler under the floor shows where on the stage the view is).
         // P1 walks P2 right: the camera follows across the stage (60) and stops at the right wall
         // (260). Then P2 walks P1 all the way left (500) and into the left corner (700). The
-        // frame and checksum stay fixed on screen throughout.
+        // frame number stays fixed on screen throughout.
         new Scenario("camera", 1,
             f => f < 260 ? new FrameInput(Buttons.Right, Buttons.Right) : new FrameInput(Buttons.Left, Buttons.Left),
             Captures: new[] { 60, 260, 500, 700 }, Frames: 700, Boxes: true),
@@ -249,6 +249,10 @@ public static class Scenarios
         new Scenario("ui-glyphs", 1, _ => default, Captures: new[] { 2 }, Frames: 2,
             StyleFrame: () => new UI.KitSheet(UI.KitSheet.Page.Glyphs)),
 
+        // Every effect frame by frame: the sparks, then the rest.
+        new Scenario("effects", 1, _ => default, Captures: new[] { 5, 15 }, Frames: 15,
+            StyleFrame: () => new FX.EffectSheet()),
+
         // The screens, built only from the kit. The title's fight behind it is this script.
         new Scenario("screen-title", 1, TitleFight, Captures: new[] { 18 }, Frames: 18,
             Setup: s => Place(s, 560, 720), StyleFrame: () => new UI.Screens.TitleScreen()),
@@ -258,6 +262,13 @@ public static class Scenarios
             StyleFrame: () => new UI.Screens.TitleScreen(menu: true) { Presses = { [10] = "ui_down" } }),
         new Scenario("screen-select", 1, _ => default, Captures: new[] { 5 }, Frames: 5,
             StyleFrame: () => new UI.Screens.SelectScreen()),
+
+        // Training's input display: P1 plays InputDemo (236P, a 66 dash, an MP~LP plink, a held
+        // back). F4 turns the display on (both players) at the start, and again near the end
+        // switches it to player 1 only.
+        new Scenario("training-input-display", 1, Training.InputDemo.Script, Captures: new[] { InputDemoEnd, 85 }, Frames: 85,
+            Setup: s => Place(s, 500, 780),
+            StyleFrame: () => new ScenarioKeys(new() { [1] = Godot.Key.F4, [82] = Godot.Key.F4 })),
         new Scenario("screen-results", 1, _ => default, Captures: new[] { 5 }, Frames: 5,
             StyleFrame: () => new UI.Screens.ResultsScreen()),
         // Pause over a match frozen mid-kick, then down twice to the move list's row; and the move list.
@@ -267,6 +278,10 @@ public static class Scenarios
         new Scenario("screen-movelist", 1, _ => default, Captures: new[] { 5 }, Frames: 5,
             Setup: s => Place(s, 540, 740), StyleFrame: () => new UI.Screens.PauseScreen(moveList: true)),
     };
+
+    // The input display's first capture: after all of InputDemo's frames (a capture shows the state
+    // after the frame before it), so the golden shows the same log InputLogTests checks.
+    private const int InputDemoEnd = Training.InputDemo.Frames;
 
     // A short exchange for the title to loop behind: walk in, P1 jabs, P2 kicks back.
     private static FrameInput TitleFight(int f) => f switch

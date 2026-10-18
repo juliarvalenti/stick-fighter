@@ -182,7 +182,10 @@ public sealed class Compiler
                         moved.Add(phase);
                         break;
                     case "lean":
-                        target.A[FloatPose.Spine] = Number(Arg(args, 0, verb), verb) * Angle.UnitsPerTurn / 360.0;
+                        // Relative to the stance's own spine, so a stance change (or another
+                        // character's stance) keeps every move's lean as written: lean:0 is upright
+                        // as the stance stands.
+                        target.A[FloatPose.Spine] = stance.A[FloatPose.Spine] + Number(Arg(args, 0, verb), verb) * Angle.UnitsPerTurn / 360.0;
                         leaned.Add(phase);
                         break;
                     case "crouch":

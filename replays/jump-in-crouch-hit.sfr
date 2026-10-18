@@ -1,87 +1,14 @@
-stick-fighter-replay 3
+stick-fighter-replay 5
 seed 1
 data 5cd46efa9b5d33eb
 stage 0 2560 600 1280
+mode training
 frames 76
 input 0008 0000 10
 input 0009 0000 5
 input 0000 0000 20
 input 0200 000a 1
 input 0000 000a 40
-checksum f9459f8be5451e9a
-checksum d3c9f62beb38f661
-checksum 270ff020dba9adba
-checksum fc61526b8e8778c6
-checksum 97bc65c5a912ffa2
-checksum 7d30a88721c377dd
-checksum c376996b00c12b5d
-checksum a6f44f20f1fd335b
-checksum e76387b7956d4caa
-checksum 5348ee2d6f4e9b25
-checksum 026fdfcf361b1da9
-checksum db817ada499baacd
-checksum 89d151d94dfe05fe
-checksum 714abb3bf33e8b4e
-checksum 3f7227fc581737c5
-checksum 97bdef313badd138
-checksum 8d746bae6efbfb1b
-checksum 8ec6b42cf88c6f3d
-checksum 8366fe5cd6c1adcc
-checksum c01b43bb030b2561
-checksum c82206624f0501ff
-checksum 39cc3781a703229b
-checksum 20900364190acd97
-checksum 245ce9f4141f9311
-checksum 84be0b0f6749e21a
-checksum c1dba851825caebd
-checksum d5590fb621ce07ee
-checksum bc822e8d331b6e3d
-checksum 10c7eb967fd9fd64
-checksum 0b41cbc1ce99eb1d
-checksum d87ec60144d685d2
-checksum 28ab1c9a428ec21e
-checksum 0b6df626735cec26
-checksum fd07fc452be52c96
-checksum 46fcc5eda2192a42
-checksum 48c7b6ea7833d9e2
-checksum af79fa2da6f5c01b
-checksum b43bff7f523ffa29
-checksum 7ebf5af120dcad02
-checksum d527d52bcdf44294
-checksum bfb0af8b99373bff
-checksum 3e4a3c440c4af21e
-checksum 00af7fa270a88311
-checksum 01a5db9e622ae1f7
-checksum 4ae426bb6ca341c3
-checksum 8bc78edf5fc272f0
-checksum 8285bbc2b71b2f9f
-checksum ba3d66777e68f223
-checksum 3c1b735e18950481
-checksum 090a1bb7b891908f
-checksum d8e5eb4ed190e457
-checksum c0dceaa36a25d6fa
-checksum 52cc18f806386771
-checksum 1762f8a3425669c4
-checksum 9f43c63d48287d89
-checksum d883e0ceceb6c9b7
-checksum d8cc63436fc89d1e
-checksum 1a34d6b9fd115cc3
-checksum cb36c3f300849a19
-checksum 876c0129488c6962
-checksum a2701c79dbefd0cc
-checksum 8d2055e7b7fea428
-checksum 4816666c9d681643
-checksum 91eb00975110e0a7
-checksum 3ac4fa103353ba33
-checksum 2d9e3276e19985cd
-checksum f0fe3fb9e420516d
-checksum d104ed413eb7e4ee
-checksum f6fc221ecd5e4297
-checksum 305c33de479b2028
-checksum 4f1d04ab9f4f3f81
-checksum a0b292fd53ab4398
-checksum 0f983880e2c7ada7
-checksum 66c7ae968b34b7b6
-checksum e659f978c8d2f0e7
-checksum a9d5a7cdd4269e03
-final a9d5a7cdd4269e03
+at 59 p1 1325.16998291015625 538.3000335693359375 1 Jump 1 1000 p2 1500 600 -1 Hitstun 3 900 match Fight 0 0 0 0
+at 75 p1 1335.16998291015625 600 1 Stand 10 1000 p2 1500 600 -1 Hitstun 19 900 match Fight 0 0 0 0
+final ae215d5e22ecb8fd
