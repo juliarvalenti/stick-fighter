@@ -34,10 +34,14 @@ public static class Hits
             var contact = contacts[c];
             if (contact.Kind != ContactKind.ProjectileClash)
                 continue;
+            // One event per fireball, at its own centre, so each breaks up where it is, in its thrower's
+            // colour (the two are a radius or so apart when they touch).
             var a = state.Projectiles[contact.Attacker];
+            var b = state.Projectiles[contact.Defender];
             state.Projectiles[contact.Attacker].Active = false;
             state.Projectiles[contact.Defender].Active = false;
-            SimEvents.Add(ref state, EventKind.Clash, a.Owner, 1 - a.Owner, a.Move, contact.Point);
+            SimEvents.Add(ref state, EventKind.Clash, a.Owner, b.Owner, a.Move, a.Position);
+            SimEvents.Add(ref state, EventKind.Clash, b.Owner, a.Owner, b.Move, b.Position);
         }
 
         for (var c = 0; c < contacts.Count; c++)
@@ -94,11 +98,12 @@ public static class Hits
         var crouching = before.Crouching[defenderIndex] == 1;
         if (before.Guarding[defenderIndex] == 1 && Blocking.RightHeight(move.Guard, crouching))
         {
+            var healthBefore = defender.Health;
             Block(ref defender, move, crouching);
             Push(ref attacker, ref defender, Fix.FromInt(move.PushbackBlock), state.Stage, pushFrom);
             freeze = move.HitstopOnBlock > freeze ? move.HitstopOnBlock : freeze;
             SimEvents.Add(ref state, EventKind.Block, attackerIndex, defenderIndex, moveIndex, point);
-            if (defender.Health == 0)
+            if (healthBefore > 0 && defender.Health == 0)
                 SimEvents.Add(ref state, EventKind.Ko, attackerIndex, defenderIndex, moveIndex, point); // a chip KO
             return true;
         }
@@ -123,7 +128,7 @@ public static class Hits
         defender.ComboDamage += damage;
         defender.CounterHit = counter;
         SimEvents.Add(ref state, counter ? EventKind.CounterHit : EventKind.Hit, attackerIndex, defenderIndex, moveIndex, point);
-        if (defender.Health == 0)
+        if (damage > 0 && defender.Health == 0) // only the hit that takes the last point is the KO
             SimEvents.Add(ref state, EventKind.Ko, attackerIndex, defenderIndex, moveIndex, point);
         defender.Stun += HitStates.Stun(move.Stun, defender.ComboMoves, counter);
         defender.StunRecovery = stats.StunRecoveryDelay;

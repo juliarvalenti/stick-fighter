@@ -69,7 +69,9 @@ public partial class EffectsView : Node2D
             // Which way the attacker faced the contact: the guard arc faces back at it.
             var attackerX = _state.Fighters[e.Attacker].Position.X.ToFloat();
             var facing = at.X >= attackerX ? 1 : -1;
-            Effects.Draw(this, effect, frame, at, facing, screen: VisibleRect());
+            // A fireball breaking up is in its thrower's colour; everything else has its own.
+            Godot.Color? color = e.Kind == EventKind.Clash ? Style.Look.Player(e.Attacker) : null;
+            Effects.Draw(this, effect, frame, at, facing, color, screen: VisibleRect());
         }
     }
 

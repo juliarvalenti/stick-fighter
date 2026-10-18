@@ -17,7 +17,8 @@ gh run download "$run_id" --name scenarios --dir "$download"
 mkdir -p "$repo_root/tests/golden"
 
 count=0
-for capture in "$download"/*.png; do
+for capture in "$download"/*.png "$download"/*.txt; do
+  [ -e "$capture" ] || continue
   case "$capture" in
     *.golden.png | *.diff.png) continue ;;
   esac

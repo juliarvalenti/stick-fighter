@@ -206,4 +206,4 @@ at 479 p1 2370 600 1 Attack 15 1000 p2 2530 600 -1 Hitstun 8 500 match Fight 0 0
 at 539 p1 2370 600 1 Stand 23 1000 p2 2530 600 -1 Dizzy 46 500 match Fight 0 0 0 0
 at 599 p1 2370 600 1 Stand 83 1000 p2 2530 600 -1 Dizzy 106 500 match Fight 0 0 0 0
 at 649 p1 2370 600 1 Stand 133 1000 p2 2530 600 -1 Stand 36 500 match Fight 0 0 0 0
-final 23e83f6776051c9e
+final 72826a956e659f9e

@@ -52,4 +52,4 @@ at 239 p1 2470 600 1 WalkForward 239 1000 p2 2530 600 -1 WalkBack 239 1000 match
 at 299 p1 2470 600 1 WalkForward 299 1000 p2 2530 600 -1 WalkBack 299 1000 match Fight 0 0 0 0
 at 359 p1 2434 600 1 Stand 2 1000 p2 2530 600 -1 Hitstun 10 944 match Fight 0 0 0 0
 at 379 p1 2434 600 1 Stand 22 1000 p2 2530 600 -1 Stand 16 944 match Fight 0 0 0 0
-final cac21dbc5e42fc79
+final 347582cc1aa7d679

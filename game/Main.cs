@@ -75,6 +75,7 @@ public partial class Main : Node2D
     private (int Frame, ulong Checksum, int SimFrame)? _pauseCheck;
     private MatchPresenter _presenter = null!;
     private FX.EffectsView _effects = null!;
+    private Sound.SoundView _sound = null!;
     private CanvasLayer _screens = null!;
     private StageCamera _camera = null!;
     private StageBackdrop _backdrop = null!;
@@ -113,6 +114,8 @@ public partial class Main : Node2D
         _effects = new FX.EffectsView();
         _effects.Attach(_camera);
         AddChild(_effects);
+        _sound = new Sound.SoundView();
+        AddChild(_sound);
         _screens = new CanvasLayer { Layer = 10 };
         AddChild(_screens);
 
@@ -308,6 +311,7 @@ public partial class Main : Node2D
         _state = GameState.NewMatch(MatchSeed);
         _camera.Cut();
         _effects.Clear();
+        _sound.Director.Clear();
         ShowScreen(new UI.Screens.TitleScreen());
     }
 
@@ -372,6 +376,7 @@ public partial class Main : Node2D
         _driver = new TickDriver();
         _camera.Cut();
         _effects.Clear();
+        _sound.Director.Clear();
         _presenter.Begin(new[] { settings.P1Color, settings.P2Color });
         _flow = Flow.Match;
         _paused = null;
@@ -560,6 +565,16 @@ public partial class Main : Node2D
             System.Array.IndexOf(args, "--update-goldens") >= 0);
         AddChild(_scenarioRun);
         GD.Print($"scenario {_scenario.Name}: seed {_scenario.Seed}, {_scenario.Frames} frames");
+        if (_scenario.SoundLog)
+        {
+            var volume = DeviceInput.Settings.EffectsVolume;
+            var log = new System.Collections.Generic.List<string>
+            {
+                $"# effects volume {volume} ({Sound.SoundDirector.VolumeDb(volume):0.0} dB), {Sound.SoundDirector.Voices} voices",
+            };
+            _sound.Director.Log = log;
+            _scenarioRun.Log = log;
+        }
 
         // A flow scenario plays the real menus from the title.
         if (_scenario.Flow)
@@ -617,6 +632,7 @@ public partial class Main : Node2D
         _frameData.Present(_state);
         _presenter.Present(_state);
         _effects.Present(_state);
+        _sound.Present(_state, DeviceInput.Settings.EffectsVolume);
         PresentTraining();
         if (_scenario is { TrainingMenuAt: >= 0 } && _state.Frame == _scenario.TrainingMenuAt && _paused is null)
             OpenTrainingMenu();
