@@ -39,6 +39,7 @@ public partial class Main : Node2D
 
     private Scenario? _scenario;
     private ScenarioRun? _scenarioRun;
+    private IScenarioClock? _clock;
     private Sim.Numerics.Rng _jitter = Sim.Numerics.Rng.Create(2024);
 
     public override void _Ready()
@@ -125,7 +126,9 @@ public partial class Main : Node2D
 
             // Screen-anchored UI over the stage, so it stays put whatever the camera does.
             var layer = new CanvasLayer { Layer = 5 };
-            layer.AddChild(frame());
+            var control = frame();
+            _clock = control as IScenarioClock;
+            layer.AddChild(control);
             AddChild(layer);
         }
 
@@ -170,6 +173,7 @@ public partial class Main : Node2D
         _overlay.Record(delta * 1000, simMs, ticks, _driver.DroppedTicks, _state.Frame);
         PresentView(ticks);
         _debugView.Present(_state);
+        _clock?.At(_state.Frame);
         QueueRedraw();
 
         _scenarioRun?.AfterStep(_state, ticks);

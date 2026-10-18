@@ -1,5 +1,6 @@
 using Godot;
 using StickFighter.Style;
+using StickFighter.UI;
 
 namespace StickFighter.StyleFrames;
 
@@ -21,6 +22,36 @@ public partial class ResultsFrame : Control
     {
         Size = new Vector2(1280, 720);
         MouseFilter = MouseFilterEnum.Ignore;
+        Theme = UiTheme.Default;
+    }
+
+    // One kit panel: the match in numbers, then the next steps as list rows, rematch focused.
+    public override void _Ready()
+    {
+        var panel = Ui.Panel();
+        panel.CustomMinimumSize = new Vector2(400, 0);
+        AddChild(panel);
+        var column = new VBoxContainer();
+        panel.AddChild(column);
+
+        var stats = new GridContainer { Columns = 2 };
+        stats.AddThemeConstantOverride("v_separation", 6);
+        column.AddChild(stats);
+        foreach (var (label, value) in Stats)
+        {
+            stats.AddChild(new Label { Text = label, ThemeTypeVariation = UiTheme.Muted, SizeFlagsHorizontal = SizeFlags.ExpandFill });
+            stats.AddChild(new Label { Text = value, ThemeTypeVariation = UiTheme.Strong, HorizontalAlignment = HorizontalAlignment.Right });
+        }
+
+        Button? first = null;
+        foreach (var item in Items)
+        {
+            var row = Ui.Row(item);
+            column.AddChild(row);
+            first ??= row;
+        }
+        panel.Position = new Vector2((Size.X - panel.GetCombinedMinimumSize().X) / 2, 192);
+        first?.GrabFocus();
     }
 
     public override void _Draw()
@@ -28,29 +59,5 @@ public partial class ResultsFrame : Control
         var band = new Rect2(0, 48, Size.X, 120);
         DrawRect(band, Look.P1);
         this.Text(band, "PLAYER 1 WINS", Look.Display, Look.DisplayLarge, Look.Text);
-
-        var panel = new Rect2(440, 200, 400, 4 * 40 + 32);
-        this.Card(panel, Look.Surface);
-        for (var i = 0; i < Stats.Length; i++)
-        {
-            var row = new Rect2(panel.Position.X + 28, panel.Position.Y + 16 + i * 40, panel.Size.X - 56, 40);
-            this.Text(row, Stats[i].Label, Look.Ui, Look.UiMedium, Look.TextMuted, HorizontalAlignment.Left);
-            this.Text(row, Stats[i].Value, Look.UiBold, Look.UiMedium, Look.Text, HorizontalAlignment.Right);
-        }
-
-        var size = new Vector2(280, 48);
-        for (var i = 0; i < Items.Length; i++)
-        {
-            var rect = new Rect2((Size.X - size.X) / 2, panel.End.Y + 24 + i * (size.Y + 4), size.X, size.Y);
-            if (i == 0)
-            {
-                this.Pill(rect, Look.Surface);
-                this.Text(rect, Items[i], Look.UiBold, Look.UiLarge, Look.Accent);
-            }
-            else
-            {
-                this.Text(rect, Items[i], Look.Ui, Look.UiLarge, Look.Ink);
-            }
-        }
     }
 }

@@ -195,7 +195,12 @@ public static class Scenarios
         // Style frames: mock screens in the style guide's palette, type and shapes, drawn over the
         // real fighters. Placeholder data, no behavior; they're the look the screens are built to.
         new Scenario("style-hud", 1, _ => default, Captures: new[] { 30 }, Frames: 30,
-            Setup: s => Place(s, 500, 780), StyleFrame: () => new HudFrame()),
+            Setup: s => Place(s, 500, 780), StyleFrame: () => new UI.HudDemo(still: true)),
+
+        // The HUD over a real match: each capture is a different moment (the round call, "Fight!"
+        // mid-pop and settled, a counter-hit combo while P1's 5MP is out, then every round ending).
+        new Scenario("hud", 1, f => f == 34 ? new FrameInput(Buttons.MediumPunch, Buttons.None) : default,
+            Captures: UI.HudDemo.Captures, Frames: 80, Setup: s => Place(s, 540, 740), StyleFrame: () => new UI.HudDemo()),
         new Scenario("style-title", 1, _ => default, Captures: new[] { 30 }, Frames: 30,
             Setup: s => Place(s, 380, 900), StyleFrame: () => new TitleFrame()),
         new Scenario("style-select", 1, _ => default, Captures: new[] { 30 }, Frames: 30,
@@ -203,6 +208,14 @@ public static class Scenarios
         // The loser is down (crouching, until knockdowns exist).
         new Scenario("style-results", 1, _ => new FrameInput(Buttons.None, Buttons.Down), Captures: new[] { 30 },
             Frames: 30, Setup: s => Place(s, 260, 1020), StyleFrame: () => new ResultsFrame()),
+
+        // The UI kit: every component in every state, the overlays, then the input glyphs.
+        new Scenario("ui-kit", 1, _ => default, Captures: new[] { 2 }, Frames: 2,
+            StyleFrame: () => new UI.KitSheet(UI.KitSheet.Page.Components)),
+        new Scenario("ui-overlays", 1, _ => default, Captures: new[] { 2 }, Frames: 2,
+            StyleFrame: () => new UI.KitSheet(UI.KitSheet.Page.Overlays)),
+        new Scenario("ui-glyphs", 1, _ => default, Captures: new[] { 2 }, Frames: 2,
+            StyleFrame: () => new UI.KitSheet(UI.KitSheet.Page.Glyphs)),
     };
 
     // Puts the fighters at these screen x positions. The view centers on the fighters, so a pair

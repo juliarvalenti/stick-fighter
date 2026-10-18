@@ -22,6 +22,7 @@ public static class Look
     public static readonly Color InkMuted = Color.FromHtml(Palette.InkMuted);
     public static readonly Color Accent = Color.FromHtml(Palette.Accent);
     public static readonly Color Danger = Color.FromHtml(Palette.Danger);
+    public static readonly Color LowHealth = Color.FromHtml(Palette.LowHealth);
 
     public static Color Player(int index) => index == 0 ? P1 : P2;
 
