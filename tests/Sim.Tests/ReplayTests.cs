@@ -226,6 +226,10 @@ public class ReplayTests
     [InlineData("low-hits-standing-block", false, true)]
     [InlineData("proximity-guard", false, false)]
     [InlineData("plink-link", false, true)]
+    [InlineData("counter-hit", false, true)]
+    [InlineData("combo-scaling", false, true)]
+    [InlineData("crouch-hitstun", false, true)]
+    [InlineData("air-no-juggle", true, false)]
     [InlineData("throw", false, true)]
     [InlineData("throw-back", false, true)]
     [InlineData("throw-meaty", false, true)]
@@ -354,6 +358,78 @@ public class ReplayTests
         }
         Assert.Equal(2, hits);
         Assert.Equal(FullHealth - 2 * jab.Damage, states[^1].Fighters[1].Health);
+    }
+
+    // Hit states. The frames on which P2 (or P1) lost health, with how much.
+    private static System.Collections.Generic.List<(int Frame, int Damage)> Hits(System.Collections.Generic.List<GameState> states, int defender)
+    {
+        var hits = new System.Collections.Generic.List<(int, int)>();
+        var health = FullHealth;
+        for (var i = 0; i < states.Count; i++)
+        {
+            var now = states[i].Fighters[defender].Health;
+            if (now < health)
+                hits.Add((i, health - now));
+            health = now;
+        }
+        return hits;
+    }
+
+    [Fact]
+    public void TheCounterHitReplayDoesMoreDamageAndHitstun()
+    {
+        var (states, _) = Play("counter-hit");
+        var jab = Characters.Characters.Placeholder.FindMove("5LP")!;
+        var (frame, damage) = Assert.Single(Hits(states, 1));
+        Assert.Equal(jab.Damage * 125 / 100, damage);
+        Assert.True(states[frame].Fighters[1].CounterHit);
+        Assert.Equal(jab.Hitstun - 1 + 1, states[frame].Fighters[1].Hitstun);
+    }
+
+    [Fact]
+    public void TheComboReplayScalesItsThirdHit()
+    {
+        var (states, _) = Play("combo-scaling");
+        var hits = Hits(states, 1);
+        Assert.Equal(new[] { 20, 20, 16 }, hits.ConvertAll(h => h.Damage));
+        Assert.Equal(3, states[hits[2].Frame].Fighters[1].ComboHits);
+        Assert.Equal(56, states[hits[2].Frame].Fighters[1].ComboDamage);
+    }
+
+    [Fact]
+    public void TheCrouchReplayAddsTheCrouchHitstunBonus()
+    {
+        var (states, _) = Play("crouch-hitstun");
+        var crJab = Characters.Characters.Placeholder.FindMove("2LP")!;
+        var (frame, _) = Assert.Single(Hits(states, 1));
+        Assert.Equal(crJab.Hitstun - 1 + Characters.Characters.Placeholder.Stats.CrouchHitstunBonus, states[frame].Fighters[1].Hitstun);
+    }
+
+    // P1 is hit rising and falls with juggle count 1. P2's next jab is active, its hitbox on P1's
+    // body, while P1 falls, and does nothing; P2's third jab hits P1 after it lands.
+    [Fact]
+    public void TheAirHitReplayCantBeJuggled()
+    {
+        var (states, _) = Play("air-no-juggle");
+        var hits = Hits(states, 0);
+        Assert.Equal(2, hits.Count);
+        Assert.True(states[hits[0].Frame].Fighters[0].Airborne);
+        Assert.Equal(1, states[hits[0].Frame].Fighters[0].Juggle);
+        Assert.False(states[hits[1].Frame - 1].Fighters[0].Airborne); // the second hit is after the landing
+
+        var jab = Characters.Characters.Placeholder.FindMove("5LP")!;
+        var passedThrough = 0;
+        for (var i = hits[0].Frame + 1; i < hits[1].Frame; i++)
+        {
+            var s = states[i];
+            var p2 = s.Fighters[1];
+            if (s.Fighters[0].Juggle == 0 || p2.Move < 0 || !jab.IsActive(p2.ActionFrame) || p2.MoveHit)
+                continue;
+            var contacts = Collision.Contacts.Find(s, Collision.Body.Shapes(s.Fighters[0]), Collision.Body.Shapes(p2));
+            if (contacts.Count > 0)
+                passedThrough++;
+        }
+        Assert.True(passedThrough > 0, "P2's jab should overlap the falling P1 at least once");
     }
 
     [Fact]

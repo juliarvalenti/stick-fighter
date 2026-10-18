@@ -79,6 +79,14 @@ public static class Simulation
         if (fighter.Wakeup > 0)
             fighter.Wakeup--;
 
+        // Out of hitstun and not falling from a juggle as this frame begins: whatever combo the
+        // fighter was taking is over. (A hit on its last hitstun frame still continues it.)
+        if (fighter.Hitstun == 0 && !(fighter.Airborne && fighter.Juggle > 0))
+        {
+            fighter.ComboHits = 0;
+            fighter.ComboDamage = 0;
+        }
+
         // Held in a throw, thrower or thrown: Throws.Resolve decides when it ends.
         if (fighter.Grab >= 0)
         {
@@ -318,6 +326,7 @@ public static class Simulation
 
         fighter.Airborne = false;
         fighter.Hitstun = 0;
+        fighter.Juggle = 0; // landing from a juggle (a knockdown, in Knockdowns)
         fighter.Action = (int)FighterAction.Landing;
         fighter.ActionFrame = 0;
         fighter.Move = -1;

@@ -56,7 +56,7 @@ public static class Output
         Field(text, "guard", Str(s.GetProperty("guard").GetString()!));
         if (s.TryGetProperty("kind", out var kind))
             Field(text, "kind", Str(kind.GetString()!));
-        foreach (var key in new[] { "chip" })
+        foreach (var key in new[] { "chip", "juggleStart", "juggleIncrease", "juggleLimit" })
         {
             if (s.TryGetProperty(key, out var value))
                 Field(text, key, value.GetInt32().ToString(CultureInfo.InvariantCulture));

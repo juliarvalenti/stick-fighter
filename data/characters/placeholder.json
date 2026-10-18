@@ -36,7 +36,12 @@
     "backDashDistance": 120,
     "forwardDashRecovery": 4,
     "backDashRecovery": 6,
-    "dashInputWindow": 10
+    "dashInputWindow": 10,
+    "comment-hit-states": "crouchHitstunBonus: extra hitstun frames on a crouching defender (SF4 gives crouchers a little more). lowLifeReduction: SF4's damage reduction for a defender under 50% (x0.95), 30% (x0.90) and 15% (x0.75) health. An air hit knocks the defender into a fall: airHitRise (up, at the hit) and airHitDrift (away from the attacker, each frame), px/1000 per frame; gravity brings them down. Placeholders for the playtest.",
+    "crouchHitstunBonus": 1,
+    "lowLifeReduction": true,
+    "airHitRise": 8000,
+    "airHitDrift": 3000
   },
   "comment-stats": "crouchTransitionFrames: frames from standing to the crouch pose, counting as crouching throughout (SF4's figure). pushShare: walking into a fighter who isn't walking in, how much of the walker's step moves them along, per mille; the walker keeps the same share, so the pair moves together at that fraction of walking speed. pushHeight here is the standing pushbox; a pose may set its own. The jump arc: jumpVelocity (up, at takeoff) and gravity (each frame) in px/1000, chosen so it lands in exactly airborneFrames (the loader checks) with its apex at 294 px, SF4's 1.76 units; jumpForward and jumpBack are the sideways drift (placeholders for the playtest).",
 
