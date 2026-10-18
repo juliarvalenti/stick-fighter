@@ -38,6 +38,11 @@ public static class CameraMath
         return Math.Clamp(centerX, leftWall + half, rightWall - half);
     }
 
+    // Where to draw, in stage coordinates, a backdrop shape placed at `layerX` on a layer at
+    // `depth`: 1 moves with the stage, 0 stays fixed to the screen, and in between scrolls slower
+    // than the stage, so it reads as further away.
+    public static float ParallaxX(float layerX, float cameraX, float depth) => layerX + cameraX * (1f - depth);
+
     // Screen shake: a jolt that fades linearly to nothing over `duration` frames. The direction
     // each frame comes from an integer hash of (seed, frame), so the same inputs always shake the
     // same way.

@@ -9,6 +9,8 @@ public static class Look
     public static readonly Color Paper = Color.FromHtml(Palette.Paper);
     public static readonly Color PaperShade = Color.FromHtml(Palette.PaperShade);
     public static readonly Color Ink = Color.FromHtml(Palette.Ink);
+    public static readonly Color BackdropFar = Color.FromHtml(Palette.BackdropFar);
+    public static readonly Color BackdropNear = Color.FromHtml(Palette.BackdropNear);
     public static readonly Color P1 = Color.FromHtml(Palette.P1);
     public static readonly Color P2 = Color.FromHtml(Palette.P2);
     public static readonly Color P1Alt = Color.FromHtml(Palette.P1Alt);
