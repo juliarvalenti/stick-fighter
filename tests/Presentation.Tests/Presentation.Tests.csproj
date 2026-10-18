@@ -27,6 +27,10 @@
     <Compile Include="../../game/settings/Bindings.cs" Link="Linked/Bindings.cs" />
     <Compile Include="../../game/settings/UserSettings.cs" Link="Linked/UserSettings.cs" />
     <Compile Include="../../game/settings/PadSlots.cs" Link="Linked/PadSlots.cs" />
+    <Compile Include="../../game/sound/Sfx.cs" Link="Linked/Sfx.cs" />
+    <Compile Include="../../game/sound/Synth.cs" Link="Linked/Synth.cs" />
+    <Compile Include="../../game/sound/WhiffWatch.cs" Link="Linked/WhiffWatch.cs" />
+    <Compile Include="../../game/sound/SoundDirector.cs" Link="Linked/SoundDirector.cs" />
   </ItemGroup>
 
   <!-- The characters' moves, to check every notation they use reads as glyphs. -->

@@ -62,6 +62,11 @@ public partial class ScenarioRun : Node
             Finish();
     }
 
+    // A text log the scenario keeps (which sounds fired on which frames: CI can't hear them),
+    // written to <out>/<scenario>.txt at the end and compared line for line with
+    // <golden>/<scenario>.txt, as captures are with their images.
+    public List<string>? Log { get; set; }
+
     // A check the scenario makes along the way (the pause leaving the match untouched): a failure
     // fails the run like a golden mismatch.
     public void Check(bool ok, string what)
@@ -156,9 +161,51 @@ public partial class ScenarioRun : Node
         return count;
     }
 
+    private void CompareLog(List<string> log)
+    {
+        var name = _scenario.Name;
+        var text = string.Join("\n", log) + "\n";
+        using (var file = FileAccess.Open($"{_outDir}/{name}.txt", FileAccess.ModeFlags.Write))
+            file.StoreString(text);
+        GD.Print($"logged {_outDir}/{name}.txt ({log.Count} lines)");
+        if (_goldenDir is null)
+            return;
+        var goldenPath = $"{_goldenDir}/{name}.txt";
+        if (_updateGoldens)
+        {
+            using var golden = FileAccess.Open(goldenPath, FileAccess.ModeFlags.Write);
+            golden.StoreString(text);
+            GD.Print($"updated golden {goldenPath}");
+            return;
+        }
+        if (!FileAccess.FileExists(goldenPath))
+        {
+            Fail($"{name}.txt: no golden at {goldenPath} (run tools/update-goldens.sh to add it)");
+            return;
+        }
+
+        var expected = FileAccess.GetFileAsString(goldenPath).TrimEnd('\n').Split('\n');
+        var differ = 0;
+        for (var i = 0; i < System.Math.Max(expected.Length, log.Count); i++)
+        {
+            var want = i < expected.Length ? expected[i] : "(nothing)";
+            var got = i < log.Count ? log[i] : "(nothing)";
+            if (want == got)
+                continue;
+            if (differ++ < 10)
+                GD.PrintErr($"  line {i + 1}: expected '{want}', got '{got}'");
+        }
+        if (differ > 0)
+            Fail($"{name}.txt: {differ} lines differ from the golden");
+        else
+            GD.Print($"ok   {name}.txt: {log.Count} lines match");
+    }
+
     private void Finish()
     {
         _finishing = true;
+        if (Log is { } log)
+            CompareLog(log);
 
         if (_scenario.PacingCheck)
         {
