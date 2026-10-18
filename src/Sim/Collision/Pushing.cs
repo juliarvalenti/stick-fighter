@@ -28,11 +28,19 @@ public static class Pushing
         var leftBefore = p1Left ? p1Before : p2Before;
         var rightBefore = p1Left ? p2Before : p1Before;
 
-        var overlap = Overlap.BoxesX(Body.PushBox(left), Body.PushBox(right));
+        // Pushboxes only push where they meet: a fighter high enough in a jump passes over the
+        // other (crossing over), and one coming down on the other is pushed off, never inside.
+        var leftBox = Body.PushBox(left);
+        var rightBox = Body.PushBox(right);
+        var level = leftBox.Min.Y < rightBox.Max.Y && rightBox.Min.Y < leftBox.Max.Y;
+        var overlap = level ? Overlap.BoxesX(leftBox, rightBox) : Fix.Zero;
         if (overlap > Fix.Zero)
         {
-            var (leftBack, rightBack) = SplitOverlap(
-                overlap, left.Position.X - leftBefore, rightBefore - right.Position.X, Body.PushShare);
+            // One in the air and one on the ground: the one in the air takes the whole push, so a
+            // jump never drags or shoves a grounded fighter (it goes up and over, or is pushed off).
+            var (leftBack, rightBack) = left.Airborne != right.Airborne
+                ? (left.Airborne ? overlap : Fix.Zero, right.Airborne ? overlap : Fix.Zero)
+                : SplitOverlap(overlap, left.Position.X - leftBefore, rightBefore - right.Position.X, Body.PushShare);
             left.Position = new FixVec2(left.Position.X - leftBack, left.Position.Y);
             right.Position = new FixVec2(right.Position.X + rightBack, right.Position.Y);
         }
@@ -45,7 +53,7 @@ public static class Pushing
 
         // Pinned against a wall, the other fighter takes the whole push.
         var width = Body.PushHalfWidth * 2;
-        if (right.Position.X - left.Position.X < width)
+        if (level && right.Position.X - left.Position.X < width)
         {
             if (left.Position.X <= MinX(stage))
                 right.Position = new FixVec2(left.Position.X + width, right.Position.Y);

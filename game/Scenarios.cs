@@ -184,6 +184,15 @@ public static class Scenarios
             f => f < 260 ? new FrameInput(Buttons.Right, Buttons.Right) : new FrameInput(Buttons.Left, Buttons.Left),
             Captures: new[] { 60, 260, 500, 700 }, Frames: 700, Boxes: true),
 
+        // Jumps, boxes on. P1 walks up to P2 and jumps forward over it: takeoff after the pre-jump
+        // frames (51), the apex above P2 (69), coming down on the far side still facing right (86),
+        // and landed and turned around (90). P2 turns as soon as P1 has crossed.
+        new Scenario("jumps", 1,
+            f => f < 46 ? new FrameInput(Buttons.Right, default)
+                : f < 51 ? new FrameInput(Buttons.Up | Buttons.Right, default)
+                : default,
+            Captures: new[] { 51, 69, 86, 90 }, Frames: 90, Boxes: true),
+
         // The frame-time overlay, with fixed numbers so the image is stable.
         new Scenario("overlay", 1, _ => WalkIn, Captures: new[] { 60 }, Frames: 60, Overlay: true),
 

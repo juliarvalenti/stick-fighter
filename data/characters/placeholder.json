@@ -26,9 +26,13 @@
     "throwDistance": 170,
     "throwFollowThrough": 14,
     "knockdownFrames": 31,
-    "wakeupThrowInvulnerable": 2
+    "wakeupThrowInvulnerable": 2,
+    "jumpVelocity": 31762,
+    "gravity": 1815,
+    "jumpForward": 5000,
+    "jumpBack": 4000
   },
-  "comment-stats": "crouchTransitionFrames: frames from standing to the crouch pose, counting as crouching throughout (SF4's figure). pushShare: walking into a fighter who isn't walking in, how much of the walker's step moves them along, per mille; the walker keeps the same share, so the pair moves together at that fraction of walking speed. pushHeight here is the standing pushbox; a pose may set its own.",
+  "comment-stats": "crouchTransitionFrames: frames from standing to the crouch pose, counting as crouching throughout (SF4's figure). pushShare: walking into a fighter who isn't walking in, how much of the walker's step moves them along, per mille; the walker keeps the same share, so the pair moves together at that fraction of walking speed. pushHeight here is the standing pushbox; a pose may set its own. The jump arc: jumpVelocity (up, at takeoff) and gravity (each frame) in px/1000, chosen so it lands in exactly airborneFrames (the loader checks) with its apex at 294 px, SF4's 1.76 units; jumpForward and jumpBack are the sideways drift (placeholders for the playtest).",
 
   "skeleton": {
     "comment": "Bone lengths and capsule radii. Hip is the root; arms hang from the neck, legs from the hip.",
@@ -110,6 +114,27 @@
       "length": 4,
       "keys": [
         { "frame": 0, "hip": [0, -112], "angles": { "spine": 0, "neck": 0, "backShoulder": 291, "backElbow": -519, "frontShoulder": -27, "frontElbow": -1830, "backHip": -18, "backKnee": 317, "frontHip": -291, "frontKnee": 335 } }
+      ]
+    },
+    "preJump": {
+      "comment": "Crouching to spring, for stats.preJumpFrames: on the ground, feet planted.",
+      "length": 1,
+      "keys": [
+        { "frame": 0, "hip": [0, -92], "angles": { "spine": 0, "neck": 0, "backShoulder": 291, "backElbow": -519, "frontShoulder": -27, "frontElbow": -1830, "backHip": -239, "backKnee": 827, "frontHip": -563, "frontKnee": 836 } }
+      ]
+    },
+    "jump": {
+      "comment": "In the air: the tuck the jumping normals start from (jump-tuck in data/moves/library.json). The origin is where the feet would be, so the legs fold up above it.",
+      "length": 1,
+      "keys": [
+        { "frame": 0, "hip": [0, -112], "angles": { "spine": 60, "neck": 0, "backShoulder": 579, "backElbow": -952, "frontShoulder": 500, "frontElbow": -1755, "backHip": -441, "backKnee": 1384, "frontHip": -830, "frontKnee": 1286 } }
+      ]
+    },
+    "landing": {
+      "comment": "Touching down, for stats.landingFrames: the same squat as preJump.",
+      "length": 1,
+      "keys": [
+        { "frame": 0, "hip": [0, -92], "angles": { "spine": 0, "neck": 0, "backShoulder": 291, "backElbow": -519, "frontShoulder": -27, "frontElbow": -1830, "backHip": -239, "backKnee": 827, "frontHip": -563, "frontKnee": 836 } }
       ]
     },
     "walkForward": {
