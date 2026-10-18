@@ -18,6 +18,7 @@ public partial class Main : Node2D
     private readonly TickDriver _driver = new();
     private readonly DeviceInputSource _input = new();
     private DebugOverlay _overlay = null!;
+    private DebugView _debugView = null!;
     private FramePacer _pacer = new(0);
     private int _screen = -1;
 
@@ -27,6 +28,8 @@ public partial class Main : Node2D
 
         _overlay = new DebugOverlay();
         AddChild(_overlay);
+        _debugView = new DebugView();
+        AddChild(_debugView);
 
         // `--smoke` (after `--`) runs a few frames and exits 0: the headless check in CI.
         if (System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--smoke") >= 0)
@@ -47,6 +50,7 @@ public partial class Main : Node2D
         var simMs = Stopwatch.GetElapsedTime(start).TotalMilliseconds;
 
         _overlay.Record(delta * 1000, simMs, ticks, _driver.DroppedTicks, _state.Frame);
+        _debugView.Show(_state);
         QueueRedraw();
     }
 
