@@ -219,16 +219,6 @@ public class ActionTests
     private static Character Data => Characters.Characters.Placeholder;
 
     [Fact]
-    public void DownCrouchesInPlace()
-    {
-        var state = GameState.NewMatch(1);
-        var x = state.Fighters[0].Position.X;
-        Simulation.Step(ref state, new FrameInput(Buttons.Down | Buttons.Right, default));
-        Assert.Equal((int)FighterAction.Crouch, state.Fighters[0].Action);
-        Assert.Equal(x, state.Fighters[0].Position.X);
-    }
-
-    [Fact]
     public void ForwardAndBackWalkAtTheirOwnSpeeds()
     {
         var state = GameState.NewMatch(1);

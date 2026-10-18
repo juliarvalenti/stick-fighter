@@ -15,8 +15,11 @@
     "landingFrames": 4,
     "pushHalfWidth": 30,
     "pushHeight": 230,
-    "proximityGuard": 180
+    "proximityGuard": 180,
+    "crouchTransitionFrames": 4,
+    "pushShare": 400
   },
+  "comment-stats": "crouchTransitionFrames: frames from standing to the crouch pose, counting as crouching throughout (SF4's figure). pushShare: walking into a fighter who isn't walking in, how much of the walker's step moves them along, per mille; the walker keeps the same share, so the pair moves together at that fraction of walking speed. pushHeight here is the standing pushbox; a pose may set its own.",
 
   "skeleton": {
     "comment": "Bone lengths and capsule radii. Hip is the root; arms hang from the neck, legs from the hip.",
@@ -57,18 +60,27 @@
     },
     "blockCrouch": {
       "length": 1,
+      "pushHeight": 150,
       "keys": [
         { "frame": 0, "hip": [-4, -72], "angles": { "spine": -30, "neck": 10, "backShoulder": 506, "backElbow": -1824, "frontShoulder": -380, "frontElbow": -1817, "backHip": -283, "backKnee": 1106, "frontHip": -753, "frontKnee": 1146 } }
       ]
     },
     "crouch": {
       "length": 40,
+      "pushHeight": 150,
       "keys": [
         { "frame": 0, "hip": [0, -74], "angles": { "spine": 0, "neck": 0, "backShoulder": 387, "backElbow": -746, "frontShoulder": 165, "frontElbow": -555, "backHip": -235, "backKnee": 1055, "frontHip": -709, "frontKnee": 1133 } },
         { "frame": 10, "hip": [0, -73], "angles": { "spine": 0, "neck": 0, "backShoulder": 387, "backElbow": -746, "frontShoulder": 165, "frontElbow": -555, "backHip": -238, "backKnee": 1069, "frontHip": -718, "frontKnee": 1147 } },
         { "frame": 15, "hip": [0, -72], "angles": { "spine": 0, "neck": 0, "backShoulder": 387, "backElbow": -746, "frontShoulder": 165, "frontElbow": -555, "backHip": -241, "backKnee": 1082, "frontHip": -726, "frontKnee": 1161 } },
         { "frame": 30, "hip": [0, -73], "angles": { "spine": 0, "neck": 0, "backShoulder": 387, "backElbow": -746, "frontShoulder": 165, "frontElbow": -555, "backHip": -238, "backKnee": 1069, "frontHip": -718, "frontKnee": 1147 } },
         { "frame": 35, "hip": [0, -74], "angles": { "spine": 0, "neck": 0, "backShoulder": 387, "backElbow": -746, "frontShoulder": 165, "frontElbow": -555, "backHip": -235, "backKnee": 1055, "frontHip": -709, "frontKnee": 1133 } }
+      ]
+    },
+    "crouchDown": {
+      "comment": "Standing to crouching: as long as stats.crouchTransitionFrames, still tall (standing pushbox), but counting as crouching for blocking and crouching normals.",
+      "length": 4,
+      "keys": [
+        { "frame": 0, "hip": [0, -112], "angles": { "spine": 0, "neck": 0, "backShoulder": 291, "backElbow": -519, "frontShoulder": -27, "frontElbow": -1830, "backHip": -18, "backKnee": 317, "frontHip": -291, "frontKnee": 335 } }
       ]
     },
     "walkForward": {

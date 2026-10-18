@@ -141,6 +141,30 @@ static List<FrameInput>? Scripts(string name) => name switch
         (Buttons.Left, Buttons.Right, 300),
         (Buttons.Right, Buttons.Right, 120)),
 
+    // Ground movement. P1 walks into a standing P2 and pushes it along at the push share; then P2
+    // walks in too and both stop; then P1 backs off and P2 follows.
+    "ground-walk-in" => Runs(
+        (Buttons.Right, Buttons.None, 120),
+        (Buttons.Right, Buttons.Left, 30),
+        (Buttons.Left, Buttons.Left, 60)),
+
+    // P1 crouches through the transition, holds it, throws 2LP and stays down, stands, then
+    // crouches down-back and down-forward (neither walks); P2 crouches and stands in between.
+    "ground-crouch" => Runs(
+        (Buttons.Down, Buttons.None, 20),
+        (Buttons.Down | Buttons.LightPunch, Buttons.Down, 1),
+        (Buttons.Down, Buttons.Down, 20),
+        (Buttons.None, Buttons.None, 10),
+        (Buttons.Down | Buttons.Left, Buttons.None, 15),
+        (Buttons.Down | Buttons.Right, Buttons.Down | Buttons.Right, 15),
+        (Buttons.None, Buttons.None, 10)),
+
+    // P1 walks in and P2 backs off, then the other way round, then both back off to the limit.
+    "ground-back-off" => Runs(
+        (Buttons.Right, Buttons.Right, 60),
+        (Buttons.Left, Buttons.Left, 60),
+        (Buttons.Left, Buttons.Right, 150)),
+
     // P1 walks up to a standing P2 and lands 5MP, then both stand while hitstun plays out.
     "hit" => Runs(
         (Buttons.Right, Buttons.None, 46),

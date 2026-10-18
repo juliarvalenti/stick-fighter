@@ -10,8 +10,14 @@ public static class Body
     private static Character Data => Characters.Characters.Placeholder;
 
     public static Fix PushHalfWidth => Data.Stats.PushHalfWidth;
-    public static Fix PushHeight => Data.Stats.PushHeight;
+    public static Fix PushShare => Data.Stats.PushShare;
     public static Fix HeadRadius => Data.Skeleton.HeadRadius;
+
+    // The pushbox's height in the fighter's stance; a move uses its stance's (crouching or standing).
+    public static Fix PushHeight(in FighterState fighter) =>
+        MoveOf(fighter) is { } move
+            ? Data.PushHeight(move.Crouching ? FighterAction.Crouch : FighterAction.Stand)
+            : Data.PushHeight((FighterAction)fighter.Action);
 
     // The move being performed, if the fighter is attacking.
     public static Move? MoveOf(in FighterState fighter) =>
@@ -41,7 +47,7 @@ public static class Body
         if (MoveOf(fighter) is { } move && move.IsActive(fighter.ActionFrame) && !fighter.MoveHit)
             shapes.AddHit(Segment(joints, move.HitboxLimb, move.HitboxRadius + move.ActiveBonus));
 
-        shapes.Push = PushBox(fighter.Position);
+        shapes.Push = PushBox(fighter);
         return shapes;
     }
 
@@ -51,7 +57,7 @@ public static class Body
         return new Capsule(joints[from], joints[to], radius);
     }
 
-    public static Box PushBox(FixVec2 feet) => new(
-        new FixVec2(feet.X - PushHalfWidth, feet.Y - PushHeight),
-        new FixVec2(feet.X + PushHalfWidth, feet.Y));
+    public static Box PushBox(in FighterState fighter) => new(
+        new FixVec2(fighter.Position.X - PushHalfWidth, fighter.Position.Y - PushHeight(fighter)),
+        new FixVec2(fighter.Position.X + PushHalfWidth, fighter.Position.Y));
 }
