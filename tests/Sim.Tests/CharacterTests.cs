@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using StickFighter.Sim.Characters;
 using StickFighter.Sim.Collision;
 using StickFighter.Sim.Numerics;
@@ -141,7 +142,8 @@ public class PoseTests
     public static TheoryData<FighterAction, int> AllKeys()
     {
         var data = new TheoryData<FighterAction, int>();
-        foreach (FighterAction action in Enum.GetValues<FighterAction>())
+        // Stance poses only: an attack plays its move's track (the move compiler checks those).
+        foreach (var action in Enum.GetValues<FighterAction>().Where(a => a != FighterAction.Attack))
         {
             foreach (var key in Data.Pose(action).Keys)
                 data.Add(action, key.Frame);

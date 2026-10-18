@@ -141,6 +141,23 @@ static List<FrameInput>? Scripts(string name) => name switch
         (Buttons.Left, Buttons.Right, 300),
         (Buttons.Right, Buttons.Right, 120)),
 
+    // P1 walks up to a standing P2 and lands 5MP, then both stand while hitstun plays out.
+    "hit" => Runs(
+        (Buttons.Right, Buttons.None, 46),
+        (Buttons.MediumPunch, Buttons.None, 1),
+        (Buttons.None, Buttons.None, 40)),
+
+    // P1 throws 5HK from the starting distance and nothing connects.
+    "whiff" => Runs(
+        (Buttons.HeavyKick, Buttons.None, 1),
+        (Buttons.None, Buttons.None, 40)),
+
+    // Both walk in and jab on the same frame: both get hit.
+    "trade" => Runs(
+        (Buttons.Right, Buttons.Left, 23),
+        (Buttons.LightPunch, Buttons.LightPunch, 1),
+        (Buttons.None, Buttons.None, 30)),
+
     _ => null,
 };
 

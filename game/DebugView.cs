@@ -14,6 +14,7 @@ public partial class DebugView : Node2D
     private static readonly Color JointColor = new(0.1f, 0.1f, 0.12f);
     private static readonly Color HurtColor = new(0.1f, 0.7f, 0.3f);
     private static readonly Color HitColor = new(0.9f, 0.1f, 0.1f);
+    private static readonly Color SpentHitColor = new(0.5f, 0.05f, 0.1f);
     private static readonly Color PushColor = new(0.2f, 0.4f, 0.95f);
     private static readonly Color ProjectileColor = new(0.95f, 0.55f, 0.1f);
     private const float Line = 2f;
@@ -75,6 +76,11 @@ public partial class DebugView : Node2D
             DrawCapsule(shapes.Hurt[i].Shape, HurtColor);
         for (var i = 0; i < shapes.HitCount; i++)
             DrawCapsule(shapes.Hit[i], HitColor);
+
+        // A hitbox that has already connected no longer collides, but it still shows, darker, so
+        // you can see where the hit landed.
+        if (Body.MoveOf(fighter) is { } move && move.IsActive(fighter.ActionFrame) && fighter.MoveHit)
+            DrawCapsule(Body.Segment(Body.Pose(fighter), move.HitboxLimb, move.HitboxRadius + move.ActiveBonus), SpentHitColor);
 
         var joints = Body.Pose(fighter);
         for (var i = 0; i < Skeleton.JointCount; i++)

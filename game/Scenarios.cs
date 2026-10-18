@@ -20,7 +20,8 @@ public sealed record Scenario(
     bool Overlay = false,
     bool PacingCheck = false,
     Func<GameState, GameState>? Setup = null,
-    string? PoseSheet = null);
+    string? PoseSheet = null,
+    Func<GameState, GameState>? EachFrame = null);
 
 public static class Scenarios
 {
@@ -33,12 +34,56 @@ public static class Scenarios
 
     private static IReadOnlyList<Scenario> Build()
     {
-        var all = new List<Scenario>(Match);
+        var all = new List<Scenario>(Match) { NormalsScenario() };
 
         // One pose sheet per move: `sheet-5LP`, `sheet-j.HK`, ...
         foreach (var move in Sim.Characters.Characters.Placeholder.Moves)
             all.Add(new Scenario($"sheet-{move.Input}", 1, _ => default, Captures: new[] { 1 }, Frames: 1, PoseSheet: move.Input));
         return all;
+    }
+
+    // Every ground normal, one every 40 frames, at point-blank against a standing P2, captured on its
+    // first active frame with boxes on. The fighters are reset before each one, so pushback doesn't add up.
+    private const int NormalPeriod = 40;
+
+    private static readonly (string Input, Buttons Press)[] GroundNormals =
+    {
+        ("5LP", Buttons.LightPunch), ("5MP", Buttons.MediumPunch), ("5HP", Buttons.HeavyPunch),
+        ("5LK", Buttons.LightKick), ("5MK", Buttons.MediumKick), ("5HK", Buttons.HeavyKick),
+        ("2LP", Buttons.LightPunch | Buttons.Down), ("2MP", Buttons.MediumPunch | Buttons.Down), ("2HP", Buttons.HeavyPunch | Buttons.Down),
+        ("2LK", Buttons.LightKick | Buttons.Down), ("2MK", Buttons.MediumKick | Buttons.Down), ("2HK", Buttons.HeavyKick | Buttons.Down),
+    };
+
+    private static Scenario NormalsScenario()
+    {
+        var character = Sim.Characters.Characters.Placeholder;
+        var captures = new int[GroundNormals.Length];
+        for (var k = 0; k < GroundNormals.Length; k++)
+            captures[k] = k * NormalPeriod + character.FindMove(GroundNormals[k].Input)!.Startup + 1;
+
+        FrameInput Script(int frame)
+        {
+            var k = frame / NormalPeriod;
+            if (k >= GroundNormals.Length)
+                return default;
+            var press = GroundNormals[k].Press;
+            var crouch = press & Buttons.Down;
+            return new FrameInput(frame % NormalPeriod == 1 ? press : crouch, default);
+        }
+
+        GameState Reset(GameState s)
+        {
+            if (s.Frame % NormalPeriod != 0)
+                return s;
+            var fresh = GameState.NewMatch(1);
+            s.Fighters[0] = fresh.Fighters[0];
+            s.Fighters[1] = fresh.Fighters[1];
+            s.Fighters[0].Position = new FixVec2(Fix.FromInt(610), s.Fighters[0].Position.Y);
+            s.Fighters[1].Position = new FixVec2(Fix.FromInt(670), s.Fighters[1].Position.Y);
+            return s;
+        }
+
+        return new Scenario("normals", 1, Script, captures, GroundNormals.Length * NormalPeriod, Boxes: true, EachFrame: Reset);
     }
 
     private static readonly Scenario[] Match =

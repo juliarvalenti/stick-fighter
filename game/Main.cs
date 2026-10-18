@@ -120,6 +120,10 @@ public partial class Main : Node2D
         if (_scenario is { PacingCheck: true })
             delta += _jitter.NextInt(-300, 300) / 1_000_000.0;
 
+        // Some scenarios set the stage up again between steps (the harness, not gameplay).
+        if (_scenario?.EachFrame is { } eachFrame)
+            _state = eachFrame(_state);
+
         var start = Stopwatch.GetTimestamp();
         var elapsed = _pacer.ToMicroseconds((long)System.Math.Round(delta * 1_000_000_000));
         var ticks = _driver.Update(ref _state, elapsed, _input);

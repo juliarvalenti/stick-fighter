@@ -13,14 +13,20 @@ public static class Body
     public static Fix PushHeight => Data.Stats.PushHeight;
     public static Fix HeadRadius => Data.Skeleton.HeadRadius;
 
+    // The move being performed, if the fighter is attacking.
+    public static Move? MoveOf(in FighterState fighter) =>
+        fighter.Action == (int)FighterAction.Attack && fighter.Move >= 0 ? Data.Moves[fighter.Move] : null;
+
     public static PoseKey PoseOf(in FighterState fighter) =>
-        Data.Pose((FighterAction)fighter.Action).At(fighter.ActionFrame);
+        MoveOf(fighter) is { } move
+            ? move.Track.At(fighter.ActionFrame)
+            : Data.Pose((FighterAction)fighter.Action).At(fighter.ActionFrame);
 
     public static Joints Pose(in FighterState fighter) =>
         Skeleton.Solve(Data.Skeleton, PoseOf(fighter), fighter.Position, fighter.Facing);
 
-    // Every bone is a hurtbox; the head is a circle. A move's active limb will become a hitbox here
-    // once moves run (Normals and getting hit).
+    // Every bone is a hurtbox; the head is a circle. On a move's active frames its striking limb is
+    // also a hitbox, until the move has hit once.
     public static FighterShapes Shapes(in FighterState fighter)
     {
         var joints = Pose(fighter);
@@ -31,6 +37,9 @@ public static class Body
         shapes.AddHurt(Segment(joints, Limb.Spine, size.TorsoRadius));
         for (var limb = Limb.BackUpperArm; limb <= Limb.FrontShin; limb++)
             shapes.AddHurt(Segment(joints, limb, size.LimbRadius));
+
+        if (MoveOf(fighter) is { } move && move.IsActive(fighter.ActionFrame) && !fighter.MoveHit)
+            shapes.AddHit(Segment(joints, move.HitboxLimb, move.HitboxRadius + move.ActiveBonus));
 
         shapes.Push = PushBox(fighter.Position);
         return shapes;

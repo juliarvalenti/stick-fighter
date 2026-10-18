@@ -263,6 +263,7 @@
       "guard": "mid",
       "pushbackHit": 20,
       "pushbackBlock": 22,
+      "hitstun": 23,
       "hitbox": { "limb": "backForearm", "radius": 11, "activeBonus": 0 },
       "keys": [
         { "frame": 0, "hip": [0, -74], "angles": { "spine": -11, "neck": 0, "backShoulder": 416, "backElbow": -819, "frontShoulder": 165, "frontElbow": -555, "backHip": -235, "backKnee": 1055, "frontHip": -709, "frontKnee": 1134 } },
