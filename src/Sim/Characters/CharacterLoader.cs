@@ -20,7 +20,8 @@ public static class CharacterLoader
     // In FighterAction order; Attack has no stance pose (it plays its move's track).
     private static readonly string[] PoseNames =
     {
-        "stand", "crouch", "walkForward", "walkBack", "hitstun", "blockStand", "blockCrouch", "crouchDown", "thrown", "throwHold", "knockdown",
+        "stand", "crouch", "walkForward", "walkBack", "hitstun", "blockStand", "blockCrouch", "crouchDown",
+        "thrown", "throwHold", "knockdown", "preJump", "jump", "landing",
     };
 
     // `json` is the character (stats, skeleton, stance poses); `movesJson` is its compiled moves
@@ -37,6 +38,9 @@ public static class CharacterLoader
             var name = Str(root, "name");
             hash.Add(name);
             var stats = ReadStats(Obj(root, "stats"), hash);
+            var arc = Movement.Jumping.ArcFrames(stats.JumpVelocity, stats.Gravity);
+            if (arc != stats.AirborneFrames)
+                throw new CharacterDataException($"stats: the jump arc (jumpVelocity, gravity) lands after {arc} frames, but airborneFrames is {stats.AirborneFrames}");
             var skeleton = ReadSkeleton(Obj(root, "skeleton"), hash);
 
             var poses = Obj(root, "poses");
@@ -104,7 +108,11 @@ public static class CharacterLoader
         ThrowDistance: Fix.FromInt(Positive(s, "throwDistance", h)),
         ThrowFollowThrough: Int(s, "throwFollowThrough", h),
         KnockdownFrames: Positive(s, "knockdownFrames", h),
-        WakeupThrowInvulnerable: Int(s, "wakeupThrowInvulnerable", h));
+        WakeupThrowInvulnerable: Int(s, "wakeupThrowInvulnerable", h),
+        JumpVelocity: Fix.FromRatio(Positive(s, "jumpVelocity", h), 1000),
+        Gravity: Fix.FromRatio(Positive(s, "gravity", h), 1000),
+        JumpForward: Fix.FromRatio(Positive(s, "jumpForward", h), 1000),
+        JumpBack: Fix.FromRatio(Positive(s, "jumpBack", h), 1000));
 
     // A share from 1 to 1000.
     private static int PerMille(JsonElement s, string key, DataHasher h)

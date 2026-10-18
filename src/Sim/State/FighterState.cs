@@ -4,7 +4,7 @@ namespace StickFighter.Sim;
 
 public struct FighterState
 {
-    public const int EncodedSize = 16 + 16 + 4 + 4 + 4 + 4 + 4 + 1 + 4 + 4 + 1 + 4 + 4 + 4 + 4 + 1 + 1;
+    public const int EncodedSize = 16 + 16 + 4 + 4 + 4 + 4 + 4 + 1 + 4 + 4 + 1 + 4 + 4 + 4 + 4 + 1 + 1 + 1 + 1;
 
     public FixVec2 Position;
     public FixVec2 Velocity;
@@ -52,6 +52,14 @@ public struct FighterState
     // startup or recovery of anything else, it's a counter-hit throw and can't be teched.
     public bool Techable;
 
+    // Off the ground, on a jump's arc (from takeoff to touchdown). Gravity applies, and the fighter
+    // can't guard, turn or walk.
+    public bool Airborne;
+
+    // This jump's one air attack has been used (and, on landing, that it was: the landing then has
+    // recovery instead of being free).
+    public bool AirAttackUsed;
+
     public readonly void Encode(ref StateWriter writer)
     {
         writer.Write(Position);
@@ -71,5 +79,7 @@ public struct FighterState
         writer.Write(Wakeup);
         writer.Write(BackThrow);
         writer.Write(Techable);
+        writer.Write(Airborne);
+        writer.Write(AirAttackUsed);
     }
 }

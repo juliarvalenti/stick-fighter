@@ -33,9 +33,15 @@ public enum FighterAction
     // Lying down after a throw (later, after sweeps too). Nothing hits a fighter lying down.
     Knockdown = 10,
 
+    // A jump: crouching to spring on the ground (PreJump, the character's pre-jump frames), in the
+    // air on a fixed arc (Jump), and landing (Landing, the character's landing frames).
+    PreJump = 11,
+    Jump = 12,
+    Landing = 13,
+
     // Performing a move; the pose comes from the move's track, not a stance pose. Last, because
     // every action before it has a stance pose at the same index.
-    Attack = 11,
+    Attack = 14,
 }
 
 public enum Strength
@@ -106,7 +112,13 @@ public sealed record Stats(
     Fix ThrowDistance,
     int ThrowFollowThrough,
     int KnockdownFrames,
-    int WakeupThrowInvulnerable);
+    int WakeupThrowInvulnerable,
+    // The jump arc, per frame: upward speed at takeoff, gravity, and the sideways drift of a forward
+    // or back jump. The loader checks the arc lands in exactly AirborneFrames.
+    Fix JumpVelocity,
+    Fix Gravity,
+    Fix JumpForward,
+    Fix JumpBack);
 
 public sealed record SkeletonSize(
     Fix Spine,
