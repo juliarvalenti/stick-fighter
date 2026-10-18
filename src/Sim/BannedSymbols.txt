@@ -13,3 +13,12 @@ M:System.Object.GetHashCode; Not stable across machines; never use it in game lo
 T:System.Threading.Tasks.Parallel; Simulation runs on one thread in a fixed order
 T:System.Threading.Tasks.Task; Simulation runs on one thread in a fixed order
 T:System.Threading.Thread; Simulation runs on one thread in a fixed order
+T:System.Collections.Generic.Dictionary`2; Unordered, and can't live in the value-type game state; use fixed arrays
+T:System.Collections.Generic.HashSet`1; Unordered, and can't live in the value-type game state; use fixed arrays
+T:System.Collections.Generic.IDictionary`2; Unordered; use fixed arrays
+T:System.Collections.Generic.IReadOnlyDictionary`2; Unordered; use fixed arrays
+T:System.Collections.Generic.ISet`1; Unordered; use fixed arrays
+T:System.Collections.Generic.IReadOnlySet`1; Unordered; use fixed arrays
+T:System.Collections.Concurrent.ConcurrentDictionary`2; Unordered; use fixed arrays
+T:System.Collections.Concurrent.ConcurrentBag`1; Unordered; use fixed arrays
+T:System.Collections.Hashtable; Unordered; use fixed arrays

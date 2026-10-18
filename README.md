@@ -36,7 +36,7 @@ Or open `project.godot` in the Godot editor and press F5.
 
 Every PR has to pass these:
 
-- **Determinism.** Analyzers in `tools/Determinism.Analyzers` fail the `src/Sim` build on floating-point values (`SF0001`) and on iterating unordered collections (`SF0002`). `src/Sim/BannedSymbols.txt` bans the wall clock, `System.Random`, `Math`, threads and `GetHashCode` (`RS0030`). For a rare justified case, use `#pragma warning disable SF0001 // why`.
+- **Determinism.** Analyzers in `tools/Determinism.Analyzers` fail the `src/Sim` build on floating-point values (`SF0001`) and on iterating unordered collections (`SF0002`). `src/Sim/BannedSymbols.txt` bans the wall clock, `System.Random`, `Math`, threads, `GetHashCode`, and the hash-based collections (`Dictionary`, `HashSet` and their interfaces), whose order is undefined (`RS0030`). For a rare justified case, use `#pragma warning disable SF0001 // why`.
 - **Types and style.** Nullable is on and warnings are errors, with the .NET analyzers at `latest-recommended` in `src/Sim`. `dotnet format --verify-no-changes` must pass.
 - **Allocations.** `tests/Sim.Tests/AllocationTests.cs` fails if a step or save allocates.
 - **Perf.** `tools/Bench` measures the p99 of one save + step against **1 ms**, and of a rollback frame (1 load + 9 × save + step) against **10 ms**. It also fails a PR that is more than 20% slower than its base branch, measured on the same runner. Differences under 50 µs are ignored as timer noise. Each mode stops after 15 s, so a slow step fails rather than hangs.

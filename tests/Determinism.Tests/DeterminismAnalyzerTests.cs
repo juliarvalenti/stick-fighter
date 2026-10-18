@@ -42,7 +42,6 @@ public class DeterminismAnalyzerTests
     [InlineData("struct S { int X; long Y; }")]
     [InlineData("class C { int M(int a, int b) => a * b / 2; }")]
     [InlineData("class C { void M() { var a = new int[4]; foreach (var x in a) { } } }")]
-    [InlineData("class C { void M() { var d = new System.Collections.Generic.Dictionary<int, int>(); var y = d[1]; } }")]
     public async Task AllowsIntegerAndOrderedCode(string source)
     {
         var ids = await AnalyzeAsync(source);
