@@ -7,7 +7,8 @@ namespace StickFighter.StyleFrames;
 // character there is, and each player's fighter standing below as the preview.
 public partial class SelectFrame : Control
 {
-    private static readonly Vector2 CardSize = new(132, 148);
+    private static readonly Vector2 CardSize = new(124, 136);
+    private const float CardTop = 116;
     private const int Cards = 3;
 
     public SelectFrame()
@@ -18,13 +19,13 @@ public partial class SelectFrame : Control
 
     public override void _Draw()
     {
-        this.Text(new Rect2(0, 24, Size.X, 64), "CHOOSE YOUR FIGHTER", Look.Display, Look.DisplayMedium, Look.Ink);
+        this.Text(new Rect2(0, 12, Size.X, 64), "CHOOSE YOUR FIGHTER", Look.Display, Look.DisplayMedium, Look.Ink);
 
         const float gap = 24;
         var left = (Size.X - (Cards * CardSize.X + (Cards - 1) * gap)) / 2;
         for (var i = 0; i < Cards; i++)
         {
-            var card = new Rect2(left + i * (CardSize.X + gap), 104, CardSize.X, CardSize.Y);
+            var card = new Rect2(left + i * (CardSize.X + gap), CardTop, CardSize.X, CardSize.Y);
             this.Card(card, Look.PaperShade);
             if (i == 0)
                 DrawPortrait(card);
@@ -33,7 +34,7 @@ public partial class SelectFrame : Control
         }
 
         // Both cursors on the first card: player 1's ring outside, player 2's inside it.
-        var picked = new Rect2(left, 104, CardSize.X, CardSize.Y);
+        var picked = new Rect2(left, CardTop, CardSize.X, CardSize.Y);
         this.CardOutline(picked.Grow(10), Look.P1, Look.BoldStroke, Look.CardRadius + 10);
         this.CardOutline(picked.Grow(2), Look.P2, Look.BoldStroke, Look.CardRadius + 2);
         DrawCursorTag(0, new Vector2(picked.Position.X - 10, picked.Position.Y - 26));
