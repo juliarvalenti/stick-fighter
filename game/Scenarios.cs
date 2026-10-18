@@ -236,6 +236,10 @@ public static class Scenarios
         new Scenario("ui-glyphs", 1, _ => default, Captures: new[] { 2 }, Frames: 2,
             StyleFrame: () => new UI.KitSheet(UI.KitSheet.Page.Glyphs)),
 
+        // Every effect frame by frame: the sparks, then the rest.
+        new Scenario("effects", 1, _ => default, Captures: new[] { 5, 15 }, Frames: 15,
+            StyleFrame: () => new FX.EffectSheet()),
+
         // The screens, built only from the kit. The title's fight behind it is this script.
         new Scenario("screen-title", 1, TitleFight, Captures: new[] { 18 }, Frames: 18,
             Setup: s => Place(s, 560, 720), StyleFrame: () => new UI.Screens.TitleScreen()),
