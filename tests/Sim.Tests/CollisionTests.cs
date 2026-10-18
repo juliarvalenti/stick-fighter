@@ -378,7 +378,7 @@ public class ContactTests
         var state = Close();
         state.Projectiles[0] = new ProjectileState { Active = true, Owner = 0, Position = V(680, 450) };
 
-        var p2 = new FighterShapes { Push = Body.PushBox(state.Fighters[1].Position) };
+        var p2 = new FighterShapes { Push = Body.PushBox(state.Fighters[1]) };
         var full = Body.Shapes(state.Fighters[1]);
         for (var i = 0; i < full.HurtCount; i++)
             p2.AddHurt(full.Hurt[i].Shape, ignoresProjectiles: true);

@@ -20,18 +20,22 @@ public enum FighterAction
     BlockStand = 5,
     BlockCrouch = 6,
 
+    // Going from standing to crouching: still tall, but counting as crouching (it blocks low and
+    // starts crouching normals). Becomes Crouch after the character's crouch transition frames.
+    CrouchDown = 7,
+
     // Held in the opponent's throw, until it's teched or completes.
-    Thrown = 7,
+    Thrown = 8,
 
     // Holding a throw that connected, through the tech check and the follow-through.
-    Throwing = 8,
+    Throwing = 9,
 
     // Lying down after a throw (later, after sweeps too). Nothing hits a fighter lying down.
-    Knockdown = 9,
+    Knockdown = 10,
 
     // Performing a move; the pose comes from the move's track, not a stance pose. Last, because
     // every action before it has a stance pose at the same index.
-    Attack = 10,
+    Attack = 11,
 }
 
 public enum Strength
@@ -88,6 +92,11 @@ public sealed record Stats(
     // Holding back with the opponent's attack in startup or active frames and the fighters at most
     // this far apart (feet to feet) puts you in block stance instead of walking back.
     Fix ProximityGuard,
+    // Frames of CrouchDown before the crouch pose.
+    int CrouchTransitionFrames,
+    // Walking into a fighter who isn't walking in, the share of the walker's step that moves them
+    // along (the walker keeps the same share, so the two move together at this fraction of its speed).
+    Fix PushShare,
     // Throws (see the comment in the character data): range feet to feet, tech timing, landing
     // distance, how long the thrower holds on, and the knockdown and wakeup that follow.
     Fix ThrowRange,
@@ -189,6 +198,9 @@ public sealed record Move(
 
     public bool IsActive(int frame) => frame >= FirstActiveFrame && frame < FirstActiveFrame + Active;
 
+    // Done from a crouch (numpad 1, 2 or 3), so it keeps the crouching pushbox and ends crouched.
+    public bool Crouching => Input.Length > 0 && Input[0] is '1' or '2' or '3';
+
     // SF4's tiers (reference/frame-data-baseline): light 14/11, medium 17/14, heavy 22/18.
     public int Hitstun => HitstunOverride ?? Strength switch
     {
@@ -210,10 +222,14 @@ public sealed record Character(
     Stats Stats,
     SkeletonSize Skeleton,
     ImmutableArray<PoseTrack> Poses,
+    // The pushbox's height in each stance, by FighterAction like Poses.
+    ImmutableArray<Fix> PushHeights,
     ImmutableArray<Move> Moves,
     ulong DataHash)
 {
     public PoseTrack Pose(FighterAction action) => Poses[(int)action];
+
+    public Fix PushHeight(FighterAction action) => PushHeights[(int)action];
 
     public Move? FindMove(string input)
     {

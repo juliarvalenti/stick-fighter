@@ -32,30 +32,30 @@
              "recovery: hold:0.3", "pose:guard"] },
 
     { "name": "Crouching light punch", "input": "2LP", "startup": 3, "active": 3, "recovery": 6, "damage": 30, "stun": 50, "strength": "light", "guard": "mid", "pushbackHit": 12, "pushbackBlock": 14,
-      "do": ["active: reach:front-hand opponent-chest 1.0", "lean:6", "hitbox:front-hand 8",
+      "do": ["active: reach:front-hand opponent-chest 1.0", "lean:36", "hitbox:front-hand 8",
              "recovery: hold:0.2", "pose:crouch-guard"] },
 
     { "name": "Crouching medium punch", "input": "2MP", "startup": 5, "active": 5, "recovery": 8, "damage": 60, "stun": 100, "strength": "medium", "guard": "mid", "pushbackHit": 16, "pushbackBlock": 18,
-      "do": ["active: reach:front-hand opponent-chest 1.0", "lean:12", "hitbox:front-hand 9",
+      "do": ["active: reach:front-hand opponent-chest 1.0", "lean:42", "hitbox:front-hand 9",
              "recovery: hold:0.2", "pose:crouch-guard"] },
 
     { "name": "Crouching heavy punch", "input": "2HP", "startup": 5, "active": 5, "recovery": 22, "damage": 100, "stun": 200, "strength": "heavy", "guard": "mid", "pushbackHit": 20, "pushbackBlock": 22, "hitstun": 23,
-      "do": ["startup: reach:back-hand hip 0.6", "lean:-6",
-             "active: reach:back-hand opponent-head 1.0", "lean:10", "crouch:0.4", "ease:overshoot", "hitbox:back-hand 11",
+      "do": ["startup: reach:back-hand hip 0.6", "lean:24",
+             "active: reach:back-hand opponent-head 1.0", "lean:24", "crouch:0.4", "hitbox:back-hand 11",
              "recovery: hold:0.3", "pose:crouch-guard"] },
 
     { "name": "Crouching light kick", "input": "2LK", "startup": 3, "active": 4, "recovery": 8, "damage": 20, "stun": 50, "strength": "light", "guard": "low", "pushbackHit": 12, "pushbackBlock": 14,
-      "do": ["active: reach:front-foot opponent-shin 1.0", "lean:-8", "hitbox:front-foot 8",
+      "do": ["active: reach:front-foot opponent-shin 1.0", "lean:22", "hitbox:front-foot 8",
              "recovery: hold:0.2", "pose:crouch-guard"] },
 
     { "name": "Crouching medium kick", "input": "2MK", "startup": 5, "active": 5, "recovery": 12, "damage": 60, "stun": 100, "strength": "medium", "guard": "low", "pushbackHit": 16, "pushbackBlock": 18, "blockstun": 15,
-      "do": ["startup: reach:front-foot opponent-shin 0.5",
-             "active: reach:front-foot opponent-shin 1.0", "lean:-12", "hurt:front-foot shrink", "hitbox:front-foot 9",
+      "do": ["startup: reach:front-foot opponent-shin 0.5", "lean:18",
+             "active: reach:front-foot opponent-shin 1.0", "lean:18", "hurt:front-foot shrink", "hitbox:front-foot 9",
              "recovery: hold:0.2", "pose:crouch-guard"] },
 
     { "name": "Sweep", "input": "2HK", "startup": 7, "active": 4, "recovery": 21, "damage": 90, "stun": 100, "strength": "heavy", "guard": "low", "pushbackHit": 20, "pushbackBlock": 22,
-      "do": ["startup: lean:-10",
-             "active: reach:front-foot opponent-shin 1.0", "lean:-18", "ease:overshoot", "hitbox:front-foot 10",
+      "do": ["startup: lean:20",
+             "active: reach:front-foot opponent-shin 1.0", "lean:12", "ease:overshoot", "hitbox:front-foot 10",
              "recovery: hold:0.3", "pose:crouch-guard"] },
 
     { "name": "Jumping light punch", "input": "j.LP", "startup": 4, "active": 7, "recovery": 0, "damage": 40, "stun": 50, "strength": "light", "guard": "high", "pushbackHit": 12, "pushbackBlock": 14,

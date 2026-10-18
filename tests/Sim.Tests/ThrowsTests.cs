@@ -278,6 +278,7 @@ public class ThrowsTests
     {
         { FighterAction.Stand, -1, 0, true },
         { FighterAction.Crouch, -1, 0, true },
+        { FighterAction.CrouchDown, -1, 0, true },
         { FighterAction.WalkForward, -1, 0, true },
         { FighterAction.WalkBack, -1, 0, true },
         { FighterAction.BlockStand, -1, 0, true },

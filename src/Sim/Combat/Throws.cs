@@ -88,8 +88,8 @@ public static class Throws
     // whiffed throw's recovery, it's a counter-hit throw. (Landing joins the list with Jumps.)
     public static bool Techable(in FighterState f) => (FighterAction)f.Action switch
     {
-        FighterAction.Stand or FighterAction.Crouch or FighterAction.WalkForward or FighterAction.WalkBack
-            or FighterAction.BlockStand or FighterAction.BlockCrouch => true,
+        FighterAction.Stand or FighterAction.Crouch or FighterAction.CrouchDown or FighterAction.WalkForward
+            or FighterAction.WalkBack or FighterAction.BlockStand or FighterAction.BlockCrouch => true,
         FighterAction.Attack => f.Move == Normals.Throw && f.ActionFrame < Characters.Characters.Placeholder.Moves[f.Move].FirstActiveFrame,
         _ => false,
     };

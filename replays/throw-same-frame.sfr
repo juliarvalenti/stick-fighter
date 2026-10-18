@@ -1,6 +1,6 @@
 stick-fighter-replay 3
 seed 1
-data 84433dc95ee1116c
+data 8712e8b914d4dbc1
 stage 0 2560 600 1280
 frames 54
 input 0008 0004 23
@@ -29,8 +29,8 @@ checksum 1190a499f3ce0e0b
 checksum bde4ae407e9240c8
 checksum 9b8a498b8bda5add
 checksum cab6edd8837cfb2c
-checksum 269e701a67585726
-checksum 8077220cc65c032f
+checksum 5c169e5828678c76
+checksum 790562ddceed409f
 checksum f331f2d617958b14
 checksum 6b0c9d35521ea163
 checksum 52394f48b3dcd474

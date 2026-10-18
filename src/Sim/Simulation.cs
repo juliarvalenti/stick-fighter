@@ -120,6 +120,7 @@ public static class Simulation
         // Free to act. Normals don't cancel into each other yet (Specials, cancels, links).
         var direction = Numpad.Direction(history.At(now, now), fighter.Facing);
         var crouching = Numpad.Vertical(direction) < 0;
+        var wasLow = IsLow(fighter, character);
         var move = BufferedNormal(history, now, fighter.LastMoveFrame, crouching);
         if (move >= 0)
         {
@@ -137,8 +138,10 @@ public static class Simulation
             return;
         }
 
+        // Down (1, 2 or 3) crouches, through the crouch transition unless already low. Otherwise
+        // forward and back walk at their own speeds.
         var forward = Numpad.Horizontal(direction);
-        var action = crouching ? FighterAction.Crouch
+        var action = crouching ? (wasLow || CrouchedDown(fighter, character) ? FighterAction.Crouch : FighterAction.CrouchDown)
             : forward > 0 ? FighterAction.WalkForward
             : forward < 0 ? FighterAction.WalkBack
             : FighterAction.Stand;
@@ -187,14 +190,33 @@ public static class Simulation
             fighter.Move = -1;
     }
 
-    // Both facings come from positions after movement, so neither player is processed first.
+    // Already down low: crouching, guarding low, or finishing a crouching normal. Down from here
+    // goes straight to the crouch pose, with no transition.
+    private static bool IsLow(in FighterState fighter, Character character) =>
+        fighter.Action is (int)FighterAction.Crouch or (int)FighterAction.BlockCrouch
+        || (fighter.Action == (int)FighterAction.Attack && fighter.Move >= 0 && character.Moves[fighter.Move].Crouching);
+
+    // The crouch transition has run its frames.
+    private static bool CrouchedDown(in FighterState fighter, Character character) =>
+        fighter.Action == (int)FighterAction.CrouchDown && fighter.ActionFrame + 1 >= character.Stats.CrouchTransitionFrames;
+
+    // Free to turn around: on the ground (always, until jumps) and not mid-move, reeling or guarding
+    // in blockstun. A fighter who isn't free keeps facing the way it was until it is.
+    public static bool CanTurn(in FighterState fighter) =>
+        fighter.Hitstun == 0 && fighter.Blockstun == 0 && fighter.Action != (int)FighterAction.Attack && !fighter.KnockedDown;
+
+    // Facings come from positions after movement, and each free fighter turns toward the other on
+    // the same frame, so neither player is processed first.
     private static void FaceEachOther(ref GameState state)
     {
         var p1 = state.Fighters[0].Position.X;
         var p2 = state.Fighters[1].Position.X;
         if (p1 == p2)
             return;
-        state.Fighters[0].Facing = p1 < p2 ? 1 : -1;
-        state.Fighters[1].Facing = -state.Fighters[0].Facing;
+        var p1Facing = p1 < p2 ? 1 : -1;
+        if (CanTurn(state.Fighters[0]))
+            state.Fighters[0].Facing = p1Facing;
+        if (CanTurn(state.Fighters[1]))
+            state.Fighters[1].Facing = -p1Facing;
     }
 }

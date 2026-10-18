@@ -183,22 +183,97 @@ public class PoseTests
     public void ArmsAndHeadsDoNotClipAtMinimumDistance(FighterAction action, int frame)
     {
         // Pushboxes touching: as close as two fighters can stand. (Crouching knees may cross, as
-        // legs do in 2D fighters at point-blank; arms and heads must not.)
-        var gap = (Body.PushHalfWidth * 2).RoundToInt();
+        // legs do in 2D fighters at point-blank; arms must not.) Heads must not either, except
+        // when both are crouched: a crouch at two-thirds height has to lean its head forward, so
+        // two crouchers' heads overlap at point-blank, as sprites do in SF4. That's a picture,
+        // not a collision (hurtboxes don't push); decided in the Ground movement task.
         var p1 = Body.Pose(At(640, 1, action, frame));
-        var p2 = Body.Pose(At(640 + gap, -1, action, frame));
-        var radius = Data.Skeleton.LimbRadius;
+        var p2 = Body.Pose(At(640 + PointBlank, -1, action, frame));
+        AssertArmsClear(p1, p2, $"{action} frame {frame}");
+        if (action is not (FighterAction.Crouch or FighterAction.BlockCrouch))
+            AssertHeadsClear(p1, p2, $"{action} frame {frame}");
+    }
 
+    public static TheoryData<FighterAction, FighterAction> StandingAgainstCrouching()
+    {
+        var data = new TheoryData<FighterAction, FighterAction>();
+        foreach (var low in new[] { FighterAction.Crouch, FighterAction.BlockCrouch })
+        {
+            foreach (var tall in new[] { FighterAction.Stand, FighterAction.BlockStand, FighterAction.WalkForward, FighterAction.CrouchDown })
+                data.Add(tall, low);
+        }
+        return data;
+    }
+
+    // Standing against crouching stays clip-free, heads included.
+    [Theory]
+    [MemberData(nameof(StandingAgainstCrouching))]
+    public void StandingAndCrouchingDoNotClip(FighterAction tall, FighterAction low)
+    {
+        foreach (var lowKey in Data.Pose(low).Keys)
+        {
+            foreach (var tallKey in Data.Pose(tall).Keys)
+            {
+                var what = $"{tall} frame {tallKey.Frame} vs {low} frame {lowKey.Frame}";
+                var p1 = Body.Pose(At(640, 1, tall, tallKey.Frame));
+                var p2 = Body.Pose(At(640 + PointBlank, -1, low, lowKey.Frame));
+                AssertArmsClear(p1, p2, what);
+                AssertHeadsClear(p1, p2, what);
+            }
+        }
+    }
+
+    // A capsule at standing chest height, where a high attack lands, hits a standing fighter and
+    // passes over a crouching one: the crouch actually ducks.
+    [Theory]
+    [InlineData(FighterAction.Crouch)]
+    [InlineData(FighterAction.BlockCrouch)]
+    public void TheCrouchDucksUnderAHighAttack(FighterAction low)
+    {
+        var standing = Body.Pose(At(640, 1, FighterAction.Stand));
+        var chestY = (standing[Joint.Neck].Y * 3 + standing[Joint.Hip].Y) / 4; // high on the chest
+        var attack = new Capsule(new FixVec2(Fix.FromInt(560), chestY), new FixVec2(Fix.FromInt(720), chestY), Fix.FromInt(8));
+
+        Assert.True(Hits(Body.Shapes(At(640, 1, FighterAction.Stand)), attack));
+        foreach (var key in Data.Pose(low).Keys)
+            Assert.False(Hits(Body.Shapes(At(640, 1, low, key.Frame)), attack), $"{low} frame {key.Frame} is hit by a high attack");
+
+        // And it's about two-thirds of standing height (60–65%, measured to the top of the head).
+        var floor = Stage.Training.Floor;
+        var standTop = floor - (standing[Joint.Head].Y - Data.Skeleton.HeadRadius);
+        var crouching = Body.Pose(At(640, 1, low));
+        var crouchTop = floor - (crouching[Joint.Head].Y - Data.Skeleton.HeadRadius);
+        Assert.InRange((crouchTop * 100 / standTop).RoundToInt(), 60, 66);
+    }
+
+    private static int PointBlank => (Body.PushHalfWidth * 2).RoundToInt();
+
+    private static bool Hits(in FighterShapes shapes, in Capsule attack)
+    {
+        for (var i = 0; i < shapes.HurtCount; i++)
+        {
+            if (Overlap.Capsules(shapes.Hurt[i].Shape, attack, out _))
+                return true;
+        }
+        return false;
+    }
+
+    private static void AssertArmsClear(in Joints p1, in Joints p2, string what)
+    {
+        var radius = Data.Skeleton.LimbRadius;
         foreach (var a in new[] { Limb.FrontUpperArm, Limb.FrontForearm })
         {
             foreach (var b in new[] { Limb.FrontUpperArm, Limb.FrontForearm })
-                Assert.False(Overlap.Capsules(Body.Segment(p1, a, radius), Body.Segment(p2, b, radius), out _), $"{action} frame {frame}: P1 {a} touches P2 {b}");
+                Assert.False(Overlap.Capsules(Body.Segment(p1, a, radius), Body.Segment(p2, b, radius), out _), $"{what}: P1 {a} touches P2 {b}");
         }
+    }
 
+    private static void AssertHeadsClear(in Joints p1, in Joints p2, string what)
+    {
         var head = Data.Skeleton.HeadRadius;
         Assert.False(
             Overlap.Capsules(Capsule.Circle(p1[Joint.Head], head), Capsule.Circle(p2[Joint.Head], head), out _),
-            $"{action} frame {frame}: heads overlap");
+            $"{what}: heads overlap");
     }
 
     [Fact]
@@ -235,16 +310,6 @@ public class PoseTests
 public class ActionTests
 {
     private static Character Data => Characters.Characters.Placeholder;
-
-    [Fact]
-    public void DownCrouchesInPlace()
-    {
-        var state = GameState.NewMatch(1);
-        var x = state.Fighters[0].Position.X;
-        Simulation.Step(ref state, new FrameInput(Buttons.Down | Buttons.Right, default));
-        Assert.Equal((int)FighterAction.Crouch, state.Fighters[0].Action);
-        Assert.Equal(x, state.Fighters[0].Position.X);
-    }
 
     [Fact]
     public void ForwardAndBackWalkAtTheirOwnSpeeds()
