@@ -1,0 +1,12 @@
+stick-fighter-replay 6
+seed 1
+data a25ed9f5779f0a87
+stage 0 2560 600 1280
+mode training
+frames 200
+input 0000 0001 200
+at 59 p1 1080 600 1 Stand 60 1000 p2 1480 309.6065673828125 -1 Jump 15 1000 match Fight 0 0 0 0
+at 119 p1 1080 600 1 Stand 120 1000 p2 1480 600 -1 Landing 0 1000 match Fight 0 0 0 0
+at 179 p1 1080 600 1 Stand 180 1000 p2 1480 309.6065673828125 -1 Jump 15 1000 match Fight 0 0 0 0
+at 199 p1 1080 600 1 Stand 200 1000 p2 1480 600 -1 Landing 0 1000 match Fight 0 0 0 0
+final bd5b53b5e2e3ad97
