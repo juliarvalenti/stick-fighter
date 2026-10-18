@@ -33,6 +33,7 @@ public partial class Main : Node2D
     private DebugOverlay _overlay = null!;
     private DebugView _debugView = null!;
     private Training.InputDisplay _inputDisplay = null!;
+    private Training.FrameDataPanel _frameData = null!;
     private StageCamera _camera = null!;
     private StageBackdrop _backdrop = null!;
     private FramePacer _pacer = new(0);
@@ -53,10 +54,12 @@ public partial class Main : Node2D
         _debugView = new DebugView();
         AddChild(_debugView);
 
-        // The training input display (F4), screen-anchored over the stage.
+        // The training input display (F4) and frame data (F5), screen-anchored over the stage.
         var inputLayer = new CanvasLayer { Layer = 6 };
         _inputDisplay = new Training.InputDisplay();
         inputLayer.AddChild(_inputDisplay);
+        _frameData = new Training.FrameDataPanel();
+        inputLayer.AddChild(_frameData);
         AddChild(inputLayer);
 
         _camera = new StageCamera();
@@ -183,6 +186,7 @@ public partial class Main : Node2D
         PresentView(ticks);
         _debugView.Present(_state);
         _inputDisplay.Present(_state);
+        _frameData.Present(_state);
         _clock?.At(_state.Frame);
         QueueRedraw();
 

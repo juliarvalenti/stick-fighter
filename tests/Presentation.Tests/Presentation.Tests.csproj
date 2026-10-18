@@ -14,6 +14,7 @@
     <Compile Include="../../game/ui/Notation.cs" Link="Linked/Notation.cs" />
     <Compile Include="../../game/training/InputLog.cs" Link="Linked/InputLog.cs" />
     <Compile Include="../../game/training/InputDemo.cs" Link="Linked/InputDemo.cs" />
+    <Compile Include="../../game/training/FrameDataAnalyser.cs" Link="Linked/FrameDataAnalyser.cs" />
   </ItemGroup>
 
   <!-- The characters' moves, to check every notation they use reads as glyphs. -->
