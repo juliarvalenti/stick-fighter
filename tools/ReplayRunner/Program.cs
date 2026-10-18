@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using StickFighter.Sim;
+using StickFighter.Sim.Characters;
 using StickFighter.Sim.Numerics;
 using StickFighter.Sim.Replays;
 
@@ -34,8 +35,10 @@ switch (args[0])
         return Rerecord(args[1]);
     case "generate" when args.Length == 4:
         return Write(args[1], Replay.Record(ulong.Parse(args[2]), Stage.Training, Walkabout(ulong.Parse(args[2]), int.Parse(args[3]))));
+    // Scripts named match-… are versus matches (rounds, timer, KO); the rest are training.
     case "script" when args.Length == 3 && Scripts(args[2]) is { } script:
-        return Write(args[1], Replay.Record(1, Stage.Training, script));
+        return Write(args[1], Replay.Record(1, Stage.Training, script,
+            args[2].StartsWith("match-", StringComparison.Ordinal) ? MatchMode.Versus : MatchMode.Training));
     default:
         return Usage();
 }
@@ -98,7 +101,7 @@ static int SyncTestAll(string folder)
     foreach (var file in files)
     {
         var replay = Replay.Read(File.ReadAllText(file));
-        if (SyncTest.Run(replay.Seed, replay.Stage, replay.Inputs) is { } failure)
+        if (SyncTest.Run(replay.Seed, replay.Stage, replay.Inputs, replay.Mode) is { } failure)
         {
             failures++;
             Console.WriteLine($"FAIL {file}  {failure}");
@@ -115,7 +118,7 @@ static int Rerecord(string folder)
     foreach (var file in Files(folder))
     {
         var old = Replay.Read(File.ReadAllText(file), allowOldVersions: true);
-        var updated = Replay.Record(old.Seed, old.Stage, old.Inputs);
+        var updated = Replay.Record(old.Seed, old.Stage, old.Inputs, old.Mode);
         File.WriteAllText(file, updated.Write());
         Console.WriteLine($"rerecorded {file}: final {old.FinalChecksum:x16} -> {updated.FinalChecksum:x16}");
     }
@@ -472,8 +475,71 @@ static List<FrameInput>? Scripts(string name) => name switch
         (Buttons.LightPunch | Buttons.LightKick, Buttons.LightPunch | Buttons.LightKick, 1),
         (Buttons.None, Buttons.None, 30)),
 
+    // Versus matches, best of three, played round by round (see Played).
+    // P1 KOs P2 twice: 2-0.
+    "match-ko-ko" => Played(Plan.P1Kos, Plan.P1Kos),
+
+    // P1 lands one hit and then nobody does anything: P1 is ahead at time over. Then P1 KOs: 2-0.
+    "match-time-over" => Played(Plan.P1AheadOnTime, Plan.P1Kos),
+
+    // Both trade heavy punches from full health: a double KO, a round each (1-1). Then P2 KOs: 1-2.
+    "match-double-ko" => Played(Plan.Trade, Plan.P2Kos),
+
+    // A double KO (1-1), then a draw at time over (2-2), then a double KO in the final round: a
+    // drawn match.
+    "match-draw" => Played(Plan.Trade, Plan.Wait, Plan.Trade),
+
+    // P1 wins one, P2 wins one, then a double KO: 2-2 and a final round, which P2 wins.
+    "match-final-round" => Played(Plan.P1Kos, Plan.P2Kos, Plan.Trade, Plan.P2Kos),
+
     _ => null,
 };
+
+// A versus match played out against the live state, a plan per round, so a script needn't count
+// frames to a KO; then a second of the result. The replay is just the inputs it came to.
+static List<FrameInput> Played(params Plan[] rounds)
+{
+    var state = GameState.NewMatch(1, Stage.Training, MatchMode.Versus);
+    var inputs = new List<FrameInput>();
+    var after = 0;
+    while (after < GameInfo.TicksPerSecond)
+    {
+        if (state.Match.Phase == MatchPhase.MatchEnd)
+            after++;
+        else if (state.Match.Round > rounds.Length)
+            throw new InvalidOperationException($"the match went to round {state.Match.Round}, past the plans");
+        var plan = rounds[Math.Min(state.Match.Round, rounds.Length) - 1];
+        var input = new FrameInput(Plays(state, 0, plan), Plays(state, 1, plan));
+        inputs.Add(input);
+        Simulation.Step(ref state, input);
+    }
+    return inputs;
+}
+
+static Buttons Plays(in GameState state, int player, Plan plan)
+{
+    var full = Characters.Placeholder.Stats.Health;
+    var attacking = plan switch
+    {
+        Plan.P1Kos => player == 0,
+        Plan.P2Kos => player == 1,
+        Plan.Trade => true,
+        Plan.P1AheadOnTime => player == 0 && state.Fighters[1].Health == full,
+        _ => false,
+    };
+    return attacking ? Attack(state, player) : Buttons.None;
+}
+
+// Walk in, and heavy punch from close whenever free to. Both doing it from the mirrored start
+// trade on every hit.
+static Buttons Attack(in GameState state, int player)
+{
+    var me = state.Fighters[player];
+    var forward = me.Facing > 0 ? Buttons.Right : Buttons.Left;
+    var gap = Fix.Abs(state.Fighters[1].Position.X - state.Fighters[0].Position.X);
+    var free = me.Action is (int)FighterAction.Stand or (int)FighterAction.WalkForward;
+    return free && gap <= Fix.FromInt(70) ? Buttons.HeavyPunch : forward;
+}
 
 static List<FrameInput> Runs(params (Buttons P1, Buttons P2, int Frames)[] runs)
 {
@@ -498,3 +564,6 @@ static int Usage()
     Console.WriteLine("usage: ReplayRunner check|synctest|rerecord <folder> | generate <file> <seed> <frames> | script <file> <name>");
     return 2;
 }
+
+// What each player does in a played round (see Played).
+enum Plan { P1Kos, P2Kos, Trade, P1AheadOnTime, Wait }
