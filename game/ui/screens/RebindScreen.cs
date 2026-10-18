@@ -76,13 +76,16 @@ public partial class RebindScreen : Screen
         column.AddChild(head);
 
         var tabs = Ui.Tabs((int)_device, "Keyboard", "Pad");
+        tabs.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        tabs.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        tabs.TabAlignment = TabBar.AlignmentMode.Right;
         tabs.TabChanged += tab =>
         {
             _device = (Device)(int)tab;
             _waiting = null;
             Refresh();
         };
-        column.AddChild(tabs);
+        head.AddChild(tabs);
 
         var sides = new HBoxContainer();
         sides.AddThemeConstantOverride("separation", 40);
@@ -101,10 +104,11 @@ public partial class RebindScreen : Screen
             order.Add(_rows[binding]);
         }
 
-        var footer = new HBoxContainer();
-        footer.AddThemeConstantOverride("separation", 16);
-        column.AddChild(footer);
+        // Reset sits under the moves, in the space the longer attack column leaves.
+        moves.AddChild(new Control { CustomMinimumSize = new Vector2(0, 24) });
         var reset = Ui.Row(Reset);
+        reset.CustomMinimumSize = new Vector2(250, 48);
+        reset.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
         reset.Pressed += () =>
         {
             Bindings.ResetToDefaults(_player);
@@ -112,19 +116,19 @@ public partial class RebindScreen : Screen
             Refresh();
             Changed?.Invoke();
         };
-        footer.AddChild(reset);
-        order.Add(reset);
+        moves.AddChild(reset);
+        order.Insert(4, reset);
 
         _prompt = Ui.Label("", UiTheme.Caption);
         column.AddChild(_prompt);
 
         AddChild(panel);
-        CenterAt(panel, 56);
+        CenterAt(panel, 48);
 
-        _toasts = new VBoxContainer { Position = new Vector2(0, 600), Size = new Vector2(1280, 0) };
+        _toasts = new VBoxContainer { Position = new Vector2(0, 640), Size = new Vector2(1280, 0) };
         AddChild(_toasts);
 
-        // Down through the moves, then the attacks, then reset; up from the first row is the tabs.
+        // Down through the moves and reset, then the attacks; up from the first row is the tabs.
         for (var i = 0; i < order.Count; i++)
         {
             order[i].FocusNeighborBottom = order[i].GetPathTo(order[(i + 1) % order.Count]);

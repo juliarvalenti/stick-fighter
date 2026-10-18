@@ -65,7 +65,7 @@ public partial class Main : Node2D
     private UI.Screens.Screen? _shown;
     private System.Action? _back;
 
-    private const int ToastFrames = 150;
+    private const int ToastFrames = 120;
     private VBoxContainer _toastStack = null!;
     private readonly System.Collections.Generic.List<(UI.Toast Toast, int Until)> _toasts = new();
 

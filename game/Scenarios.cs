@@ -455,8 +455,8 @@ public static class Scenarios
         // Controller hot-plug, from the title into training: a pad connects and goes to player 1
         // (the toast, 35); it's pulled out and the match pauses under "Controller disconnected"
         // (60; checked, and the sim must not move for 60 frames); it's plugged back in and play
-        // resumes (checked), with the toast (170).
-        new Scenario("hotplug", 1, _ => WalkIn, Captures: new[] { 35, 60, 170 }, Frames: 180, Flow: true,
+        // resumes (checked), with the toast (175, the earlier toasts gone).
+        new Scenario("hotplug", 1, _ => WalkIn, Captures: new[] { 35, 60, 175 }, Frames: 180, Flow: true,
             Actions: new()
             {
                 [10] = "ui_accept", // press start
