@@ -54,6 +54,7 @@ public static class Hits
             {
                 Block(ref attacker, ref defender, move, crouching, state.Stage);
                 freeze = move.HitstopOnBlock > freeze ? move.HitstopOnBlock : freeze;
+                SimEvents.Add(ref state, EventKind.Block, contact.Attacker, contact.Defender, moveIndex, contact.Point);
                 continue;
             }
             freeze = move.HitstopOnHit > freeze ? move.HitstopOnHit : freeze;
@@ -70,6 +71,9 @@ public static class Hits
             defender.ComboHits = hitInCombo;
             defender.ComboDamage += damage;
             defender.CounterHit = counter;
+            SimEvents.Add(ref state, counter ? EventKind.CounterHit : EventKind.Hit, contact.Attacker, contact.Defender, moveIndex, contact.Point);
+            if (defender.Health == 0)
+                SimEvents.Add(ref state, EventKind.Ko, contact.Attacker, contact.Defender, moveIndex, contact.Point);
             defender.Stun += HitStates.Stun(move.Stun, hitInCombo, counter);
             defender.StunRecovery = stats.StunRecoveryDelay;
             defender.Dizzy = 0; // a hit ends a dizzy (the gauge was already reset)
@@ -97,6 +101,7 @@ public static class Hits
             {
                 // A sweep: straight down, no hitstun and no quick rise.
                 Knockdowns.KnockDown(ref defender, stats.KnockdownFrames, stats);
+                SimEvents.Add(ref state, EventKind.Knockdown, contact.Attacker, contact.Defender, moveIndex, defender.Position);
             }
 
             Push(ref attacker, ref defender, Fix.FromInt(move.PushbackHit), state.Stage);

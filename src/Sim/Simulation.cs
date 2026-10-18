@@ -352,6 +352,7 @@ public static class Simulation
             var stats = character.Stats;
             var quick = Knockdowns.QuickRise(state.Inputs[player], now, stats.QuickRiseWindow);
             Knockdowns.KnockDown(ref fighter, quick ? stats.QuickRiseFrames : stats.KnockdownFrames, stats);
+            SimEvents.Add(ref state, EventKind.Knockdown, 1 - player, player, -1, fighter.Position);
             return;
         }
 

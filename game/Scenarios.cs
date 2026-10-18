@@ -52,6 +52,7 @@ public static class Scenarios
 
             Throws(),
             VersusMatch(),
+            Sparks(),
         };
 
         // One pose sheet per move: `sheet-5LP`, `sheet-j.HK`, ...
@@ -83,6 +84,38 @@ public static class Scenarios
 
         return new Scenario("match", replay.Seed, f => f < replay.Frames ? replay.Inputs[f] : default,
             Captures: new[] { midRound, ko, results }, Frames: results, Versus: true);
+    }
+
+    // Hit effects, from the sim's events (game/fx), one every SparkPeriod frames from a reset at
+    // point-blank. P1's standing medium punch lands on frame 7 of each; each is captured 3 frames into
+    // its spark (11, 51, 91): a hit spark, the block spark (P2 holding back), and the counter-hit
+    // spark (P2 starts a heavy kick as P1 punches, so the punch lands in its startup).
+    private const int SparkPeriod = 40;
+
+    private static Scenario Sparks()
+    {
+        FrameInput Script(int frame)
+        {
+            var k = frame / SparkPeriod;
+            var f = frame % SparkPeriod;
+            var p1 = f == 1 && k < 3 ? Buttons.MediumPunch : default;
+            var p2 = k == 1 ? Buttons.Right : k == 2 && f == 1 ? Buttons.HeavyKick : default;
+            return new FrameInput(p1, p2);
+        }
+
+        GameState Reset(GameState s)
+        {
+            if (s.Frame % SparkPeriod != 0 || s.Frame / SparkPeriod >= 3)
+                return s;
+            var fresh = GameState.NewMatch(1);
+            s.Fighters[0] = fresh.Fighters[0];
+            s.Fighters[1] = fresh.Fighters[1];
+            s.Fighters[0].Position = new FixVec2(Fix.FromInt(610), s.Fighters[0].Position.Y);
+            s.Fighters[1].Position = new FixVec2(Fix.FromInt(670), s.Fighters[1].Position.Y);
+            return s;
+        }
+
+        return new Scenario("sparks", 1, Script, new[] { 11, 51, 91 }, 3 * SparkPeriod, EachFrame: Reset);
     }
 
     // Every ground normal, one every 40 frames, at point-blank against a standing P2, captured on its
