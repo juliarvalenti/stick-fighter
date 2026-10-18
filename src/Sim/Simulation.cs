@@ -1,6 +1,7 @@
 using StickFighter.Sim.Characters;
 using StickFighter.Sim.Collision;
 using StickFighter.Sim.Combat;
+using StickFighter.Sim.Movement;
 using StickFighter.Sim.Numerics;
 
 namespace StickFighter.Sim;
@@ -83,6 +84,12 @@ public static class Simulation
             fighter.Wakeup = character.Stats.WakeupThrowInvulnerable;
         }
 
+        if (fighter.Airborne)
+        {
+            ActAirborne(ref state, player);
+            return;
+        }
+
         if (fighter.Hitstun > 0)
         {
             fighter.Hitstun--;
@@ -117,11 +124,44 @@ public static class Simulation
             return;
         }
 
-        // Free to act. Normals don't cancel into each other yet (Specials, cancels, links).
         var direction = Numpad.Direction(history.At(now, now), fighter.Facing);
+
+        // Pre-jump frames are committed (specials and supers will cancel them, later). On the last
+        // one the fighter takes off, in the direction held on that frame.
+        if (fighter.Action == (int)FighterAction.PreJump)
+        {
+            if (fighter.ActionFrame + 1 < character.Stats.PreJumpFrames)
+            {
+                Continue(ref fighter, FighterAction.PreJump);
+                return;
+            }
+            fighter.Velocity = Jumping.Takeoff(character.Stats, Numpad.Horizontal(direction), fighter.Facing);
+            fighter.Airborne = true;
+            fighter.AirAttackUsed = false;
+            fighter.Action = (int)FighterAction.Jump;
+            fighter.ActionFrame = 0;
+            fighter.Move = -1;
+            Jumping.Fall(ref fighter, state.Stage.Floor, character.Stats.Gravity);
+            return;
+        }
+
+        // Landing after an air attack: the first frames are true recovery, the rest allow
+        // guarding only. (Landing from an empty jump is free: it falls through to below.)
+        if (fighter.Action == (int)FighterAction.Landing && fighter.AirAttackUsed && fighter.ActionFrame + 1 < character.Stats.LandingFrames)
+        {
+            fighter.Velocity = FixVec2.Zero;
+            var guarding = fighter.ActionFrame + 1 >= LandingLockFrames && Blocking.HoldingBack(state, player);
+            if (guarding)
+                Continue(ref fighter, Numpad.Vertical(direction) < 0 ? FighterAction.BlockCrouch : FighterAction.BlockStand);
+            else
+                Continue(ref fighter, FighterAction.Landing);
+            return;
+        }
+
+        // Free to act. Normals don't cancel into each other yet (Specials, cancels, links).
         var crouching = Numpad.Vertical(direction) < 0;
         var wasLow = IsLow(fighter, character);
-        var move = BufferedNormal(history, now, fighter.LastMoveFrame, crouching);
+        var move = BufferedNormal(history, now, fighter.LastMoveFrame, crouching ? NormalStance.Crouching : NormalStance.Standing);
         if (move >= 0)
         {
             StartMove(ref fighter, move, now, move == Normals.Throw && Blocking.HoldingBack(state, player));
@@ -138,12 +178,23 @@ public static class Simulation
             return;
         }
 
+        // Up (7, 8 or 9) starts a jump's pre-jump frames.
+        if (Numpad.Vertical(direction) > 0)
+        {
+            fighter.Velocity = FixVec2.Zero;
+            Continue(ref fighter, FighterAction.PreJump);
+            return;
+        }
+
         // Down (1, 2 or 3) crouches, through the crouch transition unless already low. Otherwise
-        // forward and back walk at their own speeds.
+        // forward and back walk at their own speeds. Standing still after an empty jump plays out
+        // the landing.
         var forward = Numpad.Horizontal(direction);
+        var landing = fighter.Action == (int)FighterAction.Landing && fighter.ActionFrame + 1 < character.Stats.LandingFrames;
         var action = crouching ? (wasLow || CrouchedDown(fighter, character) ? FighterAction.Crouch : FighterAction.CrouchDown)
             : forward > 0 ? FighterAction.WalkForward
             : forward < 0 ? FighterAction.WalkBack
+            : landing ? FighterAction.Landing
             : FighterAction.Stand;
         var speed = action switch
         {
@@ -157,15 +208,69 @@ public static class Simulation
         Continue(ref fighter, action);
     }
 
+    // After an air attack, this many landing frames are true recovery before guarding is allowed (SF4).
+    public const int LandingLockFrames = 2;
+
+    // In the air: the jump arc, one air attack, hitstun. Touching down ends the jump: an attack or
+    // hitstun in progress is cut short, and the landing is free after an empty jump, recovery
+    // otherwise.
+    private static void ActAirborne(ref GameState state, int player)
+    {
+        ref var fighter = ref state.Fighters[player];
+        var character = Characters.Characters.Placeholder;
+        var now = state.Frame;
+
+        if (fighter.Hitstun > 0)
+        {
+            fighter.Hitstun--;
+            Continue(ref fighter, FighterAction.Hitstun);
+            // A hit in the air uses up the attack, so the landing has recovery.
+            fighter.AirAttackUsed = true;
+        }
+        else if (fighter.Action == (int)FighterAction.Attack)
+        {
+            if (fighter.ActionFrame + 1 < character.Moves[fighter.Move].TotalFrames)
+                fighter.ActionFrame++;
+            else
+                Continue(ref fighter, FighterAction.Jump);
+        }
+        else
+        {
+            var move = fighter.AirAttackUsed ? -1 : BufferedNormal(state.Inputs[player], now, fighter.LastMoveFrame, NormalStance.Airborne);
+            if (move >= 0)
+            {
+                fighter.Action = (int)FighterAction.Attack;
+                fighter.ActionFrame = 0;
+                fighter.Move = move;
+                fighter.MoveHit = false;
+                fighter.LastMoveFrame = now;
+                fighter.AirAttackUsed = true;
+            }
+            else
+            {
+                Continue(ref fighter, FighterAction.Jump);
+            }
+        }
+
+        if (!Jumping.Fall(ref fighter, state.Stage.Floor, character.Stats.Gravity))
+            return;
+
+        fighter.Airborne = false;
+        fighter.Hitstun = 0;
+        fighter.Action = (int)FighterAction.Landing;
+        fighter.ActionFrame = 0;
+        fighter.Move = -1;
+    }
+
     // The newest unused attack press within the buffer window, as a move index, or -1.
-    // Standing LP+LK is a throw rather than either normal.
-    private static int BufferedNormal(in InputHistory history, int now, int lastMoveFrame, bool crouching)
+    // Standing LP+LK is a throw rather than either normal (there are no air throws).
+    private static int BufferedNormal(in InputHistory history, int now, int lastMoveFrame, NormalStance stance)
     {
         for (var frame = now; frame > now - Normals.BufferWindow && frame > lastMoveFrame; frame--)
         {
-            if (!crouching && Normals.ThrowPressedOn(history, frame, now))
+            if (stance == NormalStance.Standing && Normals.ThrowPressedOn(history, frame, now))
                 return Normals.Throw;
-            var move = Normals.Pick(history.PressedOn(frame, now) & Buttons.Attacks, crouching);
+            var move = Normals.Pick(history.PressedOn(frame, now) & Buttons.Attacks, stance);
             if (move >= 0)
                 return move;
         }
@@ -202,10 +307,12 @@ public static class Simulation
     private static bool CrouchedDown(in FighterState fighter, Character character) =>
         fighter.Action == (int)FighterAction.CrouchDown && fighter.ActionFrame + 1 >= character.Stats.CrouchTransitionFrames;
 
-    // Free to turn around: on the ground (always, until jumps) and not mid-move, reeling or guarding
-    // in blockstun. A fighter who isn't free keeps facing the way it was until it is.
+    // Free to turn around: on the ground, not committed to a jump, and not mid-move, reeling or
+    // guarding in blockstun. A fighter who isn't free keeps facing the way it was until it is, so a
+    // jump over the opponent turns the jumper on the frame it lands.
     public static bool CanTurn(in FighterState fighter) =>
-        fighter.Hitstun == 0 && fighter.Blockstun == 0 && fighter.Action != (int)FighterAction.Attack && !fighter.KnockedDown;
+        !fighter.Airborne && fighter.Action != (int)FighterAction.PreJump
+        && fighter.Hitstun == 0 && fighter.Blockstun == 0 && fighter.Action != (int)FighterAction.Attack && !fighter.KnockedDown;
 
     // Facings come from positions after movement, and each free fighter turns toward the other on
     // the same frame, so neither player is processed first.

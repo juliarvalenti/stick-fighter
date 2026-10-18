@@ -97,6 +97,8 @@ public class GameStateTests
             Changes(s => { s.Fighters[i].Facing = -s.Fighters[i].Facing; return s; });
             Changes(s => { s.Fighters[i].Action++; return s; });
             Changes(s => { s.Fighters[i].ActionFrame++; return s; });
+            Changes(s => { s.Fighters[i].Airborne = !s.Fighters[i].Airborne; return s; });
+            Changes(s => { s.Fighters[i].AirAttackUsed = !s.Fighters[i].AirAttackUsed; return s; });
         }
         for (var p = 0; p < GameState.MaxProjectiles; p++)
         {
@@ -132,7 +134,7 @@ public class GameStateTests
         Assert.Equal(PinnedChecksum, state.Checksum());
     }
 
-    private const ulong PinnedChecksum = 10505813192386643454;
+    private const ulong PinnedChecksum = 5789501885246905814;
 
     private static GameState Busy()
     {

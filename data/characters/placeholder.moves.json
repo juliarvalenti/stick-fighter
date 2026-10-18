@@ -474,12 +474,12 @@
       "guard": "high",
       "pushbackHit": 12,
       "pushbackBlock": 14,
-      "hitbox": { "limb": "frontShin", "radius": 8, "activeBonus": 0 },
+      "hitbox": { "limb": "frontShin", "radius": 9, "activeBonus": 0 },
       "keys": [
         { "frame": 0, "hip": [0, -112], "angles": { "spine": 66, "neck": 0, "backShoulder": 579, "backElbow": -952, "frontShoulder": 500, "frontElbow": -1755, "backHip": -441, "backKnee": 1384, "frontHip": -822, "frontKnee": 1307 } },
         { "frame": 1, "hip": [0, -112], "angles": { "spine": 77, "neck": 0, "backShoulder": 579, "backElbow": -952, "frontShoulder": 500, "frontElbow": -1755, "backHip": -441, "backKnee": 1384, "frontHip": -808, "frontKnee": 1366 } },
         { "frame": 2, "hip": [0, -112], "angles": { "spine": 83, "neck": 0, "backShoulder": 579, "backElbow": -952, "frontShoulder": 500, "frontElbow": -1755, "backHip": -441, "backKnee": 1384, "frontHip": -801, "frontKnee": 1446 } },
-        { "frame": 3, "hip": [0, -112], "angles": { "spine": 3, "neck": 0, "backShoulder": 863, "backElbow": -955, "frontShoulder": 230, "frontElbow": -1518, "backHip": -441, "backKnee": 1384, "frontHip": -654, "frontKnee": 5 } }
+        { "frame": 3, "hip": [0, -112], "angles": { "spine": 3, "neck": 0, "backShoulder": 863, "backElbow": -955, "frontShoulder": 230, "frontElbow": -1518, "backHip": -441, "backKnee": 1384, "frontHip": -289, "frontKnee": 588 } }
       ]
     },
     {

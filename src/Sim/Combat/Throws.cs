@@ -56,11 +56,14 @@ public static class Throws
 
     public static bool Stunned(in FighterState f) => f.Hitstun > 0 || f.Blockstun > 0;
 
-    // Apart from stun, which Resolve reads from the start of the frame.
+    // Apart from stun, which Resolve reads from the start of the frame. Not in the air, and not in a
+    // jump's pre-jump frames either (SF4).
     public static bool Throwable(in FighterState f) =>
         !f.KnockedDown
         && f.Wakeup == 0
-        && f.Grab < 0;
+        && f.Grab < 0
+        && !f.Airborne
+        && f.Action != (int)FighterAction.PreJump;
 
     private static bool Connects(in GameState state, int player)
     {
@@ -87,11 +90,12 @@ public static class Throws
 
     // SF4: a throw can be teched from neutral (standing, crouching, walking or guarding) or from the
     // startup of your own throw. Grabbed in the startup or recovery of anything else, including a
-    // whiffed throw's recovery, it's a counter-hit throw. (Landing joins the list with Jumps.)
+    // whiffed throw's recovery, it's a counter-hit throw. A jump's landing frames can be teched too.
     public static bool Techable(in FighterState f) => (FighterAction)f.Action switch
     {
         FighterAction.Stand or FighterAction.Crouch or FighterAction.CrouchDown or FighterAction.WalkForward
-            or FighterAction.WalkBack or FighterAction.BlockStand or FighterAction.BlockCrouch => true,
+            or FighterAction.WalkBack or FighterAction.BlockStand or FighterAction.BlockCrouch
+            or FighterAction.Landing => true,
         FighterAction.Attack => f.Move == Normals.Throw && f.ActionFrame < Characters.Characters.Placeholder.Moves[f.Move].FirstActiveFrame,
         _ => false,
     };

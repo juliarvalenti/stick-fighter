@@ -78,6 +78,9 @@ public sealed class Compiler
             ["chest"] = chest,
             ["hip"] = new(0, hip.Y),
             ["knee"] = new(0, knee.Y),
+            // Straight down under the body: a leg driven down here comes down on a head below,
+            // even from just past it (a crossup).
+            ["feet"] = new(0, 0),
             ["opponent-head"] = new(OpponentSpacing, head.Y),
             ["opponent-chest"] = new(OpponentSpacing, chest.Y),
             ["opponent-shin"] = new(OpponentSpacing, knee.Y * 0.6),

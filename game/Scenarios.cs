@@ -185,6 +185,15 @@ public static class Scenarios
             f => f < 260 ? new FrameInput(Buttons.Right, Buttons.Right) : new FrameInput(Buttons.Left, Buttons.Left),
             Captures: new[] { 60, 260, 500, 700 }, Frames: 700, Boxes: true),
 
+        // Jumps, boxes on. P1 walks up to P2 and jumps forward over it: takeoff after the pre-jump
+        // frames (51), the apex above P2 (69), coming down on the far side still facing right (86),
+        // and landed and turned around (90). P2 turns as soon as P1 has crossed.
+        new Scenario("jumps", 1,
+            f => f < 46 ? new FrameInput(Buttons.Right, default)
+                : f < 51 ? new FrameInput(Buttons.Up | Buttons.Right, default)
+                : default,
+            Captures: new[] { 51, 69, 86, 90 }, Frames: 90, Boxes: true),
+
         // The frame-time overlay, with fixed numbers so the image is stable.
         new Scenario("overlay", 1, _ => WalkIn, Captures: new[] { 60 }, Frames: 60, Overlay: true),
 
@@ -217,6 +226,33 @@ public static class Scenarios
             StyleFrame: () => new UI.KitSheet(UI.KitSheet.Page.Overlays)),
         new Scenario("ui-glyphs", 1, _ => default, Captures: new[] { 2 }, Frames: 2,
             StyleFrame: () => new UI.KitSheet(UI.KitSheet.Page.Glyphs)),
+
+        // The screens, built only from the kit. The title's fight behind it is this script.
+        new Scenario("screen-title", 1, TitleFight, Captures: new[] { 18 }, Frames: 18,
+            Setup: s => Place(s, 560, 720), StyleFrame: () => new UI.Screens.TitleScreen()),
+        // The main menu: the first row focused, then a pad's down moves focus to the second.
+        new Scenario("screen-menu", 1, _ => default, Captures: new[] { 5, 20 }, Frames: 20,
+            Setup: s => Place(s, 380, 900),
+            StyleFrame: () => new UI.Screens.TitleScreen(menu: true) { Presses = { [10] = "ui_down" } }),
+        new Scenario("screen-select", 1, _ => default, Captures: new[] { 5 }, Frames: 5,
+            StyleFrame: () => new UI.Screens.SelectScreen()),
+        new Scenario("screen-results", 1, _ => default, Captures: new[] { 5 }, Frames: 5,
+            StyleFrame: () => new UI.Screens.ResultsScreen()),
+        // Pause over a match frozen mid-kick, then down twice to the move list's row; and the move list.
+        new Scenario("screen-pause", 1, f => f == 20 ? new FrameInput(Buttons.HeavyKick, Buttons.None) : default,
+            Captures: new[] { 30, 40 }, Frames: 40, Setup: s => Place(s, 540, 740),
+            StyleFrame: () => new UI.Screens.PauseScreen { Presses = { [32] = "ui_down", [35] = "ui_down" } }),
+        new Scenario("screen-movelist", 1, _ => default, Captures: new[] { 5 }, Frames: 5,
+            Setup: s => Place(s, 540, 740), StyleFrame: () => new UI.Screens.PauseScreen(moveList: true)),
+    };
+
+    // A short exchange for the title to loop behind: walk in, P1 jabs, P2 kicks back.
+    private static FrameInput TitleFight(int f) => f switch
+    {
+        < 8 => WalkIn,
+        8 => new FrameInput(Buttons.MediumPunch, Buttons.None),
+        12 => new FrameInput(Buttons.None, Buttons.LightKick),
+        _ => default,
     };
 
     // Puts the fighters at these screen x positions. The view centers on the fighters, so a pair

@@ -148,11 +148,12 @@ public class PoseTests
     // In a throw the fighters hold each other, so their arms touch by design.
     public static TheoryData<FighterAction, int> SeparateKeys() => Keys(except: [FighterAction.Thrown, FighterAction.Throwing]);
 
-    // Stance poses only: an attack plays its move's track (the move compiler checks those).
+    // Ground stance poses only: an attack plays its move's track (the move compiler checks those),
+    // and the jump pose is in the air, legs tucked above where the feet would be.
     private static TheoryData<FighterAction, int> Keys(params FighterAction[] except)
     {
         var data = new TheoryData<FighterAction, int>();
-        foreach (var action in Enum.GetValues<FighterAction>().Where(a => a != FighterAction.Attack && !except.Contains(a)))
+        foreach (var action in Enum.GetValues<FighterAction>().Where(a => a is not (FighterAction.Attack or FighterAction.Jump) && !except.Contains(a)))
         {
             foreach (var key in Data.Pose(action).Keys)
                 data.Add(action, key.Frame);

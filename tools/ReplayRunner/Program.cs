@@ -171,6 +171,79 @@ static List<FrameInput>? Scripts(string name) => name switch
         (Buttons.Left, Buttons.Right, 300),
         (Buttons.Right, Buttons.Right, 120)),
 
+    // Jumps. A jump is 4 pre-jump frames then takeoff (5 frames of up), 36 airborne, 4 landing.
+    // P1 jumps straight up, then forward, then back, landing between each.
+    "jump-three" => Runs(
+        (Buttons.Up, Buttons.None, 5),
+        (Buttons.None, Buttons.None, 45),
+        (Buttons.Up | Buttons.Right, Buttons.None, 5),
+        (Buttons.None, Buttons.None, 45),
+        (Buttons.Up | Buttons.Left, Buttons.None, 5),
+        (Buttons.None, Buttons.None, 45)),
+
+    // P1 walks up to P2 and jumps over; P2 throws 5HK as P1 passes overhead, so P2 keeps facing
+    // left until the kick ends while P1 turns on landing.
+    "jump-over" => Runs(
+        (Buttons.Right, Buttons.None, 46),
+        (Buttons.Up | Buttons.Right, Buttons.None, 5),
+        (Buttons.None, Buttons.None, 14),
+        (Buttons.None, Buttons.HeavyKick, 1),
+        (Buttons.None, Buttons.None, 60)),
+
+    // An empty jump lands free: P1 walks on the first landing frame. Then a late air attack: the
+    // landing has recovery, and P1 holding back guards only once it's over.
+    "jump-landings" => Runs(
+        (Buttons.Up, Buttons.None, 5),
+        (Buttons.None, Buttons.None, 35),
+        (Buttons.Right, Buttons.None, 10),
+        (Buttons.Up, Buttons.None, 5),
+        (Buttons.None, Buttons.None, 20),
+        (Buttons.HeavyKick, Buttons.None, 1),
+        (Buttons.Left, Buttons.None, 30)),
+
+    // Owed from Blocking. A jump-in (high) blocked by a standing guard: P1 walks in, jumps forward and
+    // kicks on the way down; P2 holds back from the kick on.
+    "jump-in-blocked" => Runs(
+        (Buttons.Right, Buttons.None, 20),
+        (Buttons.Up | Buttons.Right, Buttons.None, 5),
+        (Buttons.None, Buttons.None, 16),
+        (Buttons.HeavyKick, Buttons.Right, 1),
+        (Buttons.None, Buttons.Right, 40)),
+
+    // The same jump-in against a crouching guard: it's high, so it hits.
+    "jump-in-crouch-hit" => Runs(
+        (Buttons.Right, Buttons.None, 10),
+        (Buttons.Up | Buttons.Right, Buttons.None, 5),
+        (Buttons.None, Buttons.None, 20),
+        (Buttons.HeavyKick, Buttons.Right | Buttons.Down, 1),
+        (Buttons.None, Buttons.Right | Buttons.Down, 40)),
+
+    // A crossup: P1 walks in, jumps forward over P2 and drives j.LK's foot down on P2's head from
+    // just past it. P2 holds away from where P1 is (Left, toward its old facing) and blocks...
+    "crossup-blocked" => Runs(
+        (Buttons.Right, Buttons.None, 32),
+        (Buttons.Up | Buttons.Right, Buttons.None, 5),
+        (Buttons.None, Buttons.None, 21),
+        (Buttons.LightKick, Buttons.Left, 1),
+        (Buttons.None, Buttons.Left, 40)),
+
+    // ...and holding back by its old facing (Right, toward P1) is hit.
+    "crossup-hit" => Runs(
+        (Buttons.Right, Buttons.None, 37),
+        (Buttons.Up | Buttons.Right, Buttons.None, 5),
+        (Buttons.None, Buttons.None, 21),
+        (Buttons.LightKick, Buttons.Right, 1),
+        (Buttons.None, Buttons.Right, 40)),
+
+    // Getting hit in the air: P2 walks in and jumps straight up holding back (no air guard), P1
+    // anti-airs with 5HP; P2 falls and lands with recovery.
+    "air-hit" => Runs(
+        (Buttons.None, Buttons.Left, 30),
+        (Buttons.None, Buttons.Up, 5),
+        (Buttons.None, Buttons.None, 20),
+        (Buttons.HeavyPunch, Buttons.Right, 1),
+        (Buttons.None, Buttons.Right, 60)),
+
     // Ground movement. P1 walks into a standing P2 and pushes it along at the push share; then P2
     // walks in too and both stop; then P1 backs off and P2 follows.
     "ground-walk-in" => Runs(
@@ -251,6 +324,32 @@ static List<FrameInput>? Scripts(string name) => name switch
         (Buttons.Right, Buttons.None, 46),
         (Buttons.LightPunch | Buttons.LightKick, Buttons.None, 1),
         (Buttons.None, Buttons.None, 60)),
+
+    // P1 walks in and throws as P2 starts a jump: the throw is active during P2's pre-jump frames,
+    // which can't be thrown, so it whiffs and P2 jumps.
+    "throw-prejump" => Runs(
+        (Buttons.Right, Buttons.None, 46),
+        (Buttons.LightPunch | Buttons.LightKick, Buttons.Up, 1),
+        (Buttons.None, Buttons.Up, 4),
+        (Buttons.None, Buttons.None, 60)),
+
+    // P2 jumps a little earlier, so it has just left the ground when the throw is active: whiff.
+    "throw-airborne" => Runs(
+        (Buttons.Right, Buttons.None, 40),
+        (Buttons.Right, Buttons.Up, 5),
+        (Buttons.Right, Buttons.None, 1),
+        (Buttons.LightPunch | Buttons.LightKick, Buttons.None, 1),
+        (Buttons.None, Buttons.None, 60)),
+
+    // P2 jumps straight up and P1 walks in and throws it in its landing frames; landing can be
+    // teched, and P2 techs.
+    "throw-landing-tech" => Runs(
+        (Buttons.Right, Buttons.Up, 5),
+        (Buttons.Right, Buttons.None, 35),
+        (Buttons.LightPunch | Buttons.LightKick, Buttons.None, 1),
+        (Buttons.None, Buttons.None, 4),
+        (Buttons.None, Buttons.LightPunch | Buttons.LightKick, 1),
+        (Buttons.None, Buttons.None, 50)),
 
     // Holding back while throwing: P2 lands behind P1, and the two swap sides.
     "throw-back" => Runs(

@@ -2,6 +2,14 @@ using StickFighter.Sim.Characters;
 
 namespace StickFighter.Sim.Combat;
 
+// Where a normal is done from: numpad 5 moves standing, 2 moves crouching, j. moves in the air.
+public enum NormalStance
+{
+    Standing,
+    Crouching,
+    Airborne,
+}
+
 // Which normal a button press starts. Built once from the character's moves, so picking a move
 // in Step is an array lookup with no strings.
 public static class Normals
@@ -22,7 +30,7 @@ public static class Normals
     // first, counting the frame of the first.
     public const int ThrowLeniency = 2;
 
-    // [standing or crouching, button in ButtonOrder] -> move index, or -1.
+    // [NormalStance, button in ButtonOrder] -> move index, or -1.
     private static readonly int[,] Table = Build(Characters.Characters.Placeholder);
 
     // The standing throw. Crouching LP+LK is crouching light kick, the heavier button, as in SF4.
@@ -46,11 +54,12 @@ public static class Normals
 
     private static int[,] Build(Character character)
     {
-        var table = new int[2, ButtonOrder.Length];
+        var table = new int[3, ButtonOrder.Length];
         for (var b = 0; b < ButtonOrder.Length; b++)
         {
-            table[0, b] = IndexOf(character, "5" + ButtonNames[b]);
-            table[1, b] = IndexOf(character, "2" + ButtonNames[b]);
+            table[(int)NormalStance.Standing, b] = IndexOf(character, "5" + ButtonNames[b]);
+            table[(int)NormalStance.Crouching, b] = IndexOf(character, "2" + ButtonNames[b]);
+            table[(int)NormalStance.Airborne, b] = IndexOf(character, "j." + ButtonNames[b]);
         }
         return table;
     }
@@ -65,13 +74,13 @@ public static class Normals
         return -1;
     }
 
-    // The move for these pressed buttons, standing or crouching, or -1.
-    public static int Pick(Buttons pressed, bool crouching)
+    // The move for these pressed buttons from this stance, or -1.
+    public static int Pick(Buttons pressed, NormalStance stance)
     {
         for (var b = 0; b < ButtonOrder.Length; b++)
         {
             if (pressed.Has(ButtonOrder[b]))
-                return Table[crouching ? 1 : 0, b];
+                return Table[(int)stance, b];
         }
         return -1;
     }

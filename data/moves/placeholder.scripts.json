@@ -70,7 +70,7 @@
              "active: reach:back-hand opponent-shin 1.0", "lean:20", "ease:overshoot", "hitbox:back-hand 10"] },
 
     { "name": "Jumping light kick", "input": "j.LK", "startup": 4, "active": 8, "recovery": 0, "damage": 40, "stun": 50, "strength": "light", "guard": "high", "pushbackHit": 12, "pushbackBlock": 14,
-      "do": ["active: reach:front-foot opponent-shin 1.0", "hitbox:front-foot 8"] },
+      "do": ["active: reach:front-foot feet 0.9", "hitbox:front-foot 9"] },
 
     { "name": "Jumping medium kick", "input": "j.MK", "startup": 6, "active": 5, "recovery": 0, "damage": 70, "stun": 100, "strength": "medium", "guard": "high", "pushbackHit": 16, "pushbackBlock": 18,
       "do": ["startup: reach:front-foot hip 0.5",
