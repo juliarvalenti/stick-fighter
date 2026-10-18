@@ -20,15 +20,22 @@ public partial class ResultsScreen : Screen
 
     private readonly MatchResults _results;
 
-    public ResultsScreen(MatchResults? results = null) => _results = results ?? Example;
+    private readonly int[] _colors;
+
+    // `colors` are the players' color choices (0 own, 1 alternate), so the winner shows as they played.
+    public ResultsScreen(MatchResults? results = null, int[]? colors = null)
+    {
+        _results = results ?? Example;
+        _colors = colors ?? new[] { 0, 0 };
+    }
 
     public override void _Ready()
     {
         var winner = _results.Winner;
         var color = winner switch
         {
-            MatchWinner.P1 => Look.P1,
-            MatchWinner.P2 => Look.P2,
+            MatchWinner.P1 => Look.Player(0, _colors[0]),
+            MatchWinner.P2 => Look.Player(1, _colors[1]),
             _ => Look.InkMuted,
         };
         var title = winner switch

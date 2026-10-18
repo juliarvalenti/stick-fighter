@@ -204,7 +204,7 @@ public partial class Main : Node2D
         _input = _scenario is { Flow: true } ? new Scenarios.Source(_scenario) : _recorder;
         _driver = new TickDriver();
         _camera.Cut();
-        _presenter.Begin();
+        _presenter.Begin(new[] { settings.P1Color, settings.P2Color });
         _flow = Flow.Match;
         _paused = null;
         ShowScreen(null);
@@ -215,7 +215,7 @@ public partial class Main : Node2D
     private void ShowResults()
     {
         _flow = Flow.Results;
-        var results = new UI.Screens.ResultsScreen(_presenter.Results(_state));
+        var results = new UI.Screens.ResultsScreen(_presenter.Results(_state), new[] { _settings.P1Color, _settings.P2Color });
         results.Chosen += item =>
         {
             switch (item)

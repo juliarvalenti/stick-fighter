@@ -27,6 +27,10 @@ public static class Look
 
     public static Color Player(int index) => index == 0 ? P1 : P2;
 
+    // A player's color by their choice: 0 their own, 1 their alternate (mirror matches, color select).
+    public static Color Player(int index, int choice) =>
+        choice == 0 ? Player(index) : index == 0 ? P1Alt : P2Alt;
+
     // Type. Lilita One for display (titles, "Fight!", "K.O.", the timer); Atkinson Hyperlegible for
     // everything read at speed (names, menus, frame data). Both SIL OFL, in assets/fonts/.
     public static Font Display => _display ??= GD.Load<Font>("res://assets/fonts/lilita-one/LilitaOne-Regular.ttf");
