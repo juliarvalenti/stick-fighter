@@ -108,7 +108,7 @@ jobs:
           for name in $names; do
             echo "::group::$name"
             timeout 300 xvfb-run -a -s "-screen 0 1280x720x24" \
-              $GODOT --path . --rendering-method gl_compatibility --rendering-driver opengl3 --fixed-fps 60 \
+              $GODOT --path . --rendering-method gl_compatibility --rendering-driver opengl3 --audio-driver Dummy --fixed-fps 60 \
               -- --scenario "$name" --out "$out" --golden tests/golden || status=1
             echo "::endgroup::"
           done
