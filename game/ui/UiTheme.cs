@@ -20,6 +20,18 @@ public static class UiTheme
     public const string Strong = "Strong"; // a value that matters
     public const string Caption = "Caption"; // small secondary text: section names, hints
 
+    // Straight on the paper (screens' own titles and prompts), ink rather than light text.
+    public const string Title = "Title"; // the game's name
+    public const string PaperHeading = "PaperHeading"; // a screen's heading
+    public const string Prompt = "Prompt"; // "PRESS START"
+    public const string PaperMuted = "PaperMuted"; // hints on the paper
+
+    public const string Chip = "Chip"; // a small status pill: READY, CHOOSING
+    public const string ChipOn = "ChipOn"; // the same, lit
+    public const string Backdrop = "Backdrop"; // a full screen of paper, behind a screen's own UI
+    public const string ScrimPanel = "ScrimPanel"; // the dimmed screen behind pause and dialogs
+    public const string CharacterCard = "CharacterCard";
+
     // Dims the screen behind a dialog: ink at half strength, so the paper reads as set aside.
     public static readonly Color Scrim = new(Look.Ink, 0.55f);
 
@@ -44,7 +56,69 @@ public static class UiTheme
         Tabs(theme);
         Sliders(theme);
         Toggles(theme);
+        Screens(theme);
         return theme;
+    }
+
+    // What screens put straight on the paper: ink type, status chips, character cards.
+    private static void Screens(Theme theme)
+    {
+        theme.SetTypeVariation(Title, "Label");
+        theme.SetFont("font", Title, Look.Display);
+        theme.SetFontSize("font_size", Title, Look.DisplayHero);
+        theme.SetColor("font_color", Title, Look.Ink);
+
+        theme.SetTypeVariation(PaperHeading, "Label");
+        theme.SetFont("font", PaperHeading, Look.Display);
+        theme.SetFontSize("font_size", PaperHeading, Look.DisplayMedium);
+        theme.SetColor("font_color", PaperHeading, Look.Ink);
+
+        theme.SetTypeVariation(Prompt, "Label");
+        theme.SetFont("font", Prompt, Look.UiBold);
+        theme.SetFontSize("font_size", Prompt, Look.UiLarge);
+        theme.SetColor("font_color", Prompt, Look.Ink);
+
+        theme.SetTypeVariation(PaperMuted, "Label");
+        theme.SetFontSize("font_size", PaperMuted, Look.UiSmall);
+        theme.SetColor("font_color", PaperMuted, Look.InkMuted);
+
+        theme.SetTypeVariation(Chip, "Label");
+        var chip = Pill(Look.SurfaceRaised, horizontal: 18);
+        chip.ContentMarginTop = chip.ContentMarginBottom = 4;
+        theme.SetStylebox("normal", Chip, chip);
+        theme.SetFont("font", Chip, Look.UiBold);
+        theme.SetFontSize("font_size", Chip, Look.UiSmall);
+        theme.SetColor("font_color", Chip, Look.Text);
+
+        theme.SetTypeVariation(ChipOn, "Label");
+        var lit = Pill(Look.Surface, horizontal: 18);
+        lit.ContentMarginTop = lit.ContentMarginBottom = 4;
+        theme.SetStylebox("normal", ChipOn, lit);
+        theme.SetFont("font", ChipOn, Look.UiBold);
+        theme.SetFontSize("font_size", ChipOn, Look.UiSmall);
+        theme.SetColor("font_color", ChipOn, Look.Accent);
+
+        theme.SetTypeVariation(Backdrop, "Panel");
+        theme.SetStylebox("panel", Backdrop, new StyleBoxFlat { BgColor = Look.Paper });
+
+        theme.SetTypeVariation(ScrimPanel, "Panel");
+        theme.SetStylebox("panel", ScrimPanel, new StyleBoxFlat { BgColor = Scrim });
+
+        // A character on the select grid: a paper-shade card; focus is the accent ring, and each
+        // player's cursor is drawn by the card itself in that player's color.
+        theme.SetTypeVariation(CharacterCard, "Button");
+        theme.SetStylebox("normal", CharacterCard, Card(Look.PaperShade, margin: 8));
+        theme.SetStylebox("hover", CharacterCard, Card(Look.PaperShade.Darkened(0.04f), margin: 8));
+        theme.SetStylebox("pressed", CharacterCard, Card(Look.PaperShade, margin: 8));
+        theme.SetStylebox("disabled", CharacterCard, Card(Look.PaperShade.Lightened(0.3f), margin: 8));
+        theme.SetStylebox("focus", CharacterCard, FocusRing(Card(Colors.Transparent, margin: 8)));
+        theme.SetFont("font", CharacterCard, Look.UiBold);
+        theme.SetFontSize("font_size", CharacterCard, Look.UiMedium);
+        theme.SetColor("font_color", CharacterCard, Look.Ink);
+        theme.SetColor("font_focus_color", CharacterCard, Look.Ink);
+        theme.SetColor("font_hover_color", CharacterCard, Look.Ink);
+        theme.SetColor("font_pressed_color", CharacterCard, Look.Ink);
+        theme.SetColor("font_disabled_color", CharacterCard, Look.InkMuted);
     }
 
     // A pill on a panel: raised when idle, lighter under the pointer, accent when pressed or on.
