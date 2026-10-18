@@ -32,7 +32,11 @@ public static class Palette
     public const string TextMuted = "#A8A396"; // secondary text on a panel
     public const string InkMuted = "#5E594E"; // secondary text on paper
     public const string Accent = "#FFC21A"; // health, the timer, "Fight!", the focused item
-    public const string Danger = "#FF5A66"; // low health, damage just taken, "K.O."
+    public const string Danger = "#FF5A66"; // damage just taken, "K.O.", warnings
+
+    // The health bar's fill when a player is low. Its own token, so the open question (red is also
+    // player 1's color) is answered by changing this one line.
+    public const string LowHealth = Danger;
 
     public static readonly string[] Players = { P1, P2, P1Alt, P2Alt };
 
