@@ -17,9 +17,13 @@ public partial class Main : Node2D
     private readonly TickDriver _driver = new();
     private readonly DeviceInputSource _input = new();
     private DebugOverlay _overlay = null!;
+    private FramePacer _pacer = new(0);
+    private int _screen = -1;
 
     public override void _Ready()
     {
+        UpdatePacer();
+
         _overlay = new DebugOverlay();
         AddChild(_overlay);
 
@@ -35,12 +39,25 @@ public partial class Main : Node2D
 
     public override void _Process(double delta)
     {
+        UpdatePacer();
         var start = Stopwatch.GetTimestamp();
-        var ticks = _driver.Update(ref _state, (long)(delta * 1_000_000), _input);
+        var elapsed = _pacer.ToMicroseconds((long)System.Math.Round(delta * 1_000_000_000));
+        var ticks = _driver.Update(ref _state, elapsed, _input);
         var simMs = Stopwatch.GetElapsedTime(start).TotalMilliseconds;
 
         _overlay.Record(delta * 1000, simMs, ticks, _driver.DroppedTicks, _state.Frame);
         QueueRedraw();
+    }
+
+    // Snap frame deltas to the current screen's refresh rate; a new screen means a new rate.
+    private void UpdatePacer()
+    {
+        var screen = DisplayServer.WindowGetCurrentScreen();
+        if (screen == _screen)
+            return;
+        _screen = screen;
+        var hz = DisplayServer.ScreenGetRefreshRate(screen); // -1 when unknown, e.g. headless
+        _pacer = new FramePacer(hz > 0 ? (long)System.Math.Round(hz * 1000) : 0);
     }
 
     public override void _Draw()

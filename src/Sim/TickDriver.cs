@@ -20,7 +20,10 @@ public sealed class TickDriver
 
     private const long UnitsPerTick = 1_000_000;
 
-    private long _accumulator;
+    // Starts a quarter tick in, so the remainder sits away from the tick boundary and small timing
+    // noise never adds or skips a tick. A quarter rather than a half: at 120 Hz each frame adds
+    // half a tick, and a half-tick start would land the remainder exactly on the boundary.
+    private long _accumulator = UnitsPerTick / 4;
 
     // Ticks dropped by the catch-up limit since the start, for the debug overlay.
     public long DroppedTicks { get; private set; }
