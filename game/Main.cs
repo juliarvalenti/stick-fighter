@@ -13,7 +13,7 @@ namespace StickFighter;
 // 60 ticks per second, and draws the latest state. Placeholder fighters until moves exist.
 public partial class Main : Node2D
 {
-    private const float Stroke = 10f;
+    private const float Stroke = DrawnBounds.Stroke; // the camera frames what's drawn at this width
 
     // The style frames draw in the style guide's palette; the game switches to it once they're signed off.
     private Color _ink = new(0.1f, 0.1f, 0.12f);
@@ -502,7 +502,7 @@ public partial class Main : Node2D
     private void PresentView(int ticks)
     {
         _camera.Present(_state, ticks);
-        _backdrop.Present(_state.Stage, _camera.Position.X);
+        _backdrop.Present(_state.Stage, _camera.Position, _camera.Zoom.X);
     }
 
     private void StartScenario(string name, string[] args)
@@ -683,7 +683,14 @@ public partial class Main : Node2D
     {
         var stage = _state.Stage;
         var floor = stage.Floor.ToFloat();
-        DrawLine(new Vector2(stage.LeftWall.ToFloat(), floor), new Vector2(stage.RightWall.ToFloat(), floor), _ink, 4);
+        // The floor runs on past the walls, since a cornered fighter's body can be drawn past one and
+        // the camera follows it there; a faint line marks where each wall really is.
+        var left = stage.LeftWall.ToFloat();
+        var right = stage.RightWall.ToFloat();
+        DrawLine(new Vector2(left - Stage.ScreenWidth, floor), new Vector2(right + Stage.ScreenWidth, floor), _ink, 4);
+        var wall = new Color(_ink, 0.18f);
+        DrawLine(new Vector2(left, floor - Stage.ScreenWidth), new Vector2(left, floor), wall, 3);
+        DrawLine(new Vector2(right, floor - Stage.ScreenWidth), new Vector2(right, floor), wall, 3);
         DrawTrainingGrid();
 
         for (var i = 0; i < GameState.PlayerCount; i++)
