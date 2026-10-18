@@ -41,12 +41,16 @@ public abstract partial class Screen : Control, IScenarioClock
     protected static void CenterAt(Control control, float y, float width = 1280) =>
         control.Position = new Vector2((width - control.GetCombinedMinimumSize().X) / 2, y);
 
-    protected static Button Menu(VBoxContainer into, params string[] items)
+    // A menu row was pressed: its text. What it leads to is up to whoever shows the screen.
+    public event System.Action<string>? Chosen;
+
+    protected Button Menu(VBoxContainer into, params string[] items)
     {
         Button? first = null;
         foreach (var item in items)
         {
             var row = Ui.Row(item);
+            row.Pressed += () => Chosen?.Invoke(item);
             into.AddChild(row);
             first ??= row;
         }

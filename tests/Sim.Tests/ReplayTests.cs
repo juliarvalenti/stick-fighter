@@ -57,6 +57,21 @@ public class ReplayTests
         Assert.Equal(state.Checksum(), recorder.Build().FinalChecksum);
     }
 
+    // A versus match saved with F9 replays as versus, intro, timer and all.
+    [Fact]
+    public void RecordingKeepsTheMatchMode()
+    {
+        var recorder = new ReplayRecorder(11, Stage.Training, new Pattern(), MatchMode.Versus);
+        var state = GameState.NewMatch(11, Stage.Training, MatchMode.Versus);
+        var driver = new TickDriver();
+        while (state.Frame < 200)
+            driver.Update(ref state, 16_667, recorder);
+
+        var replay = recorder.Build();
+        Assert.Equal(MatchMode.Versus, replay.Mode);
+        Assert.Equal(state.Checksum(), replay.FinalChecksum);
+    }
+
     [Fact]
     public void TextRoundTripsExactly()
     {

@@ -10,16 +10,19 @@ public sealed class ReplayRecorder : IInputSource
     private readonly IInputSource _source;
     private readonly List<FrameInput> _inputs = new();
 
-    public ReplayRecorder(ulong seed, in Stage stage, IInputSource source)
+    public ReplayRecorder(ulong seed, in Stage stage, IInputSource source, MatchMode mode = MatchMode.Training)
     {
         Seed = seed;
         Stage = stage;
+        Mode = mode;
         _source = source;
     }
 
     public ulong Seed { get; }
 
     public Stage Stage { get; }
+
+    public MatchMode Mode { get; }
 
     public int Frames => _inputs.Count;
 
@@ -30,5 +33,5 @@ public sealed class ReplayRecorder : IInputSource
         return input;
     }
 
-    public Replay Build() => Replay.Record(Seed, Stage, _inputs.ToArray());
+    public Replay Build() => Replay.Record(Seed, Stage, _inputs.ToArray(), Mode);
 }

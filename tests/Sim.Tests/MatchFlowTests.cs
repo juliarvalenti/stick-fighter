@@ -73,7 +73,7 @@ public class MatchFlowTests
         Assert.Equal(1, state.Match.Round);
         Assert.Equal(MatchFlow.RoundFrames, state.Match.TimerFrames);
         Assert.Equal(99, state.Match.TimerSeconds);
-        Assert.Equal(-1, state.Match.Winner);
+        Assert.Equal(MatchWinner.None, state.Match.Winner);
     }
 
     [Fact]
@@ -239,7 +239,7 @@ public class MatchFlowTests
         WinRound(ref state, 1);
 
         Assert.Equal(MatchPhase.MatchEnd, state.Match.Phase);
-        Assert.Equal(1, state.Match.Winner);
+        Assert.Equal(MatchWinner.P2, state.Match.Winner);
         Assert.Equal((1, 2), (state.Match.P1Wins, state.Match.P2Wins));
 
         // The match is over: nothing more happens.
@@ -280,7 +280,7 @@ public class MatchFlowTests
 
         WinRound(ref state, 1);
         Assert.Equal(MatchPhase.MatchEnd, state.Match.Phase);
-        Assert.Equal(1, state.Match.Winner);
+        Assert.Equal(MatchWinner.P2, state.Match.Winner);
     }
 
     [Fact]
@@ -295,7 +295,7 @@ public class MatchFlowTests
 
         EndRound(ref state, 0, 0);
         Assert.Equal(MatchPhase.MatchEnd, state.Match.Phase);
-        Assert.Equal(2, state.Match.Winner);
+        Assert.Equal(MatchWinner.Draw, state.Match.Winner);
     }
 
     [Fact]
@@ -306,18 +306,18 @@ public class MatchFlowTests
         WinRound(ref state, 0);
         EndRound(ref state, 0, 0);
         Assert.Equal(MatchPhase.MatchEnd, state.Match.Phase);
-        Assert.Equal(0, state.Match.Winner);
+        Assert.Equal(MatchWinner.P1, state.Match.Winner);
     }
 
     // The versus replays show what their names say (a replay alone only pins checksums): each
     // round's result in order, "@time" for one decided at time over, then the winner and score.
     [Theory]
-    [InlineData("match-ko-ko", "P1 P1", 0, 2, 0)]
-    [InlineData("match-time-over", "P1@time P1", 0, 2, 0)]
-    [InlineData("match-double-ko", "DoubleKo P2", 1, 1, 2)]
-    [InlineData("match-draw", "DoubleKo Draw@time DoubleKo", 2, 2, 2)]
-    [InlineData("match-final-round", "P1 P2 DoubleKo P2", 1, 2, 2)]
-    public void VersusReplaysShowWhatTheySay(string name, string rounds, int winner, int p1Wins, int p2Wins)
+    [InlineData("match-ko-ko", "P1 P1", MatchWinner.P1, 2, 0)]
+    [InlineData("match-time-over", "P1@time P1", MatchWinner.P1, 2, 0)]
+    [InlineData("match-double-ko", "DoubleKo P2", MatchWinner.P2, 1, 2)]
+    [InlineData("match-draw", "DoubleKo Draw@time DoubleKo", MatchWinner.Draw, 2, 2)]
+    [InlineData("match-final-round", "P1 P2 DoubleKo P2", MatchWinner.P2, 2, 2)]
+    public void VersusReplaysShowWhatTheySay(string name, string rounds, MatchWinner winner, int p1Wins, int p2Wins)
     {
         var replay = Replay.Read(System.IO.File.ReadAllText(System.IO.Path.Combine(RepoRoot(), "replays", name + ".sfr")));
         Assert.Equal(MatchMode.Versus, replay.Mode);
@@ -364,6 +364,6 @@ public class MatchFlowTests
         foreach (var input in inputs)
             koSoon(ref state, input);
         Assert.Equal(MatchPhase.MatchEnd, state.Match.Phase);
-        Assert.Equal(0, state.Match.Winner);
+        Assert.Equal(MatchWinner.P1, state.Match.Winner);
     }
 }

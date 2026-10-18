@@ -1,4 +1,6 @@
+using System.Linq;
 using Godot;
+using StickFighter.Sim;
 using StickFighter.Sim.Characters;
 using StickFighter.Style;
 
@@ -8,19 +10,39 @@ namespace StickFighter.UI.Screens;
 // and what next (rematch focused, since that's what most players want).
 public partial class ResultsScreen : Screen
 {
-    private static readonly (string Round, int Winner, string How)[] Rounds =
+    // What the kit's screen shows on its own (the `screen-results` scenario): P1 2-1.
+    private static readonly MatchResults Example = new(MatchWinner.P1, 2, 1, new[]
     {
-        ("ROUND 1", 0, "K.O."),
-        ("ROUND 2", 1, "TIME"),
-        ("ROUND 3", 0, "PERFECT"),
-    };
+        new RoundOutcome(1, MatchWinner.P1, Announcement.KO),
+        new RoundOutcome(2, MatchWinner.P2, Announcement.Time),
+        new RoundOutcome(3, MatchWinner.P1, Announcement.Perfect),
+    });
+
+    private readonly MatchResults _results;
+
+    public ResultsScreen(MatchResults? results = null) => _results = results ?? Example;
 
     public override void _Ready()
     {
-        AddChild(new Panel { ThemeTypeVariation = UiTheme.Backdrop, Size = Size });
-        AddChild(new WinnerBand("PLAYER 1 WINS", Look.P1) { Position = new Vector2(0, 40) });
+        var winner = _results.Winner;
+        var color = winner switch
+        {
+            MatchWinner.P1 => Look.P1,
+            MatchWinner.P2 => Look.P2,
+            _ => Look.InkMuted,
+        };
+        var title = winner switch
+        {
+            MatchWinner.P1 => "PLAYER 1 WINS",
+            MatchWinner.P2 => "PLAYER 2 WINS",
+            _ => "DRAW",
+        };
 
-        AddChild(new Portrait(Characters.Placeholder, Look.P1, Portrait.Pose.Victory)
+        AddChild(new Panel { ThemeTypeVariation = UiTheme.Backdrop, Size = Size });
+        AddChild(new WinnerBand(title, color) { Position = new Vector2(0, 40) });
+
+        var pose = winner is MatchWinner.P1 or MatchWinner.P2 ? Portrait.Pose.Victory : Portrait.Pose.Ready;
+        AddChild(new Portrait(Characters.Placeholder, color, pose)
         {
             Position = new Vector2(120, 200),
             Size = new Vector2(320, 420),
@@ -31,16 +53,25 @@ public partial class ResultsScreen : Screen
         var column = new VBoxContainer();
         panel.AddChild(column);
 
-        column.AddChild(Ui.Label("ROUNDS  2 – 1", UiTheme.Caption));
+        // Rounds taken, a double KO or draw counting for both, as the score does.
+        var p1 = _results.Rounds.Count(r => r.Winner != MatchWinner.P2);
+        var p2 = _results.Rounds.Count(r => r.Winner != MatchWinner.P1);
+        column.AddChild(Ui.Label($"ROUNDS  {p1} – {p2}", UiTheme.Caption));
         var tally = new GridContainer { Columns = 3 };
         tally.AddThemeConstantOverride("h_separation", 24);
         tally.AddThemeConstantOverride("v_separation", 6);
         column.AddChild(tally);
-        foreach (var (round, winner, how) in Rounds)
+        foreach (var round in _results.Rounds)
         {
-            tally.AddChild(Ui.Label(round, UiTheme.Muted));
-            tally.AddChild(new Label { Text = $"P{winner + 1}", ThemeTypeVariation = winner == 0 ? UiTheme.ChipOn : UiTheme.Chip });
-            tally.AddChild(Ui.Label(how, UiTheme.Strong));
+            tally.AddChild(Ui.Label($"ROUND {round.Round}", UiTheme.Muted));
+            var who = round.Winner switch
+            {
+                MatchWinner.P1 => "P1",
+                MatchWinner.P2 => "P2",
+                _ => "TIE",
+            };
+            tally.AddChild(new Label { Text = who, ThemeTypeVariation = round.Winner == winner ? UiTheme.ChipOn : UiTheme.Chip });
+            tally.AddChild(Ui.Label(How(round.How), UiTheme.Strong));
         }
 
         var first = Menu(column, "Rematch", "Character select", "Title");
@@ -48,4 +79,13 @@ public partial class ResultsScreen : Screen
         AddChild(panel);
         first.GrabFocus();
     }
+
+    private static string How(Announcement how) => how switch
+    {
+        Announcement.KO => "K.O.",
+        Announcement.Time => "TIME",
+        Announcement.Perfect => "PERFECT",
+        Announcement.DoubleKO => "DOUBLE K.O.",
+        _ => "",
+    };
 }

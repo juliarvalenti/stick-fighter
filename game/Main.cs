@@ -25,15 +25,29 @@ public partial class Main : Node2D
     private const long ScenarioRefreshMilliHz = 60_000;
 
     private GameState _state = GameState.NewMatch(MatchSeed);
-    private readonly TickDriver _driver = new();
+    private TickDriver _driver = new();
 
     // Every match records its replay; F9 saves it to user://replays/.
-    private readonly ReplayRecorder _recorder = new(MatchSeed, Stage.Training, new DeviceInputSource());
+    private ReplayRecorder _recorder = new(MatchSeed, Stage.Training, new DeviceInputSource());
     private IInputSource _input = null!;
     private DebugOverlay _overlay = null!;
     private DebugView _debugView = null!;
     private Training.InputDisplay _inputDisplay = null!;
     private Training.FrameDataPanel _frameData = null!;
+
+    // The loop: title, a match, its results, and a rematch or back to the title. Character select
+    // and the rest of the menus come with Menus; for now Versus goes straight into a match.
+    private enum Flow
+    {
+        Title,
+        Match,
+        Results,
+    }
+
+    private Flow _flow = Flow.Match;
+    private int _matchNumber;
+    private MatchPresenter _presenter = null!;
+    private CanvasLayer _screens = null!;
     private StageCamera _camera = null!;
     private StageBackdrop _backdrop = null!;
     private FramePacer _pacer = new(0);
@@ -66,6 +80,10 @@ public partial class Main : Node2D
         AddChild(_camera);
         _backdrop = new StageBackdrop();
         AddChild(_backdrop);
+        _presenter = new MatchPresenter();
+        AddChild(_presenter);
+        _screens = new CanvasLayer { Layer = 10 };
+        AddChild(_screens);
 
         var args = OS.GetCmdlineUserArgs();
 
@@ -90,7 +108,80 @@ public partial class Main : Node2D
 
         if (Arg(args, "--scenario") is { } name)
             StartScenario(name, args);
+        else
+            ShowTitle();
         PresentView(0);
+    }
+
+    private void ShowScreen(UI.Screens.Screen? screen)
+    {
+        foreach (var child in _screens.GetChildren())
+            child.QueueFree();
+        if (screen is not null)
+            _screens.AddChild(screen);
+    }
+
+    // The title's menu over the fighters standing ready. Options come with Menus.
+    private void ShowTitle()
+    {
+        _flow = Flow.Title;
+        _presenter.Visible = false;
+        _state = GameState.NewMatch(MatchSeed);
+        _camera.Cut();
+        var title = new UI.Screens.TitleScreen(menu: true);
+        title.Chosen += item =>
+        {
+            switch (item)
+            {
+                case "Versus":
+                    StartMatch(MatchMode.Versus);
+                    break;
+                case "Training":
+                    StartMatch(MatchMode.Training);
+                    break;
+                case "Quit":
+                    GetTree().Quit();
+                    break;
+            }
+        };
+        ShowScreen(title);
+    }
+
+    // A new match from the start positions, recording its own replay. Each match gets the next
+    // seed, so a session's matches are each reproducible from the match number.
+    private void StartMatch(MatchMode mode)
+    {
+        _matchNumber++;
+        var seed = MatchSeed + (ulong)(_matchNumber - 1);
+        _state = GameState.NewMatch(seed, Stage.Training, mode);
+        _recorder = new ReplayRecorder(seed, Stage.Training, new DeviceInputSource(), mode);
+        _input = _recorder;
+        _driver = new TickDriver();
+        _camera.Cut();
+        _presenter.Begin();
+        _flow = Flow.Match;
+        ShowScreen(null);
+    }
+
+    // The match is decided: results over the stage, rematch focused. Rematch skips select (the
+    // same characters, the next seed); character select comes with Menus.
+    private void ShowResults()
+    {
+        _flow = Flow.Results;
+        var results = new UI.Screens.ResultsScreen(_presenter.Results(_state));
+        results.Chosen += item =>
+        {
+            switch (item)
+            {
+                case "Rematch":
+                    StartMatch(_state.Match.Mode);
+                    break;
+                case "Title":
+                    ShowTitle();
+                    break;
+            }
+        };
+        ShowScreen(results);
     }
 
     // The camera first, then the backdrop, which scrolls by where the camera ended up.
@@ -110,9 +201,11 @@ public partial class Main : Node2D
             return;
         }
 
-        _state = GameState.NewMatch(_scenario.Seed);
+        _state = GameState.NewMatch(_scenario.Seed, Stage.Training, _scenario.Versus ? MatchMode.Versus : MatchMode.Training);
         if (_scenario.Setup is { } setup)
             _state = setup(_state);
+        if (_scenario.Versus)
+            _presenter.Begin();
         _input = new Scenarios.Source(_scenario);
         _pacer = new FramePacer(ScenarioRefreshMilliHz);
         _debugView.Visible = _scenario.Boxes;
@@ -179,7 +272,8 @@ public partial class Main : Node2D
 
         var start = Stopwatch.GetTimestamp();
         var elapsed = _pacer.ToMicroseconds((long)System.Math.Round(delta * 1_000_000_000));
-        var ticks = _driver.Update(ref _state, elapsed, _input);
+        // On the title the fighters stand still: nothing to simulate until a match starts.
+        var ticks = _flow == Flow.Title ? 0 : _driver.Update(ref _state, elapsed, _input);
         var simMs = Stopwatch.GetElapsedTime(start).TotalMilliseconds;
 
         _overlay.Record(delta * 1000, simMs, ticks, _driver.DroppedTicks, _state.Frame);
@@ -187,6 +281,9 @@ public partial class Main : Node2D
         _debugView.Present(_state);
         _inputDisplay.Present(_state);
         _frameData.Present(_state);
+        _presenter.Present(_state);
+        if (_flow == Flow.Match && _state.Match is { Phase: MatchPhase.MatchEnd, PhaseFrame: >= UI.MatchHud.ResultsDelay })
+            ShowResults();
         _clock?.At(_state.Frame);
         QueueRedraw();
 
