@@ -213,7 +213,10 @@ public sealed class Compiler
             for (var i = 0; i < length; i++)
             {
                 var t = Progress(i, length, hold, ease);
-                frames.Add(KeepFeetPlanted(from, target, Blend(from, target, t), t, airborne: stanceName == "jump-tuck"));
+                var pose = KeepFeetPlanted(from, target, Blend(from, target, t), t, airborne: stanceName == "jump-tuck");
+                if (phase == "recovery")
+                    RetractInEffectorSpace(from, target, pose, t);
+                frames.Add(pose);
             }
             if (length > 0)
                 from = target;
@@ -315,6 +318,28 @@ public sealed class Compiler
                 _rig.Solve(blended, arm: false, front, new Vec(below.X, 0)); // a blend between valid poses never dips through the floor
         }
         return blended;
+    }
+
+    // Recovery brings every free hand and foot straight back: relative to its shoulder or hip, it
+    // moves along the line from where the active pose left it to its stance spot, and IK places the
+    // elbow or knee. Blending joint angles instead swings an extended limb out in an arc, so a kick
+    // would sweep past its active reach with no hitbox, and read as a late or second hit.
+    private void RetractInEffectorSpace(FloatPose from, FloatPose to, FloatPose pose, double t)
+    {
+        t = Math.Clamp(t, 0, 1);
+        foreach (var (arm, front) in new[] { (true, true), (true, false), (false, true), (false, false) })
+        {
+            var rootFrom = arm ? _rig.Neck(from) : _rig.Hip(from);
+            var rootTo = arm ? _rig.Neck(to) : _rig.Hip(to);
+            var endFrom = (arm ? _rig.Arm(from, front) : _rig.Leg(from, front)).End;
+            var endTo = (arm ? _rig.Arm(to, front) : _rig.Leg(to, front)).End;
+            if (!arm && Math.Abs(endFrom.Y) <= 1 && Math.Abs(endTo.Y) <= 1)
+                continue; // a planted foot is already handled
+
+            var relative = (endFrom - rootFrom) + ((endTo - rootTo) - (endFrom - rootFrom)) * t;
+            var root = arm ? _rig.Neck(pose) : _rig.Hip(pose);
+            _rig.Solve(pose, arm, front, root + relative);
+        }
     }
 
     private static FloatPose Blend(FloatPose from, FloatPose to, double t)

@@ -60,6 +60,25 @@ public static class Checks
             }
         }
 
+        // In recovery, the striking hand or foot comes straight back: relative to its shoulder or hip,
+        // it stays on the line from where it was on the last active frame to its stance spot. A limb
+        // that swings out past that line, with no hitbox, reads as a late hit or a second one.
+        // (Distance from the shoulder or hip alone can't show this: a straight limb is already at
+        // full length, and a kick sweeping round stays at full length the whole way.)
+        var (root, end) = Ends(Enum.Parse<Limb>(move.HitboxLimb));
+        var lastActive = move.Startup - 2 + move.Active;
+        if (move.Recovery > 0 && lastActive >= 0 && keys.Count > lastActive + 1)
+        {
+            var from = Relative(keys[lastActive], root, end, character);
+            var to = Relative(keys[^1], root, end, character);
+            for (var frame = lastActive + 1; frame < keys.Count; frame++)
+            {
+                var off = DistanceToSegment(Relative(keys[frame], root, end, character), from, to);
+                if (off > RecoverySlack)
+                    problems.Add($"move {move.Input} frame {frame}: in recovery the {Name(end)} swings {off.RoundToInt()} px off the straight path back to stance");
+            }
+        }
+
         var hitboxFrames = 0;
         for (var frame = 0; frame < keys.Count; frame++)
         {
@@ -71,6 +90,41 @@ public static class Checks
 
         return problems;
     }
+
+    private static readonly Fix RecoverySlack = Fix.FromInt(4); // px
+
+    // The joint a striking limb reaches from, and the joint at its end.
+    private static (Joint Root, Joint End) Ends(Limb limb) => limb switch
+    {
+        Limb.FrontForearm or Limb.FrontUpperArm => (Joint.Neck, Joint.FrontHand),
+        Limb.BackForearm or Limb.BackUpperArm => (Joint.Neck, Joint.BackHand),
+        Limb.FrontShin or Limb.FrontThigh => (Joint.Hip, Joint.FrontFoot),
+        Limb.BackShin or Limb.BackThigh => (Joint.Hip, Joint.BackFoot),
+        _ => (Joint.Hip, Joint.Head),
+    };
+
+    private static FixVec2 Relative(PoseKey key, Joint root, Joint end, Character character)
+    {
+        var joints = Skeleton.Solve(character.Skeleton, key, FixVec2.Zero, 1);
+        return joints[end] - joints[root];
+    }
+
+    private static Fix DistanceToSegment(FixVec2 p, FixVec2 a, FixVec2 b)
+    {
+        var ab = b - a;
+        var lengthSquared = ab.LengthSquared();
+        var t = lengthSquared == Fix.Zero ? Fix.Zero : Fix.Clamp(FixVec2.Dot(p - a, ab) / lengthSquared, Fix.Zero, Fix.One);
+        return (p - (a + ab * t)).Length();
+    }
+
+    private static string Name(Joint joint) => joint switch
+    {
+        Joint.FrontHand => "front hand",
+        Joint.BackHand => "back hand",
+        Joint.FrontFoot => "front foot",
+        Joint.BackFoot => "back foot",
+        _ => joint.ToString().ToLowerInvariant(),
+    };
 
     private static void Check(Angle bend, bool elbow, string name, Action<string> problem)
     {

@@ -49,6 +49,27 @@ public class MoveCompilerTests
         Assert.Contains(problems, p => p.Contains("move 5MP", StringComparison.Ordinal) && p.Contains("below the floor", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public void AKickThatSwingsOutInRecoveryFailsTheChecks()
+    {
+        var (output, _) = Build.Run(Character, Library, Scripts, "placeholder");
+        var character = Sim.Characters.CharacterLoader.Load(Character, output, "placeholder");
+        var move = character.FindMove("5MK")!;
+        var keys = Enumerable.Range(0, move.TotalFrames).Select(move.Track.At).ToList();
+
+        // Swing the kicking leg further out on one recovery frame, as a joint-angle blend would.
+        var frame = move.FirstActiveFrame + move.Active + 2;
+        keys[frame] = keys[frame] with { FrontHip = keys[frame].FrontHip - Sim.Numerics.Angle.FromDegrees(40) };
+
+        using var library = System.Text.Json.JsonDocument.Parse(Library);
+        using var scripts = System.Text.Json.JsonDocument.Parse(Scripts);
+        var script = scripts.RootElement.GetProperty("moves").EnumerateArray().First(m => m.GetProperty("input").GetString() == "5MK");
+        var compiled = new Compiler(Sim.Characters.CharacterLoader.Load(Character, null, "placeholder"), library.RootElement).Compile(script.Clone());
+
+        var problems = Checks.Run(compiled, keys, character);
+        Assert.Contains(problems, p => p.Contains($"move 5MK frame {frame}: in recovery the front foot swings", StringComparison.Ordinal));
+    }
+
     [Theory]
     [InlineData("\"lean:4\",", "\"wiggle:4\",", "move 5LP: unknown verb 'wiggle'")]
     [InlineData("reach:front-hand opponent-chest 0.5\"", "reach:front-hand opponent-moon 0.5\"", "move 5LP: no landmark 'opponent-moon'")]
