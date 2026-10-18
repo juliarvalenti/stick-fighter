@@ -171,6 +171,45 @@ static List<FrameInput>? Scripts(string name) => name switch
         (Buttons.Left, Buttons.Right, 300),
         (Buttons.Right, Buttons.Right, 120)),
 
+    // Dashes: tap, release, tap. P1 dashes forward (66), then back (44).
+    "dash-forward" => Runs(
+        (Buttons.Right, Buttons.None, 1),
+        (Buttons.None, Buttons.None, 2),
+        (Buttons.Right, Buttons.None, 1),
+        (Buttons.None, Buttons.None, 30)),
+
+    "dash-back" => Runs(
+        (Buttons.Left, Buttons.None, 1),
+        (Buttons.None, Buttons.None, 2),
+        (Buttons.Left, Buttons.None, 1),
+        (Buttons.None, Buttons.None, 40)),
+
+    // P2 corners P1 and steps back; P1 back-dashes into the wall (and stays there), then dashes out.
+    "dash-wall" => Runs(
+        (Buttons.Left, Buttons.Left, 300),
+        (Buttons.None, Buttons.Right, 20),
+        (Buttons.Left, Buttons.None, 1),
+        (Buttons.None, Buttons.None, 2),
+        (Buttons.Left, Buttons.None, 1),
+        (Buttons.None, Buttons.None, 30),
+        (Buttons.Right, Buttons.None, 1),
+        (Buttons.None, Buttons.None, 2),
+        (Buttons.Right, Buttons.None, 1),
+        (Buttons.None, Buttons.None, 30)),
+
+    // P2 corners P1 and throws 5HK at point-blank; P1 back-dashes into the wall so its invincible
+    // frames cover all of the kick's active frames: with nowhere to go, invincibility alone is
+    // what makes it whiff.
+    "backdash-through-attack" => Runs(
+        (Buttons.Left, Buttons.Left, 300),
+        (Buttons.None, Buttons.None, 5),
+        (Buttons.None, Buttons.HeavyKick, 1),
+        (Buttons.None, Buttons.None, 2),
+        (Buttons.Left, Buttons.None, 1),
+        (Buttons.None, Buttons.None, 1),
+        (Buttons.Left, Buttons.None, 1),
+        (Buttons.None, Buttons.None, 40)),
+
     // Jumps. A jump is 4 pre-jump frames then takeoff (5 frames of up), 36 airborne, 4 landing.
     // P1 jumps straight up, then forward, then back, landing between each.
     "jump-three" => Runs(

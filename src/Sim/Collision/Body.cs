@@ -33,16 +33,20 @@ public static class Body
 
     // Every bone is a hurtbox; the head is a circle. On a move's active frames its striking limb is
     // also a hitbox, until the move has hit once. A throw has no hitbox: Throws checks its range.
+    // A back-dash's invincible frames have no hurtboxes at all.
     public static FighterShapes Shapes(in FighterState fighter)
     {
         var joints = Pose(fighter);
         var size = Data.Skeleton;
         var shapes = new FighterShapes();
 
-        shapes.AddHurt(Capsule.Circle(joints[Joint.Head], size.HeadRadius));
-        shapes.AddHurt(Segment(joints, Limb.Spine, size.TorsoRadius));
-        for (var limb = Limb.BackUpperArm; limb <= Limb.FrontShin; limb++)
-            shapes.AddHurt(Segment(joints, limb, size.LimbRadius));
+        if (!Movement.Dashing.Invincible(fighter, Data.Stats))
+        {
+            shapes.AddHurt(Capsule.Circle(joints[Joint.Head], size.HeadRadius));
+            shapes.AddHurt(Segment(joints, Limb.Spine, size.TorsoRadius));
+            for (var limb = Limb.BackUpperArm; limb <= Limb.FrontShin; limb++)
+                shapes.AddHurt(Segment(joints, limb, size.LimbRadius));
+        }
 
         if (MoveOf(fighter) is { Kind: MoveKind.Normal } move && move.IsActive(fighter.ActionFrame) && !fighter.MoveHit)
             shapes.AddHit(Segment(joints, move.HitboxLimb, move.HitboxRadius + move.ActiveBonus));

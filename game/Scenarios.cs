@@ -146,6 +146,15 @@ public static class Scenarios
 
     private static readonly Scenario[] Match =
     {
+        // Dashes, boxes on (F2). P1 back-dashes (44): on its invincible frames it has no hurtboxes
+        // at all (6), and they're back once those are over (13). Then a forward dash (66), with
+        // hurtboxes throughout (47).
+        new Scenario("dashes", 1,
+            f => f is 0 or 2 ? new FrameInput(Buttons.Left, default)
+                : f is 40 or 42 ? new FrameInput(Buttons.Right, default)
+                : default,
+            Captures: new[] { 6, 13, 47 }, Frames: 50, Boxes: true),
+
         // Both fighters walk together and stop at the pushboxes; boxes on.
         new Scenario("walk-in", 1, _ => WalkIn, Captures: new[] { 1, 30, 90 }, Frames: 90, Boxes: true),
 

@@ -30,7 +30,13 @@
     "jumpVelocity": 31762,
     "gravity": 1815,
     "jumpForward": 5000,
-    "jumpBack": 4000
+    "jumpBack": 4000,
+    "comment-dashes": "Dashes, from 66 and 44 with the second tap within dashInputWindow frames of the first. forwardDashFrames and backDashFrames (SF4: 18 and 27) are the whole dash; the last forwardDashRecovery / backDashRecovery of them stand still, and before that the fighter covers the distance (px) on a curve that starts fast and eases to a stop. The back-dash's first backDashInvincibleFrames have no hurtboxes and can't be thrown. Distances, recoveries and the window are placeholders for the playtest.",
+    "forwardDashDistance": 140,
+    "backDashDistance": 120,
+    "forwardDashRecovery": 4,
+    "backDashRecovery": 6,
+    "dashInputWindow": 10
   },
   "comment-stats": "crouchTransitionFrames: frames from standing to the crouch pose, counting as crouching throughout (SF4's figure). pushShare: walking into a fighter who isn't walking in, how much of the walker's step moves them along, per mille; the walker keeps the same share, so the pair moves together at that fraction of walking speed. pushHeight here is the standing pushbox; a pose may set its own. The jump arc: jumpVelocity (up, at takeoff) and gravity (each frame) in px/1000, chosen so it lands in exactly airborneFrames (the loader checks) with its apex at 294 px, SF4's 1.76 units; jumpForward and jumpBack are the sideways drift (placeholders for the playtest).",
 
@@ -135,6 +141,20 @@
       "length": 1,
       "keys": [
         { "frame": 0, "hip": [0, -92], "angles": { "spine": 0, "neck": 0, "backShoulder": 291, "backElbow": -519, "frontShoulder": -27, "frontElbow": -1830, "backHip": -239, "backKnee": 827, "frontHip": -563, "frontKnee": 836 } }
+      ]
+    },
+    "dashForward": {
+      "comment": "Placeholder: the forward walk's long stride, held for the dash.",
+      "length": 1,
+      "keys": [
+        { "frame": 0, "hip": [0, -115], "angles": { "spine": 0, "neck": 0, "backShoulder": 224, "backElbow": -410, "frontShoulder": 76, "frontElbow": -1813, "backHip": -61, "backKnee": 262, "frontHip": -190, "frontKnee": 272 } }
+      ]
+    },
+    "dashBack": {
+      "comment": "Placeholder: the back walk's long stride, leaning away, held for the dash.",
+      "length": 1,
+      "keys": [
+        { "frame": 0, "hip": [0, -112], "angles": { "spine": -20, "neck": 0, "backShoulder": 289, "backElbow": -527, "frontShoulder": -46, "frontElbow": -1783, "backHip": -291, "backKnee": 335, "frontHip": -18, "frontKnee": 317 } }
       ]
     },
     "walkForward": {
