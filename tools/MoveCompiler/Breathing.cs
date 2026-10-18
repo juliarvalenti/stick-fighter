@@ -27,17 +27,24 @@ public static class Breathing
         var character = CharacterLoader.Load(characterJson, null, "character");
         var rig = new Rig(character.Skeleton);
         foreach (var (name, action) in Stances)
-            characterJson = Replace(characterJson, name, Track(name, FloatPose.From(character.Pose(action).Keys[0]), rig));
+        {
+            // A stance's own pushbox height is kept; one that uses the standing default stays without.
+            var pushHeight = character.PushHeight(action);
+            int? own = pushHeight == character.Stats.PushHeight ? null : pushHeight.RoundToInt();
+            characterJson = Replace(characterJson, name, Track(name, FloatPose.From(character.Pose(action).Keys[0]), own, rig));
+        }
         return characterJson;
     }
 
-    private static string Track(string name, FloatPose pose, Rig rig)
+    private static string Track(string name, FloatPose pose, int? pushHeight, Rig rig)
     {
         var back = rig.Leg(pose, front: false).End;
         var front = rig.Leg(pose, front: true).End;
         var text = new StringBuilder();
         text.Append('"').Append(name).Append("\": {\n");
         text.Append("      \"length\": ").Append(Length).Append(",\n");
+        if (pushHeight is { } height)
+            text.Append("      \"pushHeight\": ").Append(height).Append(",\n");
         text.Append("      \"keys\": [\n");
         int[]? previous = null;
         var first = true;
