@@ -39,9 +39,14 @@ public enum FighterAction
     Jump = 12,
     Landing = 13,
 
+    // Dashing forward or back (66 or 44): a fixed distance on a curve that starts fast and eases to
+    // a stop, then recovery. The back-dash's first frames are invincible.
+    DashForward = 14,
+    DashBack = 15,
+
     // Performing a move; the pose comes from the move's track, not a stance pose. Last, because
     // every action before it has a stance pose at the same index.
-    Attack = 14,
+    Attack = 16,
 }
 
 public enum Strength
@@ -118,7 +123,15 @@ public sealed record Stats(
     Fix JumpVelocity,
     Fix Gravity,
     Fix JumpForward,
-    Fix JumpBack);
+    Fix JumpBack,
+    // Dashes: how far each goes, and how many of its frames (ForwardDashFrames, BackDashFrames) at
+    // the end are recovery, standing still. The second tap of 66 or 44 must come within
+    // DashInputWindow frames of the first.
+    Fix ForwardDashDistance,
+    Fix BackDashDistance,
+    int ForwardDashRecovery,
+    int BackDashRecovery,
+    int DashInputWindow);
 
 public sealed record SkeletonSize(
     Fix Spine,

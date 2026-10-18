@@ -124,6 +124,18 @@ public static class Simulation
             return;
         }
 
+        // A dash runs its whole length: no turning, guarding or acting until it's over.
+        if (fighter.Action is (int)FighterAction.DashForward or (int)FighterAction.DashBack)
+        {
+            var forwardDash = fighter.Action == (int)FighterAction.DashForward;
+            if (fighter.ActionFrame + 1 < Dashing.Frames(character.Stats, forwardDash))
+            {
+                Continue(ref fighter, forwardDash ? FighterAction.DashForward : FighterAction.DashBack);
+                MoveDash(ref fighter, character.Stats, forwardDash);
+                return;
+            }
+        }
+
         var direction = Numpad.Direction(history.At(now, now), fighter.Facing);
 
         // Pre-jump frames are committed (specials and supers will cancel them, later). On the last
@@ -170,6 +182,16 @@ public static class Simulation
 
         fighter.Move = -1;
 
+        // 66 or 44 dashes (ahead of proximity guard: a back-dash can still be done near an attack).
+        var dash = Dashing.Detect(history, now, fighter.Facing, character.Stats.DashInputWindow);
+        if (dash != 0)
+        {
+            fighter.Action = (int)(dash > 0 ? FighterAction.DashForward : FighterAction.DashBack);
+            fighter.ActionFrame = 0;
+            MoveDash(ref fighter, character.Stats, dash > 0);
+            return;
+        }
+
         // Holding back near an incoming attack: guard in place rather than walk away.
         if (proximityGuard)
         {
@@ -206,6 +228,15 @@ public static class Simulation
         fighter.Velocity = new FixVec2(speed * fighter.Facing, Fix.Zero);
         fighter.Position += fighter.Velocity;
         Continue(ref fighter, action);
+    }
+
+    // This frame's step of a dash (the fighter's ActionFrame is the dash frame), as its velocity, so
+    // pushing sees a dash into the opponent as walking in.
+    private static void MoveDash(ref FighterState fighter, Stats stats, bool forward)
+    {
+        var step = Dashing.Step(stats, forward, fighter.ActionFrame) * (forward ? fighter.Facing : -fighter.Facing);
+        fighter.Velocity = new FixVec2(step, Fix.Zero);
+        fighter.Position += fighter.Velocity;
     }
 
     // After an air attack, this many landing frames are true recovery before guarding is allowed (SF4).
@@ -307,11 +338,11 @@ public static class Simulation
     private static bool CrouchedDown(in FighterState fighter, Character character) =>
         fighter.Action == (int)FighterAction.CrouchDown && fighter.ActionFrame + 1 >= character.Stats.CrouchTransitionFrames;
 
-    // Free to turn around: on the ground, not committed to a jump, and not mid-move, reeling or
-    // guarding in blockstun. A fighter who isn't free keeps facing the way it was until it is, so a
-    // jump over the opponent turns the jumper on the frame it lands.
+    // Free to turn around: on the ground, not committed to a jump or a dash, and not mid-move,
+    // reeling or guarding in blockstun. A fighter who isn't free keeps facing the way it was until it
+    // is, so a jump over the opponent turns the jumper on the frame it lands.
     public static bool CanTurn(in FighterState fighter) =>
-        !fighter.Airborne && fighter.Action != (int)FighterAction.PreJump
+        !fighter.Airborne && fighter.Action != (int)FighterAction.PreJump && !Dashing.IsDashing(fighter)
         && fighter.Hitstun == 0 && fighter.Blockstun == 0 && fighter.Action != (int)FighterAction.Attack && !fighter.KnockedDown;
 
     // Facings come from positions after movement, and each free fighter turns toward the other on

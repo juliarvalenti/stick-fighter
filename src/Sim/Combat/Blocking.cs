@@ -21,11 +21,11 @@ public static class Blocking
         state.Inputs[player].At(state.Frame, state.Frame).Has(Buttons.Down);
 
     // Free to guard: not attacking or reeling. Already guarding (blockstun or proximity) counts.
-    // Never in the air (no air blocking), in pre-jump frames (committed to the jump), or in the
-    // true-recovery frames of a landing after an air attack.
+    // Never in the air (no air blocking), in pre-jump frames (committed to the jump), mid-dash, or in
+    // the true-recovery frames of a landing after an air attack.
     public static bool CanGuard(in FighterState fighter) =>
         fighter.Hitstun == 0 && fighter.Action != (int)FighterAction.Attack && !fighter.KnockedDown
-        && !fighter.Airborne && fighter.Action != (int)FighterAction.PreJump
+        && !fighter.Airborne && fighter.Action != (int)FighterAction.PreJump && !Movement.Dashing.IsDashing(fighter)
         && !(fighter.Action == (int)FighterAction.Landing && fighter.AirAttackUsed && fighter.ActionFrame < Simulation.LandingLockFrames);
 
     // Highs must be blocked standing, lows crouching; mids either way.

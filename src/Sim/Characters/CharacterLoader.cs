@@ -21,7 +21,7 @@ public static class CharacterLoader
     private static readonly string[] PoseNames =
     {
         "stand", "crouch", "walkForward", "walkBack", "hitstun", "blockStand", "blockCrouch", "crouchDown",
-        "thrown", "throwHold", "knockdown", "preJump", "jump", "landing",
+        "thrown", "throwHold", "knockdown", "preJump", "jump", "landing", "dashForward", "dashBack",
     };
 
     // `json` is the character (stats, skeleton, stance poses); `movesJson` is its compiled moves
@@ -41,6 +41,12 @@ public static class CharacterLoader
             var arc = Movement.Jumping.ArcFrames(stats.JumpVelocity, stats.Gravity);
             if (arc != stats.AirborneFrames)
                 throw new CharacterDataException($"stats: the jump arc (jumpVelocity, gravity) lands after {arc} frames, but airborneFrames is {stats.AirborneFrames}");
+            if (stats.ForwardDashRecovery >= stats.ForwardDashFrames || stats.BackDashRecovery >= stats.BackDashFrames)
+                throw new CharacterDataException("stats: a dash's recovery must leave it at least one frame of movement");
+            if (stats.BackDashInvincibleFrames > stats.BackDashFrames)
+                throw new CharacterDataException("stats: backDashInvincibleFrames is longer than the back-dash");
+            if (stats.DashInputWindow > InputHistory.MaxWindow)
+                throw new CharacterDataException($"stats: dashInputWindow is at most {InputHistory.MaxWindow} (the input history's depth)");
             var skeleton = ReadSkeleton(Obj(root, "skeleton"), hash);
 
             var poses = Obj(root, "poses");
@@ -112,7 +118,12 @@ public static class CharacterLoader
         JumpVelocity: Fix.FromRatio(Positive(s, "jumpVelocity", h), 1000),
         Gravity: Fix.FromRatio(Positive(s, "gravity", h), 1000),
         JumpForward: Fix.FromRatio(Positive(s, "jumpForward", h), 1000),
-        JumpBack: Fix.FromRatio(Positive(s, "jumpBack", h), 1000));
+        JumpBack: Fix.FromRatio(Positive(s, "jumpBack", h), 1000),
+        ForwardDashDistance: Fix.FromInt(Positive(s, "forwardDashDistance", h)),
+        BackDashDistance: Fix.FromInt(Positive(s, "backDashDistance", h)),
+        ForwardDashRecovery: Int(s, "forwardDashRecovery", h),
+        BackDashRecovery: Int(s, "backDashRecovery", h),
+        DashInputWindow: Positive(s, "dashInputWindow", h));
 
     // A share from 1 to 1000.
     private static int PerMille(JsonElement s, string key, DataHasher h)

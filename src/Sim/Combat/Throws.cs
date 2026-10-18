@@ -56,14 +56,15 @@ public static class Throws
 
     public static bool Stunned(in FighterState f) => f.Hitstun > 0 || f.Blockstun > 0;
 
-    // Apart from stun, which Resolve reads from the start of the frame. Not in the air, and not in a
-    // jump's pre-jump frames either (SF4).
+    // Apart from stun, which Resolve reads from the start of the frame. Not in the air, not in a
+    // jump's pre-jump frames, and not in a back-dash's invincible frames (SF4).
     public static bool Throwable(in FighterState f) =>
         !f.KnockedDown
         && f.Wakeup == 0
         && f.Grab < 0
         && !f.Airborne
-        && f.Action != (int)FighterAction.PreJump;
+        && f.Action != (int)FighterAction.PreJump
+        && !Movement.Dashing.Invincible(f, Characters.Characters.Placeholder.Stats);
 
     private static bool Connects(in GameState state, int player)
     {
