@@ -80,7 +80,9 @@ public static class Throws
         ref var me = ref state.Fighters[thrower];
         ref var them = ref state.Fighters[1 - thrower];
         me.MoveHit = true;
-        me.BackThrow = Blocking.HoldingBack(state, thrower);
+        // Back held when the throw started or when it connects: letting go of back in the two
+        // startup frames still throws behind.
+        me.BackThrow |= Blocking.HoldingBack(state, thrower);
         them.Techable = Techable(them);
         Hold(ref me, FighterAction.Throwing);
         Hold(ref them, FighterAction.Thrown);
@@ -140,6 +142,10 @@ public static class Throws
         var toward = thrown.Position.X >= thrower.Position.X ? 1 : -1;
         var side = thrower.BackThrow ? -toward : toward;
         thrown.Position = new FixVec2(thrower.Position.X + stats.ThrowDistance * side, thrown.Position.Y);
+
+        // Lands facing the thrower, so lying down the head is away from them either way. (A fighter
+        // only turns when free, so after a back throw it would otherwise lie the wrong way round.)
+        thrown.Facing = -side;
 
         thrown.Grab = -1;
         thrown.Techable = false;
