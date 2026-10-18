@@ -4,7 +4,7 @@ namespace StickFighter.Sim;
 
 public struct FighterState
 {
-    public const int EncodedSize = 16 + 16 + 4 + 4 + 4 + 4 + 4 + 1 + 4 + 4 + 1 + 4 + 4 + 4 + 4 + 1;
+    public const int EncodedSize = 16 + 16 + 4 + 4 + 4 + 4 + 4 + 1 + 4 + 4 + 1 + 4 + 4 + 4 + 4 + 1 + 1;
 
     public FixVec2 Position;
     public FixVec2 Velocity;
@@ -48,6 +48,10 @@ public struct FighterState
     // The throw this fighter is holding throws the opponent behind it (chosen by holding back).
     public bool BackThrow;
 
+    // Grabbed in neutral or in the startup of their own throw, so LP+LK can tech it. Grabbed in the
+    // startup or recovery of anything else, it's a counter-hit throw and can't be teched.
+    public bool Techable;
+
     public readonly void Encode(ref StateWriter writer)
     {
         writer.Write(Position);
@@ -66,5 +70,6 @@ public struct FighterState
         writer.Write(Knockdown);
         writer.Write(Wakeup);
         writer.Write(BackThrow);
+        writer.Write(Techable);
     }
 }

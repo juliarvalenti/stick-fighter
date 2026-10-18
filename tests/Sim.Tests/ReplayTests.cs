@@ -170,6 +170,7 @@ public class ReplayTests
     [InlineData("throw-whiff-punished", true, false)]
     [InlineData("throw-hitstun", false, true)]
     [InlineData("throw-same-frame", false, false)]
+    [InlineData("throw-counterhit", false, true)]
     public void ScriptedReplaysCoverTheirCase(string name, bool p1Hurt, bool p2Hurt)
     {
         var replay = Replay.Read(System.IO.File.ReadAllText(System.IO.Path.Combine(RepoRoot(), "replays", name + ".sfr")));
@@ -256,6 +257,20 @@ public class ReplayTests
         Assert.Equal(pressRelativeToGrab, press - grab);
         Assert.DoesNotContain(states, s => s.Fighters[1].KnockedDown);
         Assert.Equal(FullHealth, states[^1].Fighters[1].Health);
+    }
+
+    // Grabbed in a heavy kick's startup, P2 presses LP+LK inside the window, and the throw lands anyway.
+    [Fact]
+    public void ACounterHitThrowCantBeTeched()
+    {
+        var (states, replay) = Play("throw-counterhit");
+        var grab = GrabFrame(states);
+        Assert.Equal(Characters.Characters.Placeholder.FindMove("5HK"), Characters.Characters.Placeholder.Moves[states[grab - 1].Fighters[1].Move]);
+        var press = System.Linq.Enumerable.ToList(replay.Inputs).FindIndex(i => i.Player2.Has(Buttons.LightPunch | Buttons.LightKick));
+        var stats = Characters.Characters.Placeholder.Stats;
+        Assert.InRange(press - grab, stats.TechFrame + 1 - stats.TechWindow, stats.TechFrame);
+        Assert.Contains(states, s => s.Fighters[1].KnockedDown);
+        Assert.Equal(FullHealth - ThrowDamage, states[^1].Fighters[1].Health);
     }
 
     [Fact]

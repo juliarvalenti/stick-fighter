@@ -6,8 +6,8 @@ namespace StickFighter.Sim.Combat;
 
 // Throws, after SF4. A throw connects on its active frames if the opponent is throwable and
 // within range (feet to feet). Then both are held: the thrown animation plays TechFrame frames,
-// and the game looks back TechWindow frames of the thrown fighter's input for LP+LK. Found, it's
-// a tech: both break apart into neutral. Not found, the throw completes: damage, the opponent
+// and the game looks back TechWindow frames of the thrown fighter's input for LP+LK. Found, and the
+// fighter was grabbed somewhere a tech is allowed (Techable), it's a tech: both break apart into neutral. Not found, the throw completes: damage, the opponent
 // lands in front (or behind, for a back throw) and is knocked down.
 //
 // Everything is decided for both players before anything is applied, so two throws on the same
@@ -29,7 +29,7 @@ public static class Throws
             if (thrown.Action != (int)FighterAction.Thrown || thrown.Grab != stats.TechFrame)
                 continue;
             ref var thrower = ref state.Fighters[1 - p];
-            if (Teched(state.Inputs[p], state.Frame, stats.TechWindow))
+            if (thrown.Techable && Teched(state.Inputs[p], state.Frame, stats.TechWindow))
                 BreakApart(ref thrower, ref thrown, stats.TechSeparation, state.Frame);
             else
                 Complete(ref thrower, ref thrown, stats);
@@ -78,9 +78,21 @@ public static class Throws
         ref var them = ref state.Fighters[1 - thrower];
         me.MoveHit = true;
         me.BackThrow = Blocking.HoldingBack(state, thrower);
+        them.Techable = Techable(them);
         Hold(ref me, FighterAction.Throwing);
         Hold(ref them, FighterAction.Thrown);
     }
+
+    // SF4: a throw can be teched from neutral (standing, crouching, walking or guarding) or from the
+    // startup of your own throw. Grabbed in the startup or recovery of anything else, including a
+    // whiffed throw's recovery, it's a counter-hit throw. (Landing joins the list with Jumps.)
+    public static bool Techable(in FighterState f) => (FighterAction)f.Action switch
+    {
+        FighterAction.Stand or FighterAction.Crouch or FighterAction.WalkForward or FighterAction.WalkBack
+            or FighterAction.BlockStand or FighterAction.BlockCrouch => true,
+        FighterAction.Attack => f.Move == Normals.Throw && f.ActionFrame < Characters.Characters.Placeholder.Moves[f.Move].FirstActiveFrame,
+        _ => false,
+    };
 
     private static void Hold(ref FighterState f, FighterAction action)
     {
@@ -126,6 +138,7 @@ public static class Throws
         thrown.Position = new FixVec2(thrower.Position.X + stats.ThrowDistance * side, thrown.Position.Y);
 
         thrown.Grab = -1;
+        thrown.Techable = false;
         thrown.Knockdown = stats.KnockdownFrames;
         thrown.KnockedDown = true;
         thrown.Action = (int)FighterAction.Knockdown;
@@ -135,6 +148,7 @@ public static class Throws
     private static void Release(ref FighterState f)
     {
         f.Grab = -1;
+        f.Techable = false;
         f.Move = -1;
         f.Action = (int)FighterAction.Stand;
         f.ActionFrame = 0;

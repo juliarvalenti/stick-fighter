@@ -251,6 +251,15 @@ static List<FrameInput>? Scripts(string name) => name switch
         (Buttons.LightPunch | Buttons.LightKick, Buttons.None, 1),
         (Buttons.None, Buttons.None, 40)),
 
+    // P2 starts a standing heavy kick as P1 throws, and is grabbed in its startup: a counter-hit
+    // throw. P2's LP+LK two frames into the grab is in the window but can't tech, and the throw lands.
+    "throw-counterhit" => Runs(
+        (Buttons.Right, Buttons.None, 46),
+        (Buttons.LightPunch | Buttons.LightKick, Buttons.HeavyKick, 1),
+        (Buttons.None, Buttons.None, 3),
+        (Buttons.None, Buttons.LightPunch | Buttons.LightKick, 1),
+        (Buttons.None, Buttons.None, 60)),
+
     // Both walk in and throw on the same frame: both tech and break apart.
     "throw-same-frame" => Runs(
         (Buttons.Right, Buttons.Left, 23),

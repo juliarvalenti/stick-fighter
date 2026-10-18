@@ -257,6 +257,47 @@ public class ThrowsTests
         }
     }
 
+    // P2 starts a standing heavy kick (or crouches) as P1 throws, then presses LP+LK in the window.
+    [Theory]
+    [InlineData(Buttons.HeavyKick, false)] // grabbed in the kick's startup: a counter-hit throw
+    [InlineData(Buttons.Down, true)] // crouching in neutral: teched
+    public void OnlyAFighterGrabbedInNeutralCanTech(Buttons p2Before, bool teched)
+    {
+        var state = Apart(60);
+        Step(ref state, LpLk, p2Before);
+        while (state.Frame <= ConnectFrame)
+            Step(ref state, p2: p2Before & Buttons.Down);
+        Assert.Equal((int)FighterAction.Thrown, state.Fighters[1].Action);
+        Step(ref state, p2: LpLk | (p2Before & Buttons.Down));
+        while (state.Frame <= ConnectFrame + Data.Stats.TechFrame)
+            Step(ref state, p2: p2Before & Buttons.Down);
+        Assert.Equal(!teched, state.Fighters[1].KnockedDown);
+    }
+
+    public static TheoryData<FighterAction, int, int, bool> TechableCases() => new()
+    {
+        { FighterAction.Stand, -1, 0, true },
+        { FighterAction.Crouch, -1, 0, true },
+        { FighterAction.WalkForward, -1, 0, true },
+        { FighterAction.WalkBack, -1, 0, true },
+        { FighterAction.BlockStand, -1, 0, true },
+        { FighterAction.BlockCrouch, -1, 0, true },
+        { FighterAction.Attack, Normals.Throw, 0, true }, // own throw's startup
+        { FighterAction.Attack, Normals.Throw, 1, true },
+        { FighterAction.Attack, Normals.Throw, 2, false }, // its active frames and recovery
+        { FighterAction.Attack, Normals.Throw, 10, false },
+        { FighterAction.Attack, 0, 0, false }, // a normal's startup
+        { FighterAction.Attack, 0, 8, false }, // and recovery
+    };
+
+    [Theory]
+    [MemberData(nameof(TechableCases))]
+    public void TechableFromNeutralOrOwnThrowStartup(FighterAction action, int move, int frame, bool techable)
+    {
+        var fighter = new FighterState { Action = (int)action, Move = move, ActionFrame = frame, Grab = -1 };
+        Assert.Equal(techable, Throws.Techable(fighter));
+    }
+
     [Fact]
     public void TheMeatyThrowConnectsOnTheFirstFrameOutOfBlockstun()
     {
