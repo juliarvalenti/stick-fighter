@@ -43,9 +43,13 @@
   "poses": {
     "comment": "Keyed poses that hold until the next key. Angles are local: spine from straight up, neck from the spine, shoulders from straight down the spine, hips from straight down (so leaning keeps the feet planted), elbows and knees from their parent bone. Guard hands stay within 16 px of the centre line, so two fighters at minimum distance (pushboxes touching) never cross arms.",
     "stand": {
-      "length": 1,
+      "length": 40,
       "keys": [
-        { "frame": 0, "hip": [0, -112], "angles": { "spine": 0, "neck": 0, "backShoulder": 291, "backElbow": -519, "frontShoulder": -27, "frontElbow": -1830, "backHip": -18, "backKnee": 317, "frontHip": -291, "frontKnee": 335 } }
+        { "frame": 0, "hip": [0, -112], "angles": { "spine": 0, "neck": 0, "backShoulder": 291, "backElbow": -519, "frontShoulder": -27, "frontElbow": -1830, "backHip": -18, "backKnee": 317, "frontHip": -291, "frontKnee": 335 } },
+        { "frame": 10, "hip": [0, -111], "angles": { "spine": 0, "neck": 0, "backShoulder": 291, "backElbow": -519, "frontShoulder": -27, "frontElbow": -1830, "backHip": -37, "backKnee": 359, "frontHip": -312, "frontKnee": 375 } },
+        { "frame": 15, "hip": [0, -110], "angles": { "spine": 0, "neck": 0, "backShoulder": 291, "backElbow": -519, "frontShoulder": -27, "frontElbow": -1830, "backHip": -55, "backKnee": 397, "frontHip": -331, "frontKnee": 412 } },
+        { "frame": 30, "hip": [0, -111], "angles": { "spine": 0, "neck": 0, "backShoulder": 291, "backElbow": -519, "frontShoulder": -27, "frontElbow": -1830, "backHip": -37, "backKnee": 359, "frontHip": -312, "frontKnee": 375 } },
+        { "frame": 35, "hip": [0, -112], "angles": { "spine": 0, "neck": 0, "backShoulder": 291, "backElbow": -519, "frontShoulder": -27, "frontElbow": -1830, "backHip": -18, "backKnee": 317, "frontHip": -291, "frontKnee": 335 } }
       ]
     },
     "hitstun": {
@@ -86,9 +90,13 @@
       ]
     },
     "crouch": {
-      "length": 1,
+      "length": 40,
       "keys": [
-        { "frame": 0, "hip": [0, -74], "angles": { "spine": 0, "neck": 0, "backShoulder": 387, "backElbow": -746, "frontShoulder": 165, "frontElbow": -555, "backHip": -235, "backKnee": 1055, "frontHip": -709, "frontKnee": 1133 } }
+        { "frame": 0, "hip": [0, -74], "angles": { "spine": 0, "neck": 0, "backShoulder": 387, "backElbow": -746, "frontShoulder": 165, "frontElbow": -555, "backHip": -235, "backKnee": 1055, "frontHip": -709, "frontKnee": 1133 } },
+        { "frame": 10, "hip": [0, -73], "angles": { "spine": 0, "neck": 0, "backShoulder": 387, "backElbow": -746, "frontShoulder": 165, "frontElbow": -555, "backHip": -238, "backKnee": 1069, "frontHip": -718, "frontKnee": 1147 } },
+        { "frame": 15, "hip": [0, -72], "angles": { "spine": 0, "neck": 0, "backShoulder": 387, "backElbow": -746, "frontShoulder": 165, "frontElbow": -555, "backHip": -241, "backKnee": 1082, "frontHip": -726, "frontKnee": 1161 } },
+        { "frame": 30, "hip": [0, -73], "angles": { "spine": 0, "neck": 0, "backShoulder": 387, "backElbow": -746, "frontShoulder": 165, "frontElbow": -555, "backHip": -238, "backKnee": 1069, "frontHip": -718, "frontKnee": 1147 } },
+        { "frame": 35, "hip": [0, -74], "angles": { "spine": 0, "neck": 0, "backShoulder": 387, "backElbow": -746, "frontShoulder": 165, "frontElbow": -555, "backHip": -235, "backKnee": 1055, "frontHip": -709, "frontKnee": 1133 } }
       ]
     },
     "walkForward": {

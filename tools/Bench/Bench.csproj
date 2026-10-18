@@ -7,6 +7,9 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <RootNamespace>StickFighter.Bench</RootNamespace>
     <AssemblyName>StickFighter.Bench</AssemblyName>
+    <!-- Fully optimized code from the first call. With tiering, the first mode measured part
+         unoptimized code and part optimized, depending on when the JIT got to it. -->
+    <TieredCompilation>false</TieredCompilation>
   </PropertyGroup>
 
   <ItemGroup>

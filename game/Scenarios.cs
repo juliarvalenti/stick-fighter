@@ -105,11 +105,11 @@ public static class Scenarios
     }
 
     // Throws, boxes on, one every ThrowPeriod frames from a reset. P1 presses LP+LK on frame 1 of
-    // each; it connects on frame 3.
+    // each; it connects on frame 3 (captured as 4: a capture shows the state after the frame before).
     //  - A throw at point-blank: held (6), then P2 knocked down in front (14).
     //  - The same throw teched: P2 presses LP+LK three frames into the grab, and on the seventh
     //    they break apart (72).
-    //  - A throw from out of range: reaching on its active frame (123), whiffed in recovery (132).
+    //  - A throw from out of range: reaching on its first active frame (124), whiffed in recovery (132).
     private const int ThrowPeriod = 60;
 
     private static Scenario Throws()
@@ -139,7 +139,7 @@ public static class Scenarios
             return s;
         }
 
-        return new Scenario("throws", 1, Script, new[] { 6, 14, 72, 123, 132 }, gaps.Length * ThrowPeriod,
+        return new Scenario("throws", 1, Script, new[] { 6, 14, 72, 124, 132 }, gaps.Length * ThrowPeriod,
             Boxes: true, EachFrame: Reset);
     }
 

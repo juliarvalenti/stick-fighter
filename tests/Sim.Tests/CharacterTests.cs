@@ -52,11 +52,11 @@ public class CharacterDataTests
 
     // Breaks the first occurrence in the compiled moves (5LP is the first move).
     [Theory]
-    [InlineData("\"frame\": 7, \"hip\"", "\"frame\": 3, \"hip\"", "move 5LP: pose key 5: frame 3 is not after the previous key's frame 6")]
+    [InlineData("\"frame\": 7, \"hip\"", "\"frame\": 3, \"hip\"", "move 5LP: pose key 6: frame 3 is not after the previous key's frame 6")]
     [InlineData("\"startup\": 4,", "\"startup\": 4.5,", "move 5LP: 'startup' must be a whole number")]
     [InlineData("\"limb\": \"frontForearm\"", "\"limb\": \"tail\"", "move 5LP: 'limb' = 'tail' is not one of")]
     [InlineData("\"strength\": \"light\"", "\"strength\": \"mighty\"", "move 5LP: 'strength' = 'mighty' is not one of")]
-    [InlineData("\"frame\": 10, \"hip\"", "\"frame\": 11, \"hip\"", "move 5LP: pose key 8: frame 11 is past the end (length 11)")]
+    [InlineData("\"frame\": 10, \"hip\"", "\"frame\": 11, \"hip\"", "move 5LP: pose key 9: frame 11 is past the end (length 11)")]
     public void BadMoveDataFailsLoudlyNamingWhere(string find, string replace, string message)
     {
         var broken = ReplaceFirst(Moves, find, replace);

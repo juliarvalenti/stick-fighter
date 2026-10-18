@@ -1,5 +1,5 @@
 {
-  "comment": "Move scripts for the placeholder character. tools/MoveCompiler turns these into data/characters/placeholder.moves.json; edit these, never the compiled file. Frame data from reference/frame-data-baseline. Verbs: pose, reach, lean, crouch, step, hold, ease, hitbox, hurt, spawn. A 'phase:' prefix (startup, active, recovery) starts that phase's verbs. Pushback values are placeholders by strength until Normals and getting hit tunes them.",
+  "comment": "Move scripts for the placeholder character. tools/MoveCompiler turns these into data/characters/placeholder.moves.json; edit these, never the compiled file. Frame data from reference/frame-data-baseline. Verbs: pose, reach, lean, crouch, step, hold, ease, hitbox, hurt, spawn. A 'phase:' prefix (startup, active, recovery) starts that phase's verbs. Scripts say where the hit lands; the compiler moves the whole body around it by default (wind-up, weight shift, lean, counter-arm, arcs home), and a script's own 'lean' or 'step' replaces the default one. Pushback values are placeholders by strength until Normals and getting hit tunes them.",
   "moves": [
     { "name": "Standing light punch", "input": "5LP", "startup": 4, "active": 2, "recovery": 6, "damage": 20, "stun": 50, "strength": "light", "guard": "mid", "pushbackHit": 12, "pushbackBlock": 14,
       "do": ["startup: reach:front-hand opponent-chest 0.5", "lean:4",
@@ -8,12 +8,12 @@
 
     { "name": "Standing medium punch", "input": "5MP", "startup": 7, "active": 2, "recovery": 10, "damage": 60, "stun": 100, "strength": "medium", "guard": "mid", "pushbackHit": 16, "pushbackBlock": 18,
       "do": ["startup: pose:windup-punch",
-             "active: reach:front-hand opponent-chest 1.0", "lean:12", "step:8", "hitbox:front-hand 9",
+             "active: reach:front-hand opponent-chest 1.0", "lean:12", "hitbox:front-hand 9",
              "recovery: hold:0.2", "pose:guard"] },
 
     { "name": "Standing heavy punch", "input": "5HP", "startup": 8, "active": 3, "recovery": 16, "damage": 100, "stun": 200, "strength": "heavy", "guard": "mid", "pushbackHit": 20, "pushbackBlock": 22,
       "do": ["startup: pose:windup-punch", "lean:-10",
-             "active: reach:back-hand opponent-head 1.0", "lean:16", "step:14", "ease:overshoot", "hitbox:back-hand 10",
+             "active: reach:back-hand opponent-head 1.0", "lean:16", "ease:overshoot", "hitbox:back-hand 10",
              "recovery: hold:0.25", "pose:guard"] },
 
     { "name": "Standing light kick", "input": "5LK", "startup": 4, "active": 3, "recovery": 9, "damage": 40, "stun": 50, "strength": "light", "guard": "mid", "pushbackHit": 12, "pushbackBlock": 14,
@@ -36,8 +36,7 @@
              "recovery: hold:0.2", "pose:crouch-guard"] },
 
     { "name": "Crouching medium punch", "input": "2MP", "startup": 5, "active": 5, "recovery": 8, "damage": 60, "stun": 100, "strength": "medium", "guard": "mid", "pushbackHit": 16, "pushbackBlock": 18,
-      "do": ["startup: reach:front-hand chest 0.5",
-             "active: reach:front-hand opponent-chest 1.0", "lean:12", "hitbox:front-hand 9",
+      "do": ["active: reach:front-hand opponent-chest 1.0", "lean:12", "hitbox:front-hand 9",
              "recovery: hold:0.2", "pose:crouch-guard"] },
 
     { "name": "Crouching heavy punch", "input": "2HP", "startup": 5, "active": 5, "recovery": 22, "damage": 100, "stun": 200, "strength": "heavy", "guard": "mid", "pushbackHit": 20, "pushbackBlock": 22, "hitstun": 23,
@@ -82,8 +81,7 @@
              "active: reach:back-foot opponent-shin 1.0", "lean:-16", "ease:overshoot", "hitbox:back-foot 10"] },
 
     { "name": "Throw", "input": "LP+LK", "kind": "throw", "startup": 3, "active": 2, "recovery": 20, "damage": 130, "stun": 100, "strength": "heavy", "guard": "mid", "pushbackHit": 0, "pushbackBlock": 0,
-      "do": ["startup: reach:both-hands opponent-chest 0.5", "lean:8",
-             "active: reach:both-hands opponent-chest 0.8", "lean:14", "step:6", "hitbox:both-hands 8",
+      "do": ["active: reach:both-hands opponent-chest 0.8", "lean:14", "hitbox:both-hands 8",
              "recovery: hold:0.15", "lean:4", "pose:guard"] },
 
     { "name": "Fireball", "input": "236P", "startup": 13, "active": 2, "recovery": 31, "damage": 60, "stun": 100, "strength": "medium", "guard": "mid", "pushbackHit": 16, "pushbackBlock": 18,

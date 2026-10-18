@@ -50,24 +50,126 @@ public class MoveCompilerTests
     }
 
     [Fact]
-    public void AKickThatSwingsOutInRecoveryFailsTheChecks()
+    public void AKickThatSweepsOutPastItsReachInRecoveryFailsTheChecks()
+    {
+        var (character, compiled, keys) = Compiled("5MK");
+
+        // Straighten the kicking leg out level in front on one recovery frame: a second sweep.
+        var frame = compiled.Startup - 1 + compiled.Active + 2;
+        keys[frame] = keys[frame] with { FrontHip = Sim.Numerics.Angle.FromDegrees(-90), FrontKnee = Sim.Numerics.Angle.FromDegrees(0) };
+
+        var problems = Checks.Run(compiled, keys, character);
+        Assert.Contains(problems, p => p.Contains($"move 5MK frame {frame}: in recovery the front foot is", StringComparison.Ordinal)
+            && p.Contains("past its active reach", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void TheCompiledMovesFoldBackInsteadOfSweeping()
+    {
+        // The arc home can't pass its reach, so every move's recovery stays inside it.
+        var (_, problems) = Build.Run(Character, Library, Scripts, "placeholder");
+        Assert.DoesNotContain(problems, p => p.Contains("past its active reach", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void AnArmOnlyMoveFailsTheWholeBodyCheck()
+    {
+        var (character, compiled, keys) = Compiled("5MP");
+
+        // Freeze everything but the arms at the stance: one arm punches, the body stands still.
+        var stance = character.Pose(Sim.Characters.FighterAction.Stand).Keys[0];
+        for (var i = 0; i < keys.Count; i++)
+        {
+            keys[i] = keys[i] with
+            {
+                Hip = stance.Hip,
+                Spine = stance.Spine,
+                Neck = stance.Neck,
+                BackHip = stance.BackHip,
+                BackKnee = stance.BackKnee,
+                FrontHip = stance.FrontHip,
+                FrontKnee = stance.FrontKnee,
+            };
+        }
+
+        var problems = Checks.Run(compiled, keys, character);
+        Assert.Contains(problems, p => p.StartsWith("move 5MP: the hip moves 0 px", StringComparison.Ordinal));
+        Assert.Contains(problems, p => p.StartsWith("move 5MP: the torso turns 0°", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void AJointThatSnapsOutsideTheStrikeFailsTheChecks()
+    {
+        var (character, compiled, keys) = Compiled("5HP");
+
+        // Fling the back elbow 90° for one recovery frame.
+        var frame = compiled.Startup - 1 + compiled.Active + 4;
+        keys[frame] = keys[frame] with { BackElbow = keys[frame].BackElbow - Sim.Numerics.Angle.FromDegrees(90) };
+
+        var problems = Checks.Run(compiled, keys, character);
+        Assert.Contains(problems, p => p.Contains($"move 5HP frame {frame}: the back elbow turns", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void EveryStrikeMovesTheWholeBody()
+    {
+        // Each ground normal's hip shifts and torso turns between the stance and its first active frame.
+        var character = Sim.Characters.Characters.Placeholder;
+        foreach (var move in character.Moves.Where(m => !m.Input.StartsWith("j.", StringComparison.Ordinal)))
+        {
+            var stance = character.Pose(Compiler.DefaultStance(move.Input) == "crouch-guard"
+                ? Sim.Characters.FighterAction.Crouch : Sim.Characters.FighterAction.Stand).Keys[0];
+            var hit = move.Track.At(move.FirstActiveFrame);
+            Assert.True(Sim.Numerics.Fix.Abs(hit.Hip.X - stance.Hip.X) >= Sim.Numerics.Fix.FromInt(4), $"{move.Input}: the hip doesn't shift");
+            Assert.NotEqual(stance.Spine, hit.Spine);
+        }
+    }
+
+    [Fact]
+    public void TheStanceBreathesWithTheFeetPlanted()
+    {
+        // The committed character file is the generator's output, and running it again changes nothing.
+        Assert.Equal(Character, Breathing.Apply(Character));
+
+        var character = Sim.Characters.CharacterLoader.Load(Character, null, "placeholder");
+        foreach (var action in new[] { Sim.Characters.FighterAction.Stand, Sim.Characters.FighterAction.Crouch })
+        {
+            var track = character.Pose(action);
+            Assert.Equal(Breathing.Length, track.Length);
+            var rest = track.Keys[0];
+            var restFeet = Feet(character, rest);
+            var depth = 0;
+            for (var frame = 0; frame < track.Length; frame++)
+            {
+                var key = track.At(frame);
+                depth = Math.Max(depth, (key.Hip.Y - rest.Hip.Y).RoundToInt());
+                Assert.Equal(restFeet, Feet(character, key));
+            }
+            Assert.InRange(depth, 1, 2);
+        }
+    }
+
+    private static (int, int, int, int) Feet(Sim.Characters.Character character, Sim.Characters.PoseKey key)
+    {
+        var joints = Sim.Characters.Skeleton.Solve(character.Skeleton, key, Sim.Numerics.FixVec2.Zero, 1);
+        var back = joints[Sim.Characters.Joint.BackFoot];
+        var front = joints[Sim.Characters.Joint.FrontFoot];
+        return (back.X.RoundToInt(), back.Y.RoundToInt(), front.X.RoundToInt(), front.Y.RoundToInt());
+    }
+
+    // A move compiled from the committed scripts, with its integer keys one per frame to tamper with.
+    private static (Sim.Characters.Character, CompiledMove, System.Collections.Generic.List<Sim.Characters.PoseKey>) Compiled(string input)
     {
         var (output, _) = Build.Run(Character, Library, Scripts, "placeholder");
         var character = Sim.Characters.CharacterLoader.Load(Character, output, "placeholder");
-        var move = character.FindMove("5MK")!;
+        var move = character.FindMove(input)!;
         var keys = Enumerable.Range(0, move.TotalFrames).Select(move.Track.At).ToList();
-
-        // Swing the kicking leg further out on one recovery frame, as a joint-angle blend would.
-        var frame = move.FirstActiveFrame + move.Active + 2;
-        keys[frame] = keys[frame] with { FrontHip = keys[frame].FrontHip - Sim.Numerics.Angle.FromDegrees(40) };
 
         using var library = System.Text.Json.JsonDocument.Parse(Library);
         using var scripts = System.Text.Json.JsonDocument.Parse(Scripts);
-        var script = scripts.RootElement.GetProperty("moves").EnumerateArray().First(m => m.GetProperty("input").GetString() == "5MK");
+        var script = scripts.RootElement.GetProperty("moves").EnumerateArray().First(m => m.GetProperty("input").GetString() == input);
         var compiled = new Compiler(Sim.Characters.CharacterLoader.Load(Character, null, "placeholder"), library.RootElement).Compile(script.Clone());
-
-        var problems = Checks.Run(compiled, keys, character);
-        Assert.Contains(problems, p => p.Contains($"move 5MK frame {frame}: in recovery the front foot swings", StringComparison.Ordinal));
+        return (character, compiled, keys);
     }
 
     [Theory]

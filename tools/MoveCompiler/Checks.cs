@@ -60,23 +60,52 @@ public static class Checks
             }
         }
 
-        // In recovery, the striking hand or foot comes straight back: relative to its shoulder or hip,
-        // it stays on the line from where it was on the last active frame to its stance spot. A limb
-        // that swings out past that line, with no hitbox, reads as a late hit or a second one.
-        // (Distance from the shoulder or hip alone can't show this: a straight limb is already at
-        // full length, and a kick sweeping round stays at full length the whole way.)
-        var (root, end) = Ends(Enum.Parse<Limb>(move.HitboxLimb));
-        var lastActive = move.Startup - 2 + move.Active;
-        if (move.Recovery > 0 && lastActive >= 0 && keys.Count > lastActive + 1)
+        // In recovery, the striking hand or foot never gets farther from the body than it was while
+        // the hitbox was out. Further, with no hitbox, it reads as a late hit or a second one. Measured
+        // from the torso (the neck-to-hip line, carried on down to the floor, so a foot back under
+        // the body counts as home), not from the shoulder or hip: a limb folding back in an arc
+        // passes, and one that sweeps round at full stretch fails.
+        var end = End(Enum.Parse<Limb>(move.HitboxLimb));
+        var firstActive = move.Startup - 1;
+        var lastActive = firstActive + move.Active - 1;
+        var reach = Fix.Zero;
+        for (var frame = firstActive; frame <= lastActive && frame < keys.Count; frame++)
+            reach = Fix.Max(reach, FromTorso(keys[frame], end, character));
+        for (var frame = lastActive + 1; frame < keys.Count; frame++)
         {
-            var from = Relative(keys[lastActive], root, end, character);
-            var to = Relative(keys[^1], root, end, character);
-            for (var frame = lastActive + 1; frame < keys.Count; frame++)
+            var distance = FromTorso(keys[frame], end, character);
+            if (distance > reach + ReachSlack)
+                problems.Add($"move {move.Input} frame {frame}: in recovery the {Name(end)} is {distance.RoundToInt()} px from the torso, past its active reach of {reach.RoundToInt()} px");
+        }
+
+        // The whole body strikes: between the stance and the first active frame the hip and the
+        // torso both move, not just the striking limb. (In the air there's no stance to shift from,
+        // so only the torso is checked, against the move's first frame.)
+        if (firstActive < keys.Count)
+        {
+            var before = airborne ? keys[0] : Stance(move, character);
+            var hit = keys[firstActive];
+            var hipMoved = (hit.Hip - before.Hip).Length();
+            var torsoTurned = Math.Abs(Wrap(hit.Spine.Units - before.Spine.Units));
+            if (!airborne && hipMoved < Fix.FromInt(MinHipShift))
+                problems.Add($"move {move.Input}: the hip moves {hipMoved.RoundToInt()} px into the strike (at least {MinHipShift}); the whole body should strike, not just the limb");
+            if (torsoTurned < MinTorsoTurn)
+                problems.Add($"move {move.Input}: the torso turns {torsoTurned * 360 / Angle.UnitsPerTurn}° into the strike (at least {MinTorsoTurn * 360 / Angle.UnitsPerTurn}°); the whole body should strike, not just the limb");
+        }
+
+        // Smooth: outside the snap into the strike, no joint turns more than a set amount in one
+        // frame. On the ground the move starts from the stance, so its first frame counts too.
+        var previous = airborne ? null : Stance(move, character);
+        for (var frame = 0; frame < keys.Count; frame++)
+        {
+            var key = keys[frame];
+            if (previous is not null && (frame < firstActive || frame > lastActive))
             {
-                var off = DistanceToSegment(Relative(keys[frame], root, end, character), from, to);
-                if (off > RecoverySlack)
-                    problems.Add($"move {move.Input} frame {frame}: in recovery the {Name(end)} swings {off.RoundToInt()} px off the straight path back to stance");
+                var (joint, turn) = LargestTurn(previous, key);
+                if (turn > MaxTurnPerFrame)
+                    problems.Add($"move {move.Input} frame {frame}: the {joint} turns {turn * 360 / Angle.UnitsPerTurn}° in one frame (at most {MaxTurnPerFrame * 360 / Angle.UnitsPerTurn}° outside the strike)");
             }
+            previous = key;
         }
 
         var hitboxFrames = 0;
@@ -91,22 +120,61 @@ public static class Checks
         return problems;
     }
 
-    private static readonly Fix RecoverySlack = Fix.FromInt(4); // px
+    private static readonly Fix ReachSlack = Fix.FromInt(3); // px
+    private const int MinHipShift = 4; // px
+    private const int MinTorsoTurn = 34; // Angle units, about 3°
+    private const int MaxTurnPerFrame = 512; // Angle units, 45°
 
-    // The joint a striking limb reaches from, and the joint at its end.
-    private static (Joint Root, Joint End) Ends(Limb limb) => limb switch
+    // The joint at the end of a striking limb.
+    private static Joint End(Limb limb) => limb switch
     {
-        Limb.FrontForearm or Limb.FrontUpperArm => (Joint.Neck, Joint.FrontHand),
-        Limb.BackForearm or Limb.BackUpperArm => (Joint.Neck, Joint.BackHand),
-        Limb.FrontShin or Limb.FrontThigh => (Joint.Hip, Joint.FrontFoot),
-        Limb.BackShin or Limb.BackThigh => (Joint.Hip, Joint.BackFoot),
-        _ => (Joint.Hip, Joint.Head),
+        Limb.FrontForearm or Limb.FrontUpperArm => Joint.FrontHand,
+        Limb.BackForearm or Limb.BackUpperArm => Joint.BackHand,
+        Limb.FrontShin or Limb.FrontThigh => Joint.FrontFoot,
+        Limb.BackShin or Limb.BackThigh => Joint.BackFoot,
+        _ => Joint.Head,
     };
 
-    private static FixVec2 Relative(PoseKey key, Joint root, Joint end, Character character)
+    private static Fix FromTorso(PoseKey key, Joint end, Character character)
     {
         var joints = Skeleton.Solve(character.Skeleton, key, FixVec2.Zero, 1);
-        return joints[end] - joints[root];
+        var hip = joints[Joint.Hip];
+        var below = new FixVec2(hip.X, Fix.Zero);
+        return Fix.Min(DistanceToSegment(joints[end], hip, joints[Joint.Neck]), DistanceToSegment(joints[end], hip, below));
+    }
+
+    // The pose a ground move starts from: crouching moves from the crouch, the rest standing.
+    private static PoseKey Stance(CompiledMove move, Character character) =>
+        character.Pose(Compiler.DefaultStance(move.Input) == "crouch-guard" ? FighterAction.Crouch : FighterAction.Stand).Keys[0];
+
+    private static readonly string[] JointNames =
+    {
+        "spine", "neck", "back shoulder", "back elbow", "front shoulder", "front elbow", "back hip", "back knee", "front hip", "front knee",
+    };
+
+    // The joint that turns most between two poses, and by how much.
+    private static (string Joint, int Turn) LargestTurn(PoseKey a, PoseKey b)
+    {
+        int[] from = { a.Spine.Units, a.Neck.Units, a.BackShoulder.Units, a.BackElbow.Units, a.FrontShoulder.Units, a.FrontElbow.Units, a.BackHip.Units, a.BackKnee.Units, a.FrontHip.Units, a.FrontKnee.Units };
+        int[] to = { b.Spine.Units, b.Neck.Units, b.BackShoulder.Units, b.BackElbow.Units, b.FrontShoulder.Units, b.FrontElbow.Units, b.BackHip.Units, b.BackKnee.Units, b.FrontHip.Units, b.FrontKnee.Units };
+        var worst = (JointNames[0], 0);
+        for (var i = 0; i < from.Length; i++)
+        {
+            var turn = Math.Abs(Wrap(to[i] - from[i]));
+            if (turn > worst.Item2)
+                worst = (JointNames[i], turn);
+        }
+        return worst;
+    }
+
+    private static int Wrap(int units)
+    {
+        var u = units % Angle.UnitsPerTurn;
+        if (u > Angle.UnitsPerTurn / 2)
+            u -= Angle.UnitsPerTurn;
+        if (u <= -Angle.UnitsPerTurn / 2)
+            u += Angle.UnitsPerTurn;
+        return u;
     }
 
     private static Fix DistanceToSegment(FixVec2 p, FixVec2 a, FixVec2 b)
