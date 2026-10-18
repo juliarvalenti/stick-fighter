@@ -109,6 +109,46 @@ public class SoundTests
         Assert.Empty(run.Sink.Faded);
     }
 
+    // At 30 Hz (or catching up) the presentation sees every second or third frame, whichever one the
+    // first active frame falls on: the swish still plays, once, keyed to that frame.
+    [Theory]
+    [InlineData(2, 0)]
+    [InlineData(2, 1)]
+    [InlineData(3, 0)]
+    [InlineData(3, 1)]
+    [InlineData(3, 2)]
+    [InlineData(4, 3)]
+    public void AWhiffIsCaughtWhenUpdatesSkipFrames(int every, int phase)
+    {
+        var expected = new Run(400);
+        expected.Play(Press(Buttons.LightPunch), 30);
+
+        foreach (var move in new[] { Buttons.LightPunch, Buttons.HeavyKick })
+        {
+            var state = Apart(400);
+            var sink = new FakeSink();
+            var sound = new SoundDirector(sink) { Log = new List<string>() };
+            for (var f = 0; f < 60; f++)
+            {
+                Simulation.Step(ref state, Press(move)(f));
+                if (f % every == phase)
+                    sound.Update(state);
+            }
+            Assert.Equal(Sfx.Whiff, Assert.Single(sink.Played).Sfx);
+            if (move == Buttons.LightPunch)
+                Assert.Equal(Frame(expected.Sound.Log![0]), Frame(sound.Log[0]));
+        }
+    }
+
+    // Two jabs in a row are two swishes, not one.
+    [Fact]
+    public void EachSwingSwishesOnItsOwn()
+    {
+        var run = new Run(400);
+        run.Play(f => new FrameInput(f is 0 or 30 ? Buttons.LightPunch : default, default), 60);
+        Assert.Equal(new[] { Sfx.Whiff, Sfx.Whiff }, run.Sink.Played.Select(p => p.Sfx));
+    }
+
     // At point-blank the jab connects on its first active frame: a hit, no swish.
     [Fact]
     public void AnAttackThatConnectsDoesntSwish()

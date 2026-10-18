@@ -31,6 +31,8 @@
     <Compile Include="../../game/sound/Synth.cs" Link="Linked/Synth.cs" />
     <Compile Include="../../game/sound/WhiffWatch.cs" Link="Linked/WhiffWatch.cs" />
     <Compile Include="../../game/sound/SoundDirector.cs" Link="Linked/SoundDirector.cs" />
+    <Compile Include="../../game/sound/MusicSynth.cs" Link="Linked/MusicSynth.cs" />
+    <Compile Include="../../game/sound/MusicDirector.cs" Link="Linked/MusicDirector.cs" />
   </ItemGroup>
 
   <!-- The characters' moves, to check every notation they use reads as glyphs. -->

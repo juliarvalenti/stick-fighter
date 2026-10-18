@@ -76,6 +76,7 @@ public partial class Main : Node2D
     private MatchPresenter _presenter = null!;
     private FX.EffectsView _effects = null!;
     private Sound.SoundView _sound = null!;
+    private Sound.MusicView _music = null!;
     private CanvasLayer _screens = null!;
     private StageCamera _camera = null!;
     private StageBackdrop _backdrop = null!;
@@ -116,6 +117,8 @@ public partial class Main : Node2D
         AddChild(_effects);
         _sound = new Sound.SoundView();
         AddChild(_sound);
+        _music = new Sound.MusicView();
+        AddChild(_music);
         _screens = new CanvasLayer { Layer = 10 };
         AddChild(_screens);
 
@@ -568,11 +571,14 @@ public partial class Main : Node2D
         if (_scenario.SoundLog)
         {
             var volume = DeviceInput.Settings.EffectsVolume;
+            var music = DeviceInput.Settings.MusicVolume;
             var log = new System.Collections.Generic.List<string>
             {
                 $"# effects volume {volume} ({Sound.SoundDirector.VolumeDb(volume):0.0} dB), {Sound.SoundDirector.Voices} voices",
+                $"# music volume {music} ({Sound.MusicDirector.GainDb(music, paused: false):0.0} dB, {Sound.MusicDirector.PausedDuckDb:0} dB more paused)",
             };
             _sound.Director.Log = log;
+            _music.Director.Log = log;
             _scenarioRun.Log = log;
         }
 
@@ -633,6 +639,8 @@ public partial class Main : Node2D
         _presenter.Present(_state);
         _effects.Present(_state);
         _sound.Present(_state, DeviceInput.Settings.EffectsVolume);
+        _music.Director.Update(_flow == Flow.Match ? Sound.Track.Match : Sound.Track.Menu,
+            DeviceInput.Settings.MusicVolume, paused: _paused is not null, _displayFrame);
         PresentTraining();
         if (_scenario is { TrainingMenuAt: >= 0 } && _state.Frame == _scenario.TrainingMenuAt && _paused is null)
             OpenTrainingMenu();
