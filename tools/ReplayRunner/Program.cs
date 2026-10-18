@@ -46,7 +46,26 @@ static int Check(string folder)
     var failures = 0;
     foreach (var file in files)
     {
-        var replay = Replay.Read(File.ReadAllText(file));
+        Replay replay;
+        try
+        {
+            replay = Replay.Read(File.ReadAllText(file));
+        }
+        catch (FormatException e)
+        {
+            failures++;
+            Console.WriteLine($"FAIL {file}  {e.Message}");
+            continue;
+        }
+
+        if (!replay.MatchesLoadedData)
+        {
+            failures++;
+            Console.WriteLine($"FAIL {file}  recorded with character data {replay.DataHash:x16}, but this build has {Replay.LoadedDataHash:x16}");
+            Console.WriteLine("     if the data change is intended, rerecord and say why in the PR");
+            continue;
+        }
+
         var frame = replay.FirstDivergence(out var expected, out var actual);
         if (frame < 0)
         {
@@ -64,7 +83,7 @@ static int Rerecord(string folder)
 {
     foreach (var file in Files(folder))
     {
-        var old = Replay.Read(File.ReadAllText(file));
+        var old = Replay.Read(File.ReadAllText(file), allowVersion1: true);
         var updated = Replay.Record(old.Seed, old.Inputs);
         File.WriteAllText(file, updated.Write());
         Console.WriteLine($"rerecorded {file}: final {old.FinalChecksum:x16} -> {updated.FinalChecksum:x16}");

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using StickFighter.Sim;
+using StickFighter.Sim.Numerics;
 
 namespace StickFighter;
 
@@ -34,6 +35,17 @@ public static class Scenarios
             Setup: s =>
             {
                 (s.Fighters[0].Position, s.Fighters[1].Position) = (s.Fighters[1].Position, s.Fighters[0].Position);
+                return s;
+            }),
+
+        // The data-driven poses at minimum distance (pushboxes touching), boxes on: standing, then
+        // crouching, then both walking forward into each other. The arms must not cross.
+        new Scenario("poses", 1, f => f < 20 ? default : f < 40 ? new FrameInput(Buttons.Down, Buttons.Down) : WalkIn,
+            Captures: new[] { 10, 30, 52 }, Frames: 52, Boxes: true,
+            Setup: s =>
+            {
+                s.Fighters[0].Position = new FixVec2(Fix.FromInt(610), s.Fighters[0].Position.Y);
+                s.Fighters[1].Position = new FixVec2(Fix.FromInt(670), s.Fighters[1].Position.Y);
                 return s;
             }),
 

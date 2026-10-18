@@ -16,6 +16,7 @@ A real-time 2D fighting game in Godot 4 (C#), in the spirit of Street Fighter 4,
 | `tests/Sim.Tests/` | xUnit tests for the simulation. They run without Godot. |
 | `game/` | Presentation: Godot scenes and nodes that draw the simulation and poll input. |
 | `project.godot`, `StickFighter.csproj` | The Godot project. It references `src/Sim`. |
+| `data/characters/` | Character data: stats, skeleton, keyed poses and moves, as integer JSON. Embedded in the Sim assembly and validated at load; bad data fails naming the move and key. |
 
 The simulation never depends on the presentation. The rules for the game live in the room's `context/rules`.
 

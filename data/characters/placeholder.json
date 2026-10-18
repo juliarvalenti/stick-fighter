@@ -1,0 +1,91 @@
+{
+  "name": "placeholder",
+  "comment": "Integers only. Distances in px, angles in Angle units (4096 per turn, positive turns +X toward +Y), speeds in px/1000 per frame. Values from reference/frame-data-baseline; 1 SF4 unit = 167 px (jump apex matched to our 294 px height).",
+
+  "stats": {
+    "health": 1000,
+    "stun": 1000,
+    "walkForward": 7517,
+    "walkBack": 5011,
+    "forwardDashFrames": 18,
+    "backDashFrames": 27,
+    "backDashInvincibleFrames": 8,
+    "preJumpFrames": 4,
+    "airborneFrames": 36,
+    "landingFrames": 4,
+    "pushHalfWidth": 30,
+    "pushHeight": 230
+  },
+
+  "skeleton": {
+    "comment": "Bone lengths and capsule radii. Hip is the root; arms hang from the neck, legs from the hip.",
+    "spine": 120,
+    "neck": 36,
+    "upperArm": 52,
+    "forearm": 48,
+    "thigh": 60,
+    "shin": 58,
+    "headRadius": 28,
+    "torsoRadius": 16,
+    "limbRadius": 8
+  },
+
+  "poses": {
+    "comment": "Keyed poses that hold until the next key. Angles are local: spine from straight up, neck from the spine, shoulders and hips from straight down the spine, elbows and knees from their parent bone. Guard hands stay within 16 px of the centre line, so two fighters at minimum distance (pushboxes touching) never cross arms.",
+    "stand": {
+      "length": 1,
+      "keys": [
+        { "frame": 0, "hip": [0, -112], "angles": { "spine": 0, "neck": 0, "backShoulder": 291, "backElbow": -519, "frontShoulder": -27, "frontElbow": -1830, "backHip": -18, "backKnee": 317, "frontHip": -291, "frontKnee": 335 } }
+      ]
+    },
+    "crouch": {
+      "length": 1,
+      "keys": [
+        { "frame": 0, "hip": [0, -74], "angles": { "spine": 0, "neck": 0, "backShoulder": 387, "backElbow": -746, "frontShoulder": 165, "frontElbow": -555, "backHip": -235, "backKnee": 1055, "frontHip": -709, "frontKnee": 1133 } }
+      ]
+    },
+    "walkForward": {
+      "length": 32,
+      "keys": [
+        { "frame": 0, "hip": [0, -112], "angles": { "spine": 0, "neck": 0, "backShoulder": 291, "backElbow": -519, "frontShoulder": -27, "frontElbow": -1830, "backHip": 3, "backKnee": 296, "frontHip": -293, "frontKnee": 316 } },
+        { "frame": 8, "hip": [0, -115], "angles": { "spine": 0, "neck": 0, "backShoulder": 224, "backElbow": -410, "frontShoulder": 76, "frontElbow": -1813, "backHip": -61, "backKnee": 262, "frontHip": -190, "frontKnee": 272 } },
+        { "frame": 16, "hip": [0, -112], "angles": { "spine": 0, "neck": 0, "backShoulder": 291, "backElbow": -519, "frontShoulder": -27, "frontElbow": -1830, "backHip": -291, "backKnee": 335, "frontHip": -18, "frontKnee": 317 } },
+        { "frame": 24, "hip": [0, -115], "angles": { "spine": 0, "neck": 0, "backShoulder": 224, "backElbow": -410, "frontShoulder": 76, "frontElbow": -1813, "backHip": -183, "backKnee": 280, "frontHip": -93, "frontKnee": 281 } }
+      ]
+    },
+    "walkBack": {
+      "length": 32,
+      "keys": [
+        { "frame": 0, "hip": [0, -115], "angles": { "spine": -20, "neck": 0, "backShoulder": 222, "backElbow": -417, "frontShoulder": 40, "frontElbow": -1769, "backHip": -163, "backKnee": 280, "frontHip": -73, "frontKnee": 281 } },
+        { "frame": 8, "hip": [0, -112], "angles": { "spine": -20, "neck": 0, "backShoulder": 289, "backElbow": -527, "frontShoulder": -46, "frontElbow": -1783, "backHip": -271, "backKnee": 335, "frontHip": 2, "frontKnee": 317 } },
+        { "frame": 16, "hip": [0, -115], "angles": { "spine": -20, "neck": 0, "backShoulder": 222, "backElbow": -417, "frontShoulder": 40, "frontElbow": -1769, "backHip": -41, "backKnee": 262, "frontHip": -170, "frontKnee": 272 } },
+        { "frame": 24, "hip": [0, -112], "angles": { "spine": -20, "neck": 0, "backShoulder": 289, "backElbow": -527, "frontShoulder": -46, "frontElbow": -1783, "backHip": 23, "backKnee": 296, "frontHip": -273, "frontKnee": 316 } }
+      ]
+    }
+  },
+
+  "moves": [
+    {
+      "comment": "Startup includes the first active frame, so the hitbox is out on frames startup-1 .. startup-1+active-1 (0-based). Not executed yet: Normals and getting hit uses it.",
+      "name": "Standing light punch",
+      "input": "5LP",
+      "startup": 4,
+      "active": 2,
+      "recovery": 6,
+      "damage": 20,
+      "stun": 50,
+      "strength": "light",
+      "guard": "mid",
+      "pushbackHit": 12,
+      "pushbackBlock": 14,
+      "hitbox": { "limb": "frontForearm", "radius": 8, "activeBonus": 4 },
+      "keys": [
+        { "frame": 0, "hip": [0, -112], "angles": { "spine": 0, "neck": 0, "backShoulder": 291, "backElbow": -519, "frontShoulder": -27, "frontElbow": -1830, "backHip": -18, "backKnee": 317, "frontHip": -291, "frontKnee": 335 } },
+        { "frame": 2, "hip": [0, -112], "angles": { "spine": 30, "neck": 0, "backShoulder": 291, "backElbow": -519, "frontShoulder": -700, "frontElbow": -500, "backHip": -18, "backKnee": 317, "frontHip": -291, "frontKnee": 335 } },
+        { "frame": 3, "hip": [0, -112], "angles": { "spine": 60, "neck": -30, "backShoulder": 291, "backElbow": -519, "frontShoulder": -1000, "frontElbow": 0, "backHip": -18, "backKnee": 317, "frontHip": -291, "frontKnee": 335 } },
+        { "frame": 5, "hip": [0, -112], "angles": { "spine": 30, "neck": 0, "backShoulder": 291, "backElbow": -519, "frontShoulder": -700, "frontElbow": -500, "backHip": -18, "backKnee": 317, "frontHip": -291, "frontKnee": 335 } },
+        { "frame": 8, "hip": [0, -112], "angles": { "spine": 0, "neck": 0, "backShoulder": 291, "backElbow": -519, "frontShoulder": -27, "frontElbow": -1830, "backHip": -18, "backKnee": 317, "frontHip": -291, "frontKnee": 335 } }
+      ]
+    }
+  ]
+}

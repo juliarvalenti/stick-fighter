@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Godot;
 using StickFighter.Sim;
+using StickFighter.Sim.Characters;
 using StickFighter.Sim.Collision;
 using StickFighter.Sim.Numerics;
 using StickFighter.Sim.Replays;
@@ -149,20 +150,19 @@ public partial class Main : Node2D
 
     private void DrawFighter(FighterState fighter, Color color)
     {
-        // Drawn from the same joints the hurtboxes come from, so what you see is what gets hit.
-        Vector2 J(FixVec2 offset) => Body.Joint(fighter, offset).ToVector2();
-        var hip = J(Body.Hip);
-        var neck = J(Body.Neck);
-
-        Limb(hip, J(Body.BackFoot), color);
-        Limb(hip, J(Body.FrontFoot), color);
-        Limb(hip, neck, color);
-        Limb(neck, J(Body.BackHand), color);
-        Limb(neck, J(Body.FrontHand), color);
-        DrawCircle(J(Body.Head), Body.HeadSize.ToFloat(), color);
+        // Drawn from the same posed joints the hurtboxes come from, so what you see is what gets hit.
+        var joints = Body.Pose(fighter);
+        for (var limb = Limb.Spine; limb <= Limb.FrontShin; limb++)
+        {
+            if (limb == Limb.Neck)
+                continue;
+            var (from, to) = Skeleton.Ends(limb);
+            DrawBone(joints[from].ToVector2(), joints[to].ToVector2(), color);
+        }
+        DrawCircle(joints[Joint.Head].ToVector2(), Body.HeadRadius.ToFloat(), color);
     }
 
-    private void Limb(Vector2 from, Vector2 to, Color color)
+    private void DrawBone(Vector2 from, Vector2 to, Color color)
     {
         DrawLine(from, to, color, Stroke);
         DrawCircle(from, Stroke / 2, color);

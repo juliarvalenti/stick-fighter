@@ -183,7 +183,7 @@ public class ContactTests
     private static FighterShapes WithJab(in FighterState fighter, int reach)
     {
         var shapes = Body.Shapes(fighter);
-        var shoulder = Body.Joint(fighter, Body.Neck);
+        var shoulder = Body.Pose(fighter)[Characters.Joint.Neck];
         shapes.AddHit(new Capsule(shoulder, shoulder + new FixVec2(Fix.FromInt(reach * fighter.Facing), Fix.Zero), Fix.FromInt(6)));
         return shapes;
     }
@@ -215,10 +215,16 @@ public class ContactTests
     }
 
     [Fact]
-    public void TheAttackersOutstretchedLimbIsHittable()
+    public void ArmsAreHittable()
     {
+        // A small hit right on P2's guard hand connects: every limb is a hurtbox, including the
+        // one a move would strike with.
         var state = Close();
-        var hit = Contacts.Find(state, WithJab(state.Fighters[0], 30), Body.Shapes(state.Fighters[1]));
+        var hand = Body.Pose(state.Fighters[1])[Characters.Joint.FrontHand];
+        var p1 = Body.Shapes(state.Fighters[0]);
+        p1.AddHit(Capsule.Circle(hand, Fix.FromInt(2)));
+
+        var hit = Contacts.Find(state, p1, Body.Shapes(state.Fighters[1]));
         Assert.Equal(1, hit.Count);
     }
 
