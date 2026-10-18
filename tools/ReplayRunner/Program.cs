@@ -452,6 +452,16 @@ static List<FrameInput>? Scripts(string name) => name switch
         (Buttons.None, Buttons.LightPunch | Buttons.LightKick, 1),
         (Buttons.None, Buttons.None, 60)),
 
+    // P1 jabs P2 (+6 on hit), then plinks the next jab in its recovery: LP, then MP a frame later
+    // with LP held. The earliest press comes out, so the jab links: two hits, one combo.
+    "plink-link" => Runs(
+        (Buttons.Right, Buttons.None, 46),
+        (Buttons.LightPunch, Buttons.None, 1),
+        (Buttons.None, Buttons.None, 8),
+        (Buttons.LightPunch, Buttons.None, 1),
+        (Buttons.LightPunch | Buttons.MediumPunch, Buttons.None, 1),
+        (Buttons.None, Buttons.None, 30)),
+
     // Both walk in and throw on the same frame: both tech and break apart.
     "throw-same-frame" => Runs(
         (Buttons.Right, Buttons.Left, 23),

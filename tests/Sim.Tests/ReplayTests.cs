@@ -162,6 +162,7 @@ public class ReplayTests
     [InlineData("block-crouch-low", false, false)]
     [InlineData("low-hits-standing-block", false, true)]
     [InlineData("proximity-guard", false, false)]
+    [InlineData("plink-link", false, true)]
     [InlineData("throw", false, true)]
     [InlineData("throw-back", false, true)]
     [InlineData("throw-meaty", false, true)]
@@ -271,6 +272,25 @@ public class ReplayTests
         Assert.InRange(press - grab, stats.TechFrame + 1 - stats.TechWindow, stats.TechFrame);
         Assert.Contains(states, s => s.Fighters[1].KnockedDown);
         Assert.Equal(FullHealth - ThrowDamage, states[^1].Fighters[1].Health);
+    }
+
+    // The plinked jab comes out as a jab (not MP) and lands before P2 leaves hitstun: a combo.
+    [Fact]
+    public void APlinkedJabLinks()
+    {
+        var (states, _) = Play("plink-link");
+        var jab = Characters.Characters.Placeholder.FindMove("5LP")!;
+        var hits = 0;
+        for (var i = 1; i < states.Count; i++)
+        {
+            if (states[i].Fighters[1].Health >= states[i - 1].Fighters[1].Health)
+                continue;
+            hits++;
+            if (hits == 2)
+                Assert.True(states[i - 1].Fighters[1].Hitstun > 0, "P2 was free before the second jab landed");
+        }
+        Assert.Equal(2, hits);
+        Assert.Equal(FullHealth - 2 * jab.Damage, states[^1].Fighters[1].Health);
     }
 
     [Fact]

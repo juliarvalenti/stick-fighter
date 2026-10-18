@@ -70,6 +70,38 @@ public class NormalsTests
         Assert.Equal(0, state.Fighters[0].ActionFrame);
     }
 
+    // Presses during the jab's recovery: `first` three frames before it ends, `second`
+    // second on the next frame with the first still held (how a plink is played), then let go.
+    // Returns the move that comes out on the first free frame.
+    private static string? BufferedThenFree(Buttons first, Buttons second)
+    {
+        var state = Apart(400);
+        var jab = Data.FindMove("5LP")!;
+        Simulation.Step(ref state, new FrameInput(Buttons.LightPunch, default));
+        for (var i = 1; i < jab.TotalFrames - 3; i++)
+            Simulation.Step(ref state, default);
+        Simulation.Step(ref state, new FrameInput(first, default));
+        Simulation.Step(ref state, new FrameInput(first | second, default));
+        Simulation.Step(ref state, default);
+        Assert.Equal("5LP", CurrentMove(state.Fighters[0]));
+        Simulation.Step(ref state, default);
+        Assert.Equal(0, state.Fighters[0].ActionFrame);
+        return CurrentMove(state.Fighters[0]);
+    }
+
+    // The earliest buffered press is the one that comes out: it's the button the player committed to.
+    [Theory]
+    [InlineData(Buttons.MediumPunch, Buttons.LightPunch, "5MP")] // a plink: MP, then LP
+    [InlineData(Buttons.LightPunch, Buttons.HeavyKick, "5LP")]
+    [InlineData(Buttons.HeavyKick, Buttons.LightPunch, "5HK")]
+    [InlineData(Buttons.LightPunch, Buttons.LightKick, "LP+LK")] // LP then LK a frame later is still a throw
+    [InlineData(Buttons.LightKick, Buttons.LightPunch, "LP+LK")]
+    [InlineData(Buttons.MediumPunch, Buttons.LightPunch | Buttons.LightKick, "5MP")] // MP first, then a throw input
+    public void TheEarliestBufferedPressComesOut(Buttons first, Buttons second, string expected)
+    {
+        Assert.Equal(expected, BufferedThenFree(first, second));
+    }
+
     [Fact]
     public void AnOldPressIsNotBuffered()
     {
