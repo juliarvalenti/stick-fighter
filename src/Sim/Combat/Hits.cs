@@ -41,9 +41,27 @@ public static class Hits
             defender.Move = -1;
             defender.Velocity = FixVec2.Zero;
 
-            // Pushed straight back, away from the attacker. Walls stop it (Pushing runs next frame).
-            var away = defender.Position.X >= attacker.Position.X ? 1 : -1;
-            defender.Position += new FixVec2(Fix.FromInt(move.PushbackHit * away), Fix.Zero);
+            Push(ref attacker, ref defender, Fix.FromInt(move.PushbackHit), state.Stage);
         }
+    }
+
+    // The defender slides straight back, away from the attacker. If a wall stops it short, the
+    // attacker slides back by the rest instead (SF4's corner pushback), so a cornered defender can't
+    // be pinned. The separation limit is applied afterwards by Pushing, from each fighter's real
+    // movement this frame, so it only ever pulls back whoever moved away.
+    private static void Push(ref FighterState attacker, ref FighterState defender, Fix distance, in Stage stage)
+    {
+        var away = defender.Position.X >= attacker.Position.X ? 1 : -1;
+
+        var defenderRoom = away > 0 ? Pushing.MaxX(stage) - defender.Position.X : defender.Position.X - Pushing.MinX(stage);
+        var defenderMove = Fix.Clamp(distance, Fix.Zero, Fix.Max(Fix.Zero, defenderRoom));
+        defender.Position += new FixVec2(defenderMove * away, Fix.Zero);
+
+        var rest = distance - defenderMove;
+        if (rest <= Fix.Zero)
+            return;
+        var attackerRoom = away > 0 ? attacker.Position.X - Pushing.MinX(stage) : Pushing.MaxX(stage) - attacker.Position.X;
+        var attackerMove = Fix.Clamp(rest, Fix.Zero, Fix.Max(Fix.Zero, attackerRoom));
+        attacker.Position -= new FixVec2(attackerMove * away, Fix.Zero);
     }
 }
