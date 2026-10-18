@@ -133,20 +133,32 @@ static int SyncTestAll(string folder)
         return 1;
     }
 
-    var failures = 0;
-    foreach (var file in files)
+    // The replays are independent, so they run in parallel; each one's lines are kept and printed
+    // in file order, so the output reads the same whatever finished first.
+    var clock = System.Diagnostics.Stopwatch.StartNew();
+    var reports = new string[files.Length];
+    var failed = new bool[files.Length];
+    System.Threading.Tasks.Parallel.For(0, files.Length, i =>
     {
+        var file = files[i];
         var replay = Replay.Read(File.ReadAllText(file));
         if (SyncTest.Run(replay.Seed, replay.Stage, replay.Inputs, replay.Mode) is { } failure)
         {
-            failures++;
-            Console.WriteLine($"FAIL {file}  {failure}");
-            Console.WriteLine($"     inputs on that frame: p1 {replay.Inputs[failure.Frame].Player1}, p2 {replay.Inputs[failure.Frame].Player2}");
-            continue;
+            failed[i] = true;
+            reports[i] = $"FAIL {file}  {failure}\n"
+                + $"     inputs on that frame: p1 {replay.Inputs[failure.Frame].Player1}, p2 {replay.Inputs[failure.Frame].Player2}";
+            return;
         }
-        Console.WriteLine($"ok   {file}  {replay.Frames} frames, rolled back 1-{SyncTest.MaxRollback} after each");
-    }
-    return failures == 0 ? 0 : 1;
+        var depths = replay.Frames < SyncTest.LongReplay
+            ? $"rolled back 1-{SyncTest.MaxRollback} after each"
+            : $"rolled back 1, 4 and 8 after each, 1-{SyncTest.MaxRollback} every {SyncTest.FullSweepEvery}th";
+        reports[i] = $"ok   {file}  {replay.Frames} frames, {depths}";
+    });
+
+    foreach (var report in reports)
+        Console.WriteLine(report);
+    Console.WriteLine($"synctest: {files.Length} replays in {clock.Elapsed.TotalSeconds:F1} s");
+    return failed.Any(f => f) ? 1 : 0;
 }
 
 // Rewrites each replay from its inputs and says what changed, for the PR body: nothing, the
