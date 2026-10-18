@@ -35,10 +35,12 @@ public sealed record CompiledMove(JsonElement Script, string Input, int Startup,
 
 // Turns a move script into per-frame poses.
 //
-// A script's verbs build one target pose per phase. Startup eases from the stance to its target,
-// active snaps to its target on the first active frame and holds, and recovery eases back to its
-// target (the stance unless a pose says otherwise). Phase lengths come from the frame data, so a
-// script never counts frames; `hold:f` waits a fraction of the phase before moving.
+// A script's verbs build one target pose per phase, and Motion brings the whole body into them:
+// the wind-up, the weight shift, lean and counter-arm of the strike, and a chamber to come back
+// through. Startup eases from the stance into the wind-up, active snaps to the strike on the first
+// active frame and holds, and recovery folds the limb back through its chamber in an arc and
+// settles into its target (the stance unless a pose says otherwise). Phase lengths come from the
+// frame data, so a script never counts frames; `hold:f` waits a fraction of the phase before moving.
 public sealed class Compiler
 {
     // The opponent's landmarks sit this far in front, at close-normal range.
@@ -46,6 +48,7 @@ public sealed class Compiler
 
     private readonly Character _character;
     private readonly Rig _rig;
+    private readonly Motion _motion;
     private readonly Dictionary<string, FloatPose> _library;
     private readonly Dictionary<string, Vec> _landmarks;
 
@@ -53,6 +56,7 @@ public sealed class Compiler
     {
         _character = character;
         _rig = new Rig(character.Skeleton);
+        _motion = new Motion(_rig);
         _library = new Dictionary<string, FloatPose>(StringComparer.Ordinal)
         {
             ["guard"] = FloatPose.From(character.Pose(FighterAction.Stand).Keys[0]),
@@ -145,13 +149,20 @@ public sealed class Compiler
             ["recovery"] = (firstActive + active, firstActive + active + recovery - 1),
         };
 
-        var frames = new List<FloatPose>();
+        var targets = new Dictionary<string, FloatPose>(StringComparer.Ordinal);
+        var eases = new Dictionary<string, Ease?>(StringComparer.Ordinal);
+        var holds = new Dictionary<string, double>(StringComparer.Ordinal);
+        var leaned = new HashSet<string>(StringComparer.Ordinal);
+        var stepped = new HashSet<string>(StringComparer.Ordinal);
+        var moved = new HashSet<string>(StringComparer.Ordinal);
+        string? strikeLimb = null;
+
         var from = stance;
         foreach (var phase in new[] { "startup", "active", "recovery" })
         {
             var length = phase switch { "startup" => startupFrames, "active" => active, _ => recovery };
             var target = phase == "recovery" ? stance.Clone() : from.Clone();
-            var ease = phase == "active" ? Ease.Snap : Ease.InOut;
+            Ease? ease = null;
             var hold = 0.0;
 
             foreach (var verb in phases[phase])
@@ -161,18 +172,24 @@ public sealed class Compiler
                 {
                     case "pose":
                         target = Pose(Arg(args, 0, verb)).Clone();
+                        moved.Add(phase);
                         break;
                     case "reach":
                         Reach(target, Arg(args, 0, verb), Arg(args, 1, verb), args.Length > 2 ? Number(args[2], verb) : null);
+                        moved.Add(phase);
                         break;
                     case "lean":
                         target.A[FloatPose.Spine] = Number(Arg(args, 0, verb), verb) * Angle.UnitsPerTurn / 360.0;
+                        leaned.Add(phase);
                         break;
                     case "crouch":
                         Crouch(target, Math.Clamp(Number(Arg(args, 0, verb), verb), 0, 1));
+                        moved.Add(phase);
                         break;
                     case "step":
                         Step(target, Number(Arg(args, 0, verb), verb));
+                        stepped.Add(phase);
+                        moved.Add(phase);
                         break;
                     case "hold":
                         hold = Math.Clamp(Number(Arg(args, 0, verb), verb), 0, 1);
@@ -192,6 +209,7 @@ public sealed class Compiler
                         if (phase != "active")
                             throw new CompileException($"'{verb}': a hitbox belongs in the active phase");
                         hitboxLimb = HitboxLimb(Arg(args, 0, verb), verb);
+                        strikeLimb = Arg(args, 0, verb);
                         hitboxRadius = args.Length > 1 ? (int)Number(args[1], verb) : (int)_character.Skeleton.LimbRadius.RoundToInt();
                         break;
                     case "hurt":
@@ -210,23 +228,96 @@ public sealed class Compiler
                 }
             }
 
-            for (var i = 0; i < length; i++)
-            {
-                var t = Progress(i, length, hold, ease);
-                var pose = KeepFeetPlanted(from, target, Blend(from, target, t), t, airborne: stanceName == "jump-tuck");
-                if (phase == "recovery")
-                    RetractInEffectorSpace(from, target, pose, t);
-                frames.Add(pose);
-            }
+            targets[phase] = target;
+            eases[phase] = ease;
+            holds[phase] = hold;
             if (length > 0)
                 from = target;
         }
 
-        if (hitboxLimb is null)
+        if (hitboxLimb is null || strikeLimb is null)
             throw new CompileException("no hitbox: add 'hitbox:<limb>' to the active phase");
+
+        // The script's key poses, with the whole body brought in (see Motion).
+        var airborne = stanceName == "jump-tuck";
+        var strike = new Strike(strikeLimb, Tier(script), Grounded: !airborne, Crouching: stanceName == "crouch-guard");
+        var windup = targets["startup"];
+        var hit = targets["active"];
+        var home = targets["recovery"];
+        if (startupFrames > 0)
+        {
+            _motion.Windup(windup, strike, moved.Contains("startup"), leaned.Contains("startup"));
+            windup = KeepFeetPlanted(stance, windup, windup, 1, airborne);
+        }
+        else
+        {
+            windup = stance;
+        }
+        _motion.Into(hit, stance, strike, leaned.Contains("active"), stepped.Contains("active"));
+        Motion.KeepTuck(windup, stance, strike);
+        Motion.KeepTuck(hit, stance, strike);
+
+        // Startup winds up from the stance; active snaps out (or eases, if the script says) and holds.
+        var frames = new List<FloatPose>();
+        Segment(frames, stance, windup, startupFrames, holds["startup"], eases["startup"] ?? Ease.InOut, airborne, Overlap.Lag);
+        Segment(frames, windup, hit, active, 0, eases["active"] ?? Ease.Snap, airborne, Overlap.None);
+
+        // Recovery holds for `hold`, pulls the limb back into its chamber fast, then eases home
+        // through it and settles. Too short for that, it eases straight home.
+        var held = (int)Math.Floor(holds["recovery"] * recovery);
+        for (var i = 0; i < held; i++)
+            frames.Add(hit.Clone());
+        var back = recovery - held;
+        if (back >= 3 && eases["recovery"] is null)
+        {
+            var retract = KeepFeetPlanted(hit, home, _motion.Retract(hit, home, strike), 0.5, airborne);
+            var quick = (int)Math.Ceiling(back * 0.5);
+            var first = frames.Count;
+            Segment(frames, hit, retract, quick, 0, Ease.InOut, airborne, Overlap.Lead);
+            Segment(frames, retract, home, back - quick, 0, Ease.Overshoot, airborne, Overlap.Lag);
+            _motion.ArcBack(frames, first, back, hit, retract, home, strike);
+        }
+        else
+        {
+            Segment(frames, hit, home, back, 0, eases["recovery"] ?? Ease.Out, airborne, Overlap.Lead);
+        }
 
         return new CompiledMove(script, input, startup, active, recovery, hitboxLimb, hitboxRadius, hurt, spawn, frames);
     }
+
+    // How elbows, knees and the head move against their parents in a segment.
+    private enum Overlap
+    {
+        None,
+        Lag, // half a frame behind, catching up on the last frame: the trailing forearm or shin
+        Lead, // half a frame ahead: a limb folds before it swings, so a straight limb never sweeps
+    }
+
+    // Frames easing from one key pose to the next, reaching it on the last.
+    private void Segment(List<FloatPose> frames, FloatPose from, FloatPose to, int length, double hold, Ease ease,
+        bool airborne, Overlap overlap)
+    {
+        for (var i = 0; i < length; i++)
+        {
+            var t = Progress(i, length, hold, ease);
+            var children = overlap switch
+            {
+                Overlap.Lag when i < length - 1 => (t + (i == 0 ? 0 : Progress(i - 1, length, hold, ease))) / 2,
+                Overlap.Lead when i < length - 1 => (t + Progress(i + 1, length, hold, ease)) / 2,
+                _ => t,
+            };
+            frames.Add(KeepFeetPlanted(from, to, Motion.Blend(from, to, t, children), t, airborne));
+        }
+    }
+
+    private static int Tier(JsonElement script) =>
+        script.TryGetProperty("strength", out var s) ? s.GetString() switch
+        {
+            "light" => 0,
+            "medium" => 1,
+            "heavy" => 2,
+            var other => throw new CompileException($"strength '{other}' must be light, medium or heavy"),
+        } : 0;
 
     public FloatPose Pose(string name) =>
         _library.TryGetValue(name, out var pose) ? pose : throw new CompileException($"no pose named '{name}' (have: {string.Join(", ", _library.Keys)})");
@@ -318,40 +409,6 @@ public sealed class Compiler
                 _rig.Solve(blended, arm: false, front, new Vec(below.X, 0)); // a blend between valid poses never dips through the floor
         }
         return blended;
-    }
-
-    // Recovery brings every free hand and foot straight back: relative to its shoulder or hip, it
-    // moves along the line from where the active pose left it to its stance spot, and IK places the
-    // elbow or knee. Blending joint angles instead swings an extended limb out in an arc, so a kick
-    // would sweep past its active reach with no hitbox, and read as a late or second hit.
-    private void RetractInEffectorSpace(FloatPose from, FloatPose to, FloatPose pose, double t)
-    {
-        t = Math.Clamp(t, 0, 1);
-        foreach (var (arm, front) in new[] { (true, true), (true, false), (false, true), (false, false) })
-        {
-            var rootFrom = arm ? _rig.Neck(from) : _rig.Hip(from);
-            var rootTo = arm ? _rig.Neck(to) : _rig.Hip(to);
-            var endFrom = (arm ? _rig.Arm(from, front) : _rig.Leg(from, front)).End;
-            var endTo = (arm ? _rig.Arm(to, front) : _rig.Leg(to, front)).End;
-            if (!arm && Math.Abs(endFrom.Y) <= 1 && Math.Abs(endTo.Y) <= 1)
-                continue; // a planted foot is already handled
-
-            var relative = (endFrom - rootFrom) + ((endTo - rootTo) - (endFrom - rootFrom)) * t;
-            var root = arm ? _rig.Neck(pose) : _rig.Hip(pose);
-            _rig.Solve(pose, arm, front, root + relative);
-        }
-    }
-
-    private static FloatPose Blend(FloatPose from, FloatPose to, double t)
-    {
-        var p = new FloatPose
-        {
-            HipX = from.HipX + (to.HipX - from.HipX) * t,
-            HipY = from.HipY + (to.HipY - from.HipY) * t,
-        };
-        for (var i = 0; i < 10; i++)
-            p.A[i] = from.A[i] + Rig.Wrap(to.A[i] - from.A[i]) * t; // the short way round
-        return p;
     }
 
     // Progress through a phase on frame i: the target is reached on the phase's last frame.
