@@ -5,6 +5,7 @@ using StickFighter.Sim.Characters;
 using StickFighter.Sim.Collision;
 using StickFighter.Sim.Numerics;
 using StickFighter.Sim.Replays;
+using StickFighter.Style;
 
 namespace StickFighter;
 
@@ -12,9 +13,11 @@ namespace StickFighter;
 // 60 ticks per second, and draws the latest state. Placeholder fighters until moves exist.
 public partial class Main : Node2D
 {
-    private static readonly Color Ink = new(0.1f, 0.1f, 0.12f);
-    private static readonly Color[] PlayerColors = { new(0.85f, 0.2f, 0.25f), new(0.2f, 0.4f, 0.85f) };
     private const float Stroke = 10f;
+
+    // The style frames draw in the style guide's palette; the game switches to it once they're signed off.
+    private Color _ink = new(0.1f, 0.1f, 0.12f);
+    private Color[] _playerColors = { new(0.85f, 0.2f, 0.25f), new(0.2f, 0.4f, 0.85f) };
 
     private const ulong MatchSeed = 1;
 
@@ -97,6 +100,14 @@ public partial class Main : Node2D
             AddChild(new PoseSheet(move) { ZIndex = 20 });
         }
 
+        if (_scenario.StyleFrame is { } frame)
+        {
+            _ink = Look.Ink;
+            _playerColors = new[] { Look.P1, Look.P2 };
+            RenderingServer.SetDefaultClearColor(Look.Paper);
+            AddChild(frame());
+        }
+
         _scenarioRun = new ScenarioRun(
             _scenario,
             Arg(args, "--out") ?? "user://scenarios",
@@ -156,10 +167,10 @@ public partial class Main : Node2D
 
         var stage = _state.Stage;
         var floor = stage.Floor.ToFloat();
-        DrawLine(new Vector2(stage.LeftWall.ToFloat(), floor), new Vector2(stage.RightWall.ToFloat(), floor), Ink, 4);
+        DrawLine(new Vector2(stage.LeftWall.ToFloat(), floor), new Vector2(stage.RightWall.ToFloat(), floor), _ink, 4);
 
         for (var i = 0; i < GameState.PlayerCount; i++)
-            DrawFighter(_state.Fighters[i], PlayerColors[i]);
+            DrawFighter(_state.Fighters[i], _playerColors[i]);
     }
 
     // The stage x at the screen's left edge: centered on the fighters, stopping at the walls.

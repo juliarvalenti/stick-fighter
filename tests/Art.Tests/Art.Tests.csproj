@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Checks on the style guide that don't need Godot: the palette's contrast and color-blind safety. -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>StickFighter.Art.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+
+  <!-- The palette is plain C#, so the test compiles the game's own file rather than a copy. -->
+  <ItemGroup>
+    <Compile Include="../../game/Style/Palette.cs" Link="Palette.cs" />
+  </ItemGroup>
+</Project>
