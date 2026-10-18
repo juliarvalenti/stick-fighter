@@ -40,7 +40,7 @@
              "active: reach:front-hand opponent-chest 1.0", "lean:12", "hitbox:front-hand 9",
              "recovery: hold:0.2", "pose:crouch-guard"] },
 
-    { "name": "Crouching heavy punch", "input": "2HP", "startup": 5, "active": 5, "recovery": 22, "damage": 100, "stun": 200, "strength": "heavy", "guard": "mid", "pushbackHit": 20, "pushbackBlock": 22,
+    { "name": "Crouching heavy punch", "input": "2HP", "startup": 5, "active": 5, "recovery": 22, "damage": 100, "stun": 200, "strength": "heavy", "guard": "mid", "pushbackHit": 20, "pushbackBlock": 22, "hitstun": 23,
       "do": ["startup: reach:back-hand hip 0.6", "lean:-6",
              "active: reach:back-hand opponent-head 1.0", "lean:10", "crouch:0.4", "ease:overshoot", "hitbox:back-hand 11",
              "recovery: hold:0.3", "pose:crouch-guard"] },

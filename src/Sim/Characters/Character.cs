@@ -12,6 +12,12 @@ public enum FighterAction
     Crouch = 1,
     WalkForward = 2,
     WalkBack = 3,
+
+    // Reeling from a hit; can't act until hitstun runs out.
+    Hitstun = 4,
+
+    // Performing a move; the pose comes from the move's track, not a stance pose.
+    Attack = 5,
 }
 
 public enum Strength

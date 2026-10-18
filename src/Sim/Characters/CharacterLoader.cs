@@ -17,7 +17,8 @@ public static class CharacterLoader
         "backHip", "backKnee", "frontHip", "frontKnee",
     };
 
-    private static readonly string[] PoseNames = { "stand", "crouch", "walkForward", "walkBack" };
+    // In FighterAction order; Attack has no stance pose (it plays its move's track).
+    private static readonly string[] PoseNames = { "stand", "crouch", "walkForward", "walkBack", "hitstun" };
 
     // `json` is the character (stats, skeleton, stance poses); `movesJson` is its compiled moves
     // (tools/MoveCompiler's output), or null for a character with no moves yet.

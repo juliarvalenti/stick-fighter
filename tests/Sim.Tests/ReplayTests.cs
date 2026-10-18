@@ -151,4 +151,29 @@ public class ReplayTests
         Assert.Equal(0UL, old.DataHash);
         Assert.Equal(1, old.Frames);
     }
+
+    // The committed scripted replays show what their names say.
+    [Theory]
+    [InlineData("hit", false, true)]
+    [InlineData("whiff", false, false)]
+    [InlineData("trade", true, true)]
+    public void ScriptedReplaysCoverTheirCase(string name, bool p1Hurt, bool p2Hurt)
+    {
+        var replay = Replay.Read(System.IO.File.ReadAllText(System.IO.Path.Combine(RepoRoot(), "replays", name + ".sfr")));
+        var state = GameState.NewMatch(replay.Seed, replay.Stage);
+        foreach (var input in replay.Inputs)
+            Simulation.Step(ref state, input);
+
+        var full = Characters.Characters.Placeholder.Stats.Health;
+        Assert.Equal(p1Hurt, state.Fighters[0].Health < full);
+        Assert.Equal(p2Hurt, state.Fighters[1].Health < full);
+    }
+
+    private static string RepoRoot()
+    {
+        var dir = new System.IO.DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !System.IO.File.Exists(System.IO.Path.Combine(dir.FullName, "StickFighter.sln")))
+            dir = dir.Parent;
+        return dir?.FullName ?? throw new System.IO.DirectoryNotFoundException("repo root");
+    }
 }

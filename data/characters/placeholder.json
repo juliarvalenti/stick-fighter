@@ -38,6 +38,12 @@
         { "frame": 0, "hip": [0, -112], "angles": { "spine": 0, "neck": 0, "backShoulder": 291, "backElbow": -519, "frontShoulder": -27, "frontElbow": -1830, "backHip": -18, "backKnee": 317, "frontHip": -291, "frontKnee": 335 } }
       ]
     },
+    "hitstun": {
+      "length": 1,
+      "keys": [
+        { "frame": 0, "hip": [-8, -112], "angles": { "spine": -170, "neck": -120, "backShoulder": 696, "backElbow": -1386, "frontShoulder": 202, "frontElbow": -1496, "backHip": 3, "backKnee": 296, "frontHip": -293, "frontKnee": 316 } }
+      ]
+    },
     "crouch": {
       "length": 1,
       "keys": [

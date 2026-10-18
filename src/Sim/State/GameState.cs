@@ -46,10 +46,19 @@ public struct GameState
     public static GameState NewMatch(ulong seed, in Stage stage)
     {
         var state = new GameState { Rng = Rng.Create(seed), Stage = stage };
-        state.Fighters[0] = new FighterState { Position = new FixVec2(stage.Center - StartOffset, stage.Floor), Facing = 1 };
-        state.Fighters[1] = new FighterState { Position = new FixVec2(stage.Center + StartOffset, stage.Floor), Facing = -1 };
+        state.Fighters[0] = Fresh(new FixVec2(stage.Center - StartOffset, stage.Floor), 1);
+        state.Fighters[1] = Fresh(new FixVec2(stage.Center + StartOffset, stage.Floor), -1);
         return state;
     }
+
+    private static FighterState Fresh(FixVec2 position, int facing) => new()
+    {
+        Position = position,
+        Facing = facing,
+        Health = Characters.Characters.Placeholder.Stats.Health,
+        Move = -1,
+        LastMoveFrame = -1,
+    };
 
     // The canonical encoding: fixed field order, little-endian, no padding.
     public readonly void Encode(Span<byte> buffer)
