@@ -219,16 +219,16 @@ public partial class Main : Node2D
         var change = DeviceInput.Pads.Changed(device, connected);
         if (connected)
         {
-            Toast(change.Player is { } p ? $"Controller connected: player {p + 1}" : "Controller connected", UI.Toast.Kind.Success);
+            ShowToast(change.Player is { } p ? $"Controller connected: player {p + 1}" : "Controller connected", UI.Toast.Kind.Success);
             ResumeIfPadsBack();
             return;
         }
         if (change.Player is not { } player)
         {
-            Toast("Controller disconnected", UI.Toast.Kind.Info);
+            ShowToast("Controller disconnected", UI.Toast.Kind.Info);
             return;
         }
-        Toast($"Player {player + 1}'s controller disconnected", UI.Toast.Kind.Warning);
+        ShowToast($"Player {player + 1}'s controller disconnected", UI.Toast.Kind.Warning);
         if (_flow == Flow.Match && DeviceInput.Pads.HoldsMatch)
             ShowDisconnected();
     }
@@ -236,6 +236,7 @@ public partial class Main : Node2D
     private void ShowDisconnected()
     {
         _paused = UI.Screens.PauseScreen.Page.Disconnected;
+        _trainingMenuOpen = false; // the dialog replaces whatever pause page was up
         var screen = new UI.Screens.PauseScreen(UI.Screens.PauseScreen.Page.Disconnected) { Player = DeviceInput.Pads.Waiting ?? 0 };
         screen.Chosen += item =>
         {
@@ -274,11 +275,11 @@ public partial class Main : Node2D
             return;
         GetViewport().SetInputAsHandled();
         DeviceInput.Pads.Assign(waiting, button.Device);
-        Toast($"Player {waiting + 1} is on this controller now", UI.Toast.Kind.Success);
+        ShowToast($"Player {waiting + 1} is on this controller now", UI.Toast.Kind.Success);
         ResumeIfPadsBack();
     }
 
-    private void Toast(string message, UI.Toast.Kind kind)
+    private void ShowToast(string message, UI.Toast.Kind kind)
     {
         var toast = new UI.Toast(message, kind) { SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter };
         _toastStack.AddChild(toast);
