@@ -94,6 +94,27 @@ public class ThrowsTests
         Assert.True(state.Fighters[1].KnockedDown);
         Assert.Equal(throwerX - Data.Stats.ThrowDistance, state.Fighters[1].Position.X);
         Assert.Equal(-1, state.Fighters[0].Facing); // the fighters swapped sides
+        Assert.Equal(1, state.Fighters[1].Facing); // and P2 lies facing P1, head away from them
+    }
+
+    // Back held only on the frame of the press, as when back and LP+LK go down together and back is
+    // let go: still a back throw. Back held only when it connects counts too.
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(false, false)]
+    public void BackOnThePressOrTheConnectThrowsBehind(bool backOnPress, bool backOnConnect)
+    {
+        var state = Apart(60);
+        var throwerX = state.Fighters[0].Position.X;
+        for (var i = 0; i <= ConnectFrame + Data.Stats.TechFrame; i++)
+        {
+            var back = (i == 0 && backOnPress) || (i == ConnectFrame && backOnConnect) ? Buttons.Left : default;
+            Step(ref state, back | (i == 0 ? LpLk : default));
+        }
+        Assert.True(state.Fighters[1].KnockedDown);
+        var behind = backOnPress || backOnConnect;
+        Assert.Equal(behind, state.Fighters[1].Position.X < throwerX);
     }
 
     [Fact]

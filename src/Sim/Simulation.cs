@@ -106,7 +106,7 @@ public static class Simulation
             && Numpad.Vertical(Numpad.Direction(history.At(now, now), fighter.Facing)) >= 0
             && Normals.ThrowPressedOn(history, now, now))
         {
-            StartMove(ref fighter, Normals.Throw, now);
+            StartMove(ref fighter, Normals.Throw, now, Blocking.HoldingBack(state, player));
             return;
         }
 
@@ -124,7 +124,7 @@ public static class Simulation
         var move = BufferedNormal(history, now, fighter.LastMoveFrame, crouching);
         if (move >= 0)
         {
-            StartMove(ref fighter, move, now);
+            StartMove(ref fighter, move, now, move == Normals.Throw && Blocking.HoldingBack(state, player));
             return;
         }
 
@@ -172,8 +172,10 @@ public static class Simulation
         return -1;
     }
 
-    private static void StartMove(ref FighterState fighter, int move, int now)
+    // backThrow: a throw started holding back throws behind (Throws also takes back held when it connects).
+    private static void StartMove(ref FighterState fighter, int move, int now, bool backThrow)
     {
+        fighter.BackThrow = backThrow;
         fighter.Action = (int)FighterAction.Attack;
         fighter.ActionFrame = 0;
         fighter.Move = move;

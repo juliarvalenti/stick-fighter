@@ -110,18 +110,19 @@ public static class Scenarios
     //  - The same throw teched: P2 presses LP+LK three frames into the grab, and on the seventh
     //    they break apart (72).
     //  - A throw from out of range: reaching on its first active frame (124), whiffed in recovery (132).
+    //  - A back throw, back pressed with LP+LK and let go: P2 held (186), then knocked down behind P1 (194).
     private const int ThrowPeriod = 60;
 
     private static Scenario Throws()
     {
         const Buttons lpLk = Buttons.LightPunch | Buttons.LightKick;
-        int[] gaps = { 60, 60, 150 };
+        int[] gaps = { 60, 60, 150, 60 };
 
         FrameInput Script(int frame)
         {
             var k = frame / ThrowPeriod;
             var f = frame % ThrowPeriod;
-            var p1 = f == 1 && k < gaps.Length ? lpLk : default;
+            var p1 = f == 1 && k < gaps.Length ? lpLk | (k == 3 ? Buttons.Left : default) : default;
             var p2 = k == 1 && f == 6 ? lpLk : default;
             return new FrameInput(p1, p2);
         }
@@ -139,7 +140,7 @@ public static class Scenarios
             return s;
         }
 
-        return new Scenario("throws", 1, Script, new[] { 6, 14, 72, 124, 132 }, gaps.Length * ThrowPeriod,
+        return new Scenario("throws", 1, Script, new[] { 6, 14, 72, 124, 132, 186, 194 }, gaps.Length * ThrowPeriod,
             Boxes: true, EachFrame: Reset);
     }
 
