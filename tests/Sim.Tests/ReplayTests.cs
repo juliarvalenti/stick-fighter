@@ -75,7 +75,7 @@ public class ReplayTests
     public void ACheckpointReadsAsBehavior()
     {
         var text = Replay.Record(1, Stage.Training, new FrameInput[60]).Write();
-        Assert.Contains("at 59 p1 1080 600 1 Stand 60 1000 p2 1480 600 -1 Stand 60 1000\n", text, StringComparison.Ordinal);
+        Assert.Contains("at 59 p1 1080 600 1 Stand 60 1000 p2 1480 600 -1 Stand 60 1000 match Fight 0 0 0 0\n", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -123,18 +123,37 @@ public class ReplayTests
     [Theory]
     [InlineData("not-a-replay 1\nseed 1\nframes 0\nfinal 0\n")]
     [InlineData("stick-fighter-replay 99\nseed 1\ndata 00\nframes 0\nfinal 0\n")]
-    [InlineData("stick-fighter-replay 4\nseed 1\ndata 00\nstage 0 2560 600 1280\nframes 2\ninput 0000 0000 1\nfinal 00\n")] // too few inputs
-    [InlineData("stick-fighter-replay 4\nseed 1\ndata 00\nstage 0 2560 600 1280\nframes 1\ninput 0000 0000 1\nfinal 00\n")] // no checkpoint
-    [InlineData("stick-fighter-replay 4\nseed 1\ndata 00\nstage 0 2560 600 1280\nframes 1\ninput 0000 0000 1\nat 0 p1 1\nfinal 00\n")] // short checkpoint
-    [InlineData("stick-fighter-replay 4\nseed 1\ndata 00\nstage 0 2560 600 1280\nframes 0\nbogus line\n")]
-    [InlineData("stick-fighter-replay 4\nseed 1\ndata 00\nstage 0 2560 600 1280\nframes 0\n")] // no final checksum
-    [InlineData("stick-fighter-replay 4\nseed 1\nstage 0 2560 600 1280\nframes 0\nfinal 0\n")] // no data line
-    [InlineData("stick-fighter-replay 4\nseed 1\ndata 00\nframes 0\nfinal 0\n")] // no stage line
-    [InlineData("stick-fighter-replay 4\nseed 1\ndata 00\nstage 0 2560 600\nframes 0\nfinal 0\n")] // short stage line
-    [InlineData("stick-fighter-replay 3\nseed 1\ndata 00\nstage 0 2560 600 1280\nframes 1\ninput 0000 0000 1\nchecksum 00\nfinal 00\n")] // old: rerecord it
+    [InlineData("stick-fighter-replay 5\nseed 1\ndata 00\nstage 0 2560 600 1280\nmode training\nframes 2\ninput 0000 0000 1\nfinal 00\n")] // too few inputs
+    [InlineData("stick-fighter-replay 5\nseed 1\ndata 00\nstage 0 2560 600 1280\nmode training\nframes 1\ninput 0000 0000 1\nfinal 00\n")] // no checkpoint
+    [InlineData("stick-fighter-replay 5\nseed 1\ndata 00\nstage 0 2560 600 1280\nmode training\nframes 1\ninput 0000 0000 1\nat 0 p1 1\nfinal 00\n")] // short checkpoint
+    [InlineData("stick-fighter-replay 5\nseed 1\ndata 00\nstage 0 2560 600 1280\nmode training\nframes 0\nbogus line\n")]
+    [InlineData("stick-fighter-replay 5\nseed 1\ndata 00\nstage 0 2560 600 1280\nmode training\nframes 0\n")] // no final checksum
+    [InlineData("stick-fighter-replay 5\nseed 1\nstage 0 2560 600 1280\nmode training\nframes 0\nfinal 0\n")] // no data line
+    [InlineData("stick-fighter-replay 5\nseed 1\ndata 00\nmode training\nframes 0\nfinal 0\n")] // no stage line
+    [InlineData("stick-fighter-replay 5\nseed 1\ndata 00\nstage 0 2560 600\nmode training\nframes 0\nfinal 0\n")] // short stage line
+    [InlineData("stick-fighter-replay 5\nseed 1\ndata 00\nstage 0 2560 600 1280\nframes 0\nfinal 0\n")] // no mode line
+    [InlineData("stick-fighter-replay 5\nseed 1\ndata 00\nstage 0 2560 600 1280\nmode arcade\nframes 0\nfinal 0\n")] // unknown mode
+    [InlineData("stick-fighter-replay 4\nseed 1\ndata 00\nstage 0 2560 600 1280\nmode training\nframes 1\ninput 0000 0000 1\nchecksum 00\nfinal 00\n")] // old: rerecord it
     public void MalformedReplaysAreRejected(string text)
     {
         Assert.Throws<FormatException>(() => Replay.Read(text));
+    }
+
+    // The well-formed version of the cases above, so each one fails for the reason it gives.
+    [Fact]
+    public void AMinimalReplayReads()
+    {
+        var replay = Replay.Read("stick-fighter-replay 5\nseed 1\ndata 00\nstage 0 2560 600 1280\nmode versus\nframes 0\nfinal 00\n");
+        Assert.Equal(MatchMode.Versus, replay.Mode);
+        Assert.Empty(replay.Checkpoints);
+    }
+
+    [Fact]
+    public void Format4IsUpgradedByRerecordAsPerFrameChecksums()
+    {
+        var old = Replay.Read("stick-fighter-replay 4\nseed 1\ndata 00\nstage 0 2560 600 1280\nmode versus\nframes 1\ninput 0000 0000 1\nchecksum 00\nfinal 00\n", allowOldVersions: true);
+        Assert.Equal(MatchMode.Versus, old.Mode);
+        Assert.Empty(old.Checkpoints);
     }
 
     [Fact]

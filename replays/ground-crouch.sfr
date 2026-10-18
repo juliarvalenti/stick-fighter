@@ -1,7 +1,8 @@
-stick-fighter-replay 4
+stick-fighter-replay 5
 seed 1
 data 5cd46efa9b5d33eb
 stage 0 2560 600 1280
+mode training
 frames 91
 input 0002 0000 20
 input 0012 0002 1
@@ -10,6 +11,6 @@ input 0000 0000 10
 input 0006 0000 15
 input 000a 000a 15
 input 0000 0000 10
-at 59 p1 1080 600 1 Crouch 4 1000 p2 1480 600 -1 Stand 18 1000
-at 90 p1 1080 600 1 Stand 9 1000 p2 1480 600 -1 Stand 9 1000
-final dcaaf096964294f8
+at 59 p1 1080 600 1 Crouch 4 1000 p2 1480 600 -1 Stand 18 1000 match Fight 0 0 0 0
+at 90 p1 1080 600 1 Stand 9 1000 p2 1480 600 -1 Stand 9 1000 match Fight 0 0 0 0
+final 8186aed5da73e13c

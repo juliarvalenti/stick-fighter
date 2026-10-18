@@ -214,6 +214,35 @@ public class MoveCompilerTests
         Assert.Equal(expected, Compiler.Progress(frame, length, hold, ease), 6);
     }
 
+    [Fact]
+    public void LeanIsRelativeToTheStanceSoAStanceChangeKeepsIt()
+    {
+        // Lean the crouch stance 100 units (about 9°) further and recompile from the same scripts.
+        const string rest = "\"frame\": 0, \"hip\": [-60, -30], \"angles\": { \"spine\": 360,";
+        Assert.Contains(rest, Character, StringComparison.Ordinal);
+        var deeper = ReplaceFirst(Character, rest, rest.Replace("360,", "460,", StringComparison.Ordinal));
+
+        var before = Sim.Characters.CharacterLoader.Load(Character, Build.Run(Character, Library, Scripts, "placeholder").Output, "before");
+        var after = Sim.Characters.CharacterLoader.Load(deeper, Build.Run(deeper, Library, Scripts, "placeholder").Output, "after");
+        var stanceBefore = before.Pose(Sim.Characters.FighterAction.Crouch).Keys[0].Spine.Units;
+        var stanceAfter = after.Pose(Sim.Characters.FighterAction.Crouch).Keys[0].Spine.Units;
+        Assert.Equal(100, stanceAfter - stanceBefore);
+
+        // Every crouching normal leans the same amount relative to its stance on every active frame.
+        var crouching = before.Moves.Where(m => Compiler.DefaultStance(m.Input) == "crouch-guard").ToList();
+        Assert.NotEmpty(crouching);
+        foreach (var move in crouching)
+        {
+            var moved = after.FindMove(move.Input)!;
+            for (var frame = move.FirstActiveFrame; frame < move.FirstActiveFrame + move.Active; frame++)
+            {
+                var leanBefore = move.Track.At(frame).Spine.Units - stanceBefore;
+                var leanAfter = moved.Track.At(frame).Spine.Units - stanceAfter;
+                Assert.True(Math.Abs(leanAfter - leanBefore) <= 1, $"{move.Input} frame {frame}: lean {leanBefore} became {leanAfter}");
+            }
+        }
+    }
+
     [Theory]
     [InlineData("5LP", "guard")]
     [InlineData("2MK", "crouch-guard")]

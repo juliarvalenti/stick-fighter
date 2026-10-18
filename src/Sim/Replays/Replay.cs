@@ -13,34 +13,41 @@ namespace StickFighter.Sim.Replays;
 //
 // Text format, one item per line so diffs read well:
 //
-//   stick-fighter-replay 4
+//   stick-fighter-replay 5
 //   seed 42
 //   data 5be0c6f2a1d3e497    hash of the character data it was recorded with
 //   stage 0 2560 600 1280    left wall, right wall, floor, max separation (whole pixels)
+//   mode versus              training (no rounds) or versus (a best-of-three match)
 //   frames 87
 //   input 0008 0004 2        p1 buttons, p2 buttons (hex), run length
 //   input 0000 0000 85
-//   at 59 p1 610 600 1 Stand 13 1000 p2 670 600 -1 Hitstun 2 940
+//   at 59 p1 610 600 1 Stand 13 1000 p2 670 600 -1 Hitstun 2 940 match Fight 1 5340 0 0
 //   at 86 p1 ...             the last frame is always a checkpoint
 //   final 9f86d081884c7d65   checksum of the whole state after the last frame
 //
 // A checkpoint ("at") comes every CheckpointInterval frames and on the last frame. It holds each
-// fighter's position, facing, action, action frame and health: behavior, not encoding. So adding a
-// field to the state changes one line per replay (the final checksum), while a change in behavior
-// shows up as a readable diff on the checkpoint where it starts. The final checksum still covers
-// every field, so a difference no checkpoint shows is still caught.
+// fighter's position, facing, action, action frame and health, and the match's phase, round, timer
+// and wins: behavior, not encoding. So adding a field to the state changes one line per replay
+// (the final checksum), while a change in behavior shows up as a readable diff on the checkpoint
+// where it starts. The final checksum still covers every field, so a difference no checkpoint
+// shows is still caught.
 //
-// Formats 1 to 3 stored a checksum per frame (1 had no data line, 2 no stage line). They're read
-// only to be rerecorded. A replay is only meaningful with the data it was recorded with, so one
-// made with different move data is refused rather than reported as a divergence.
+// Formats 1 to 4 stored a checksum per frame (1 had no data line, 2 no stage line, 3 no mode line).
+// They're read only to be rerecorded. A replay is only meaningful with the data it was recorded
+// with, so one made with different move data is refused rather than reported as a divergence.
 public sealed class Replay
 {
     public const string Magic = "stick-fighter-replay";
-    public const int FormatVersion = 4;
+    public const int FormatVersion = 5;
     public const int CheckpointInterval = 60;
 
-    // What a checkpoint records for each fighter, in order.
-    public static readonly string[] FighterFields = { "x", "y", "facing", "action", "frame", "health" };
+    // A checkpoint's values, in order, by name; null marks a group label (p1, p2, match).
+    private static readonly string?[] FieldNames =
+    {
+        null, "P1 x", "P1 y", "P1 facing", "P1 action", "P1 frame", "P1 health",
+        null, "P2 x", "P2 y", "P2 facing", "P2 action", "P2 frame", "P2 health",
+        null, "phase", "round", "timer", "P1 wins", "P2 wins",
+    };
 
     public readonly record struct Checkpoint(int Frame, string[] Values)
     {
@@ -54,17 +61,20 @@ public sealed class Replay
     public ulong Seed { get; }
     public ulong DataHash { get; }
     public Stage Stage { get; }
+    public MatchMode Mode { get; }
     public IReadOnlyList<FrameInput> Inputs { get; }
 
     // Empty for a replay read from an old format, which recorded no behavior.
     public IReadOnlyList<Checkpoint> Checkpoints { get; }
     public ulong FinalChecksum { get; }
 
-    public Replay(ulong seed, ulong dataHash, in Stage stage, IReadOnlyList<FrameInput> inputs, IReadOnlyList<Checkpoint> checkpoints, ulong finalChecksum)
+    public Replay(ulong seed, ulong dataHash, in Stage stage, IReadOnlyList<FrameInput> inputs, IReadOnlyList<Checkpoint> checkpoints, ulong finalChecksum,
+        MatchMode mode = MatchMode.Training)
     {
         Seed = seed;
         DataHash = dataHash;
         Stage = stage;
+        Mode = mode;
         Inputs = inputs;
         Checkpoints = checkpoints;
         FinalChecksum = finalChecksum;
@@ -80,8 +90,9 @@ public sealed class Replay
     public static bool IsCheckpoint(int frame, int frames) =>
         (frame + 1) % CheckpointInterval == 0 || frame == frames - 1;
 
-    // What the players can see after a frame, as checkpoint values: for each fighter, x, y, facing,
-    // action (by name), action frame and health.
+    // What the players can see after a frame, as checkpoint values (see FieldNames): for each
+    // fighter, x, y, facing, action (by name), action frame and health; then the match's phase,
+    // round, timer and wins.
     public static string[] Behavior(in GameState state)
     {
         var values = new List<string>();
@@ -96,14 +107,20 @@ public sealed class Replay
             values.Add(f.ActionFrame.ToString(CultureInfo.InvariantCulture));
             values.Add(f.Health.ToString(CultureInfo.InvariantCulture));
         }
+        values.Add("match");
+        values.Add(state.Match.Phase.ToString());
+        values.Add(state.Match.Round.ToString(CultureInfo.InvariantCulture));
+        values.Add(state.Match.TimerFrames.ToString(CultureInfo.InvariantCulture));
+        values.Add(state.Match.P1Wins.ToString(CultureInfo.InvariantCulture));
+        values.Add(state.Match.P2Wins.ToString(CultureInfo.InvariantCulture));
         return values.ToArray();
     }
 
     // Plays the inputs from the seed and records the checkpoints and final checksum: how a replay is
     // made from inputs alone.
-    public static Replay Record(ulong seed, in Stage stage, IReadOnlyList<FrameInput> inputs)
+    public static Replay Record(ulong seed, in Stage stage, IReadOnlyList<FrameInput> inputs, MatchMode mode = MatchMode.Training)
     {
-        var state = GameState.NewMatch(seed, stage);
+        var state = GameState.NewMatch(seed, stage, mode);
         var checkpoints = new List<Checkpoint>();
         for (var i = 0; i < inputs.Count; i++)
         {
@@ -111,11 +128,11 @@ public sealed class Replay
             if (IsCheckpoint(i, inputs.Count))
                 checkpoints.Add(new Checkpoint(i, Behavior(state)));
         }
-        return new Replay(seed, LoadedDataHash, stage, inputs, checkpoints, state.Checksum());
+        return new Replay(seed, LoadedDataHash, stage, inputs, checkpoints, state.Checksum(), mode);
     }
 
     // Replays the inputs and returns where they first stop matching, or null if everything does.
-    public Mismatch? Verify() => Compare(Record(Seed, Stage, Inputs));
+    public Mismatch? Verify() => Compare(Record(Seed, Stage, Inputs, Mode));
 
     // How `other`, played from the same inputs, differs from this replay: the first checkpoint whose
     // behavior differs, or (Frame -1) only the final checksum, or null for no difference.
@@ -137,12 +154,10 @@ public sealed class Replay
     private static List<string> Differences(string[] expected, string[] actual)
     {
         var lines = new List<string>();
-        var perFighter = FighterFields.Length + 1;
-        for (var i = 0; i < expected.Length && i < actual.Length; i++)
+        for (var i = 0; i < expected.Length && i < actual.Length && i < FieldNames.Length; i++)
         {
-            if (i % perFighter == 0 || expected[i] == actual[i])
-                continue;
-            lines.Add($"P{i / perFighter + 1} {FighterFields[i % perFighter - 1]}: {expected[i]} vs {actual[i]}");
+            if (FieldNames[i] is { } name && expected[i] != actual[i])
+                lines.Add($"{name}: {expected[i]} vs {actual[i]}");
         }
         return lines;
     }
@@ -151,7 +166,7 @@ public sealed class Replay
     // divergence between checkpoints down to the frame: trace it on both builds and diff.
     public IEnumerable<string> Trace(int from, int to)
     {
-        var state = GameState.NewMatch(Seed, Stage);
+        var state = GameState.NewMatch(Seed, Stage, Mode);
         for (var i = 0; i < Inputs.Count && i <= to; i++)
         {
             Simulation.Step(ref state, Inputs[i]);
@@ -171,6 +186,7 @@ public sealed class Replay
             .Append(Pixels(Stage.RightWall)).Append(' ')
             .Append(Pixels(Stage.Floor)).Append(' ')
             .Append(Pixels(Stage.MaxSeparation)).Append('\n');
+        text.Append("mode ").Append(Mode == MatchMode.Versus ? "versus" : "training").Append('\n');
         text.Append("frames ").Append(Frames.ToString(CultureInfo.InvariantCulture)).Append('\n');
 
         for (var i = 0; i < Inputs.Count;)
@@ -191,9 +207,9 @@ public sealed class Replay
         return text.ToString();
     }
 
-    // Reads the current format. `allowOldVersions` lets rerecord upgrade formats 1 to 3: their
-    // per-frame checksums are skipped (they're rerecorded), a version 1 data hash reads as 0, and
-    // versions 1 and 2 were all played on the training stage.
+    // Reads the current format. `allowOldVersions` lets rerecord upgrade formats 1 to 4: their
+    // per-frame checksums are skipped (they're rerecorded), a version 1 data hash reads as 0,
+    // versions 1 and 2 were all played on the training stage, and 1 to 3 in training mode.
     public static Replay Read(string text, bool allowOldVersions = false)
     {
         using var reader = new StringReader(text);
@@ -201,7 +217,7 @@ public sealed class Replay
         if (header[0] != Magic)
             throw new FormatException("Not a stick-fighter replay");
         var version = int.Parse(header[1], CultureInfo.InvariantCulture);
-        var old = version is >= 1 and <= 3;
+        var old = version is >= 1 and <= 4;
         if (old && !allowOldVersions)
             throw new FormatException($"Replay format {version} is from before checkpoints; rerecord it (ReplayRunner rerecord)");
         if (version != FormatVersion && !old)
@@ -210,6 +226,7 @@ public sealed class Replay
         var seed = ulong.Parse(Expect(reader, "seed"), CultureInfo.InvariantCulture);
         var dataHash = version == 1 ? 0 : ulong.Parse(Expect(reader, "data"), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
         var stage = version <= 2 ? Stage.Training : ReadStage(ExpectFields(reader, "stage", 5));
+        var mode = version <= 3 ? MatchMode.Training : ReadMode(Expect(reader, "mode"));
         var frames = int.Parse(Expect(reader, "frames"), CultureInfo.InvariantCulture);
         var inputs = new List<FrameInput>(frames);
         var checkpoints = new List<Checkpoint>();
@@ -232,7 +249,7 @@ public sealed class Replay
                     break;
                 case "checksum" when old && f.Length == 2:
                     break;
-                case "at" when !old && f.Length == 2 + GameState.PlayerCount * (FighterFields.Length + 1):
+                case "at" when !old && f.Length == 2 + FieldNames.Length:
                     checkpoints.Add(new Checkpoint(int.Parse(f[1], CultureInfo.InvariantCulture), f[2..]));
                     break;
                 case "final" when f.Length == 2:
@@ -255,8 +272,15 @@ public sealed class Replay
             if (checkpoints.Count != expected)
                 throw new FormatException($"Replay has {checkpoints.Count} checkpoints, but {frames} frames need {expected}");
         }
-        return new Replay(seed, dataHash, stage, inputs, checkpoints, final.Value);
+        return new Replay(seed, dataHash, stage, inputs, checkpoints, final.Value, mode);
     }
+
+    private static MatchMode ReadMode(string mode) => mode switch
+    {
+        "training" => MatchMode.Training,
+        "versus" => MatchMode.Versus,
+        _ => throw new FormatException($"Unknown match mode '{mode}' (training or versus)"),
+    };
 
     private static bool Same(FrameInput a, FrameInput b) => a.Player1 == b.Player1 && a.Player2 == b.Player2;
 

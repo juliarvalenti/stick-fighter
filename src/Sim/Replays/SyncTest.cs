@@ -33,13 +33,13 @@ public static class SyncTest
             + string.Concat(Differences.Select(d => "\n  " + d));
     }
 
-    public static Failure? Run(ulong seed, in Stage stage, IReadOnlyList<FrameInput> inputs) =>
-        Run(seed, stage, inputs, Simulation.Step);
+    public static Failure? Run(ulong seed, in Stage stage, IReadOnlyList<FrameInput> inputs, MatchMode mode = MatchMode.Training) =>
+        Run(seed, stage, inputs, Simulation.Step, mode);
 
     // The first frame that comes out different on a resimulation, or null if every one matches.
-    public static Failure? Run(ulong seed, in Stage stage, IReadOnlyList<FrameInput> inputs, Stepper step)
+    public static Failure? Run(ulong seed, in Stage stage, IReadOnlyList<FrameInput> inputs, Stepper step, MatchMode mode = MatchMode.Training)
     {
-        var state = GameState.NewMatch(seed, stage);
+        var state = GameState.NewMatch(seed, stage, mode);
         var saved = new StateBuffer(MaxRollback + 1);
         var checksums = new ulong[inputs.Count];
         var firstRun = new GameState[inputs.Count]; // to say which fields differ on a failure
