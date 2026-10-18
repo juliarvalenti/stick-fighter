@@ -34,7 +34,9 @@ public static class Throws
             else
             {
                 Complete(ref thrower, ref thrown, stats);
-                SimEvents.Add(ref state, EventKind.Throw, 1 - p, p, thrower.Move, thrown.Position);
+                // The slam's spark on the body as it lands (lying, about hip height), not at the feet.
+                var body = thrown.Position - new FixVec2(Fix.Zero, Fix.FromInt(30));
+                SimEvents.Add(ref state, EventKind.Throw, 1 - p, p, thrower.Move, body);
                 SimEvents.Add(ref state, EventKind.Knockdown, 1 - p, p, -1, thrown.Position);
                 if (thrown.Health == 0)
                     SimEvents.Add(ref state, EventKind.Ko, 1 - p, p, thrower.Move, thrown.Position);
