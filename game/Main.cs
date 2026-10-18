@@ -60,6 +60,15 @@ public partial class Main : Node2D
     // can't stop the other player's clock, so it will need its own rule (a mutual pause, or none).
     private UI.Screens.PauseScreen.Page? _paused;
 
+    // The screen up now, and where Back goes from it when that isn't the flow's usual step back
+    // (options and controls, reached from the menu or pause).
+    private UI.Screens.Screen? _shown;
+    private System.Action? _back;
+
+    private const int ToastFrames = 120;
+    private VBoxContainer _toastStack = null!;
+    private readonly System.Collections.Generic.List<(UI.Toast Toast, int Until)> _toasts = new();
+
     // Flow scenarios count display frames, and check the paused match doesn't move.
     private int _displayFrame;
     private string? _heldAction;
@@ -131,19 +140,162 @@ public partial class Main : Node2D
         EnsurePauseAction();
         UI.Screens.SelectScreen.EnsureColorAction();
 
+        // Toasts sit above everything, bottom center, over menus and match alike.
+        var toastLayer = new CanvasLayer { Layer = 30 };
+        _toastStack = new VBoxContainer
+        {
+            Position = new Vector2(0, 520),
+            Size = new Vector2(1280, 160),
+            Alignment = BoxContainer.AlignmentMode.End,
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+            Theme = UI.UiTheme.Default,
+        };
+        toastLayer.AddChild(_toastStack);
+        AddChild(toastLayer);
+
         if (Arg(args, "--scenario") is { } name)
+        {
             StartScenario(name, args);
+        }
         else
+        {
+            // The saved options and bindings, and the pads already plugged in (no toasts for those).
+            Settings.Config.Load();
+            foreach (var pad in Input.GetConnectedJoypads())
+                DeviceInput.Pads.Changed(pad, connected: true);
+            Input.JoyConnectionChanged += (device, connected) => OnPadChanged((int)device, connected);
             ShowPressStart();
+        }
         PresentView(0);
     }
 
-    private void ShowScreen(UI.Screens.Screen? screen)
+    // `back` is where Back goes from this screen, for screens reached from more than one place.
+    private void ShowScreen(UI.Screens.Screen? screen, System.Action? back = null)
     {
         foreach (var child in _screens.GetChildren())
             child.QueueFree();
+        _shown = screen;
+        _back = back;
         if (screen is not null)
             _screens.AddChild(screen);
+    }
+
+    // Options, from the main menu or pause; `back` returns there. Every change is saved at once
+    // (never in scenarios, which run on the defaults).
+    private void ShowOptions(System.Action back, string? focus = null)
+    {
+        var options = new UI.Screens.OptionsScreen(DeviceInput.Settings, focus);
+        options.Changed += () =>
+        {
+            if (_scenario is not null)
+                return;
+            Settings.Config.Save();
+            Settings.Config.ApplyDisplay();
+        };
+        options.Chosen += item =>
+        {
+            var player = item == UI.Screens.OptionsScreen.Player1Controls ? 0 : 1;
+            ShowControls(player, () => ShowOptions(back, item));
+        };
+        ShowScreen(options, back);
+    }
+
+    private void ShowControls(int player, System.Action back)
+    {
+        var controls = new UI.Screens.RebindScreen(player, DeviceInput.Settings);
+        controls.Changed += () =>
+        {
+            if (_scenario is null)
+                Settings.Config.Save();
+        };
+        ShowScreen(controls, back);
+    }
+
+    // A controller came or went. Toasts say so; in a match, losing a player's pad holds it paused
+    // under the "Controller disconnected" dialog until it's back, another pad takes over, or the
+    // player picks the keyboard.
+    private void OnPadChanged(int device, bool connected)
+    {
+        var change = DeviceInput.Pads.Changed(device, connected);
+        if (connected)
+        {
+            ShowToast(change.Player is { } p ? $"Controller connected: player {p + 1}" : "Controller connected", UI.Toast.Kind.Success);
+            ResumeIfPadsBack();
+            return;
+        }
+        if (change.Player is not { } player)
+        {
+            ShowToast("Controller disconnected", UI.Toast.Kind.Info);
+            return;
+        }
+        ShowToast($"Player {player + 1}'s controller disconnected", UI.Toast.Kind.Warning);
+        if (_flow == Flow.Match && DeviceInput.Pads.HoldsMatch)
+            ShowDisconnected();
+    }
+
+    private void ShowDisconnected()
+    {
+        _paused = UI.Screens.PauseScreen.Page.Disconnected;
+        _trainingMenuOpen = false; // the dialog replaces whatever pause page was up
+        var screen = new UI.Screens.PauseScreen(UI.Screens.PauseScreen.Page.Disconnected) { Player = DeviceInput.Pads.Waiting ?? 0 };
+        screen.Chosen += item =>
+        {
+            if (item == UI.Screens.PauseScreen.UseKeyboard && DeviceInput.Pads.Waiting is { } waiting)
+                DeviceInput.Pads.UseKeyboard(waiting);
+            ResumeIfPadsBack();
+        };
+        ShowScreen(screen);
+        _scenarioRun?.Check(_paused == UI.Screens.PauseScreen.Page.Disconnected,
+            $"a disconnect at display frame {_displayFrame} pauses the match");
+    }
+
+    // Everyone has a pad again (or chose the keyboard): play on. Another player still waiting gets
+    // their own dialog.
+    private void ResumeIfPadsBack()
+    {
+        if (_paused != UI.Screens.PauseScreen.Page.Disconnected)
+            return;
+        if (DeviceInput.Pads.HoldsMatch)
+        {
+            ShowDisconnected();
+            return;
+        }
+        Unpause();
+        _scenarioRun?.Check(_paused is null, $"the match resumes at display frame {_displayFrame}");
+    }
+
+    // While the disconnect dialog is up, a button on a pad nobody has hands it to the waiting player.
+    public override void _Input(InputEvent @event)
+    {
+        if (_paused != UI.Screens.PauseScreen.Page.Disconnected || DeviceInput.Pads.Waiting is not { } waiting)
+            return;
+        if (@event is not InputEventJoypadButton { Pressed: true } button)
+            return;
+        if (DeviceInput.Pads.PadOf(0) == button.Device || DeviceInput.Pads.PadOf(1) == button.Device)
+            return;
+        GetViewport().SetInputAsHandled();
+        DeviceInput.Pads.Assign(waiting, button.Device);
+        ShowToast($"Player {waiting + 1} is on this controller now", UI.Toast.Kind.Success);
+        ResumeIfPadsBack();
+    }
+
+    private void ShowToast(string message, UI.Toast.Kind kind)
+    {
+        var toast = new UI.Toast(message, kind) { SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter };
+        _toastStack.AddChild(toast);
+        _toasts.Add((toast, _displayFrame + ToastFrames));
+    }
+
+    // Toasts last a fixed count of display frames, so scenario captures of them are repeatable.
+    private void ExpireToasts()
+    {
+        for (var i = _toasts.Count - 1; i >= 0; i--)
+        {
+            if (_displayFrame < _toasts[i].Until)
+                continue;
+            _toasts[i].Toast.QueueFree();
+            _toasts.RemoveAt(i);
+        }
     }
 
     // The title, waiting for start (or confirm), over the fighters standing ready.
@@ -159,7 +311,7 @@ public partial class Main : Node2D
         ShowScreen(new UI.Screens.TitleScreen());
     }
 
-    // The main menu. Options arrive with the options task.
+    // The main menu.
     private void ShowMenu()
     {
         _flow = Flow.Menu;
@@ -173,6 +325,9 @@ public partial class Main : Node2D
                     break;
                 case "Training":
                     StartMatch(Menus.MatchSettings.Training); // training goes straight in
+                    break;
+                case "Options":
+                    ShowOptions(ShowMenu);
                     break;
                 case "Quit":
                     GetTree().Quit();
@@ -269,6 +424,10 @@ public partial class Main : Node2D
                 case UI.Screens.PauseScreen.CommandListItem:
                     Pause(UI.Screens.PauseScreen.Page.Commands);
                     break;
+                case UI.Screens.PauseScreen.Options:
+                    // Still paused underneath: the match stays frozen through options and controls.
+                    ShowOptions(() => Pause(UI.Screens.PauseScreen.Page.Menu, UI.Screens.PauseScreen.Options));
+                    break;
                 case UI.Screens.PauseScreen.Quit:
                     Pause(UI.Screens.PauseScreen.Page.ConfirmQuit);
                     break;
@@ -297,6 +456,14 @@ public partial class Main : Node2D
     // to the title. Select handles its own (undoing P1's pick first).
     private void GoBack()
     {
+        // Mid-bind, Back is a key or button like any other; and a lost controller isn't dismissed.
+        if (_shown is UI.Screens.RebindScreen { Waiting: true } || _paused == UI.Screens.PauseScreen.Page.Disconnected)
+            return;
+        if (_back is { } back)
+        {
+            back();
+            return;
+        }
         switch (_flow)
         {
             case Flow.Match when _trainingMenuOpen:
@@ -424,7 +591,12 @@ public partial class Main : Node2D
         }
 
         if (_scenario is { Flow: true } flow)
+        {
             PressScenarioActions(flow);
+            if (flow.Pads?.TryGetValue(_displayFrame, out var pad) == true)
+                OnPadChanged(pad.Device, pad.Connected);
+        }
+        ExpireToasts();
 
         var start = Stopwatch.GetTimestamp();
         var elapsed = _pacer.ToMicroseconds((long)System.Math.Round(delta * 1_000_000_000));
@@ -555,7 +727,7 @@ public partial class Main : Node2D
                 ShowMenu();
             else if (_flow == Flow.Match && _paused is null && _scenario is null or { Flow: true })
                 Pause(UI.Screens.PauseScreen.Page.Menu);
-            else if (_paused is not null)
+            else if (_paused is not null || _back is not null)
                 GoBack();
             GetViewport().SetInputAsHandled();
         }

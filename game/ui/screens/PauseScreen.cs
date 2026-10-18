@@ -19,6 +19,7 @@ public partial class PauseScreen : Screen
         MoveList,
         Commands,
         ConfirmQuit,
+        Disconnected, // a player's pad went mid-match
     }
 
     public const string Resume = "Resume";
@@ -29,6 +30,7 @@ public partial class PauseScreen : Screen
     public const string Quit = "Quit to menu";
     public const string Stay = "Stay";
     public const string QuitConfirmed = "Quit";
+    public const string UseKeyboard = "Use keyboard";
 
     private readonly Page _page;
     private readonly string _focus;
@@ -51,6 +53,22 @@ public partial class PauseScreen : Screen
 
     public Page Showing => _page;
 
+    // The player whose controller went, for the Disconnected page.
+    public int Player { get; init; }
+
+    // The match holds until the controller is back, another pad takes over (a button pressed on it),
+    // or the player carries on with the keyboard: the one answer, since the others aren't choices
+    // made in the dialog.
+    private void BuildDisconnected()
+    {
+        var dialog = new Dialog("Controller disconnected",
+            $"Reconnect player {Player + 1}'s controller to carry on, or press a button on another one to take over.",
+            UseKeyboard);
+        AddChild(dialog);
+        dialog.Position = (Size - dialog.GetCombinedMinimumSize()) / 2;
+        dialog.Buttons[0].Pressed += () => Choose(UseKeyboard);
+    }
+
     public override void _Ready()
     {
         AddChild(new Panel { ThemeTypeVariation = UiTheme.ScrimPanel, Size = Size });
@@ -61,6 +79,9 @@ public partial class PauseScreen : Screen
                 break;
             case Page.Commands:
                 BuildCommands();
+                break;
+            case Page.Disconnected:
+                BuildDisconnected();
                 break;
             default:
                 BuildMenu();
@@ -81,11 +102,7 @@ public partial class PauseScreen : Screen
             Menu(column, Resume, MoveListItem, CommandListItem, Options, Quit);
         AddChild(panel);
         CenterAt(panel, 120);
-
-        // Options arrive with the options task; until then the row shows but can't be chosen.
         var rows = column.GetChildren().OfType<Button>().ToList();
-        foreach (var row in rows.Where(r => r.Text == Options))
-            row.Disabled = true;
 
         if (_page == Page.ConfirmQuit)
         {
