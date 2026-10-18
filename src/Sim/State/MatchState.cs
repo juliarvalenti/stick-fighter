@@ -37,6 +37,18 @@ public enum RoundResult
     Draw = 4,
 }
 
+// Who won the match. The values are what's encoded, so they don't change.
+public enum MatchWinner
+{
+    // The match is still on.
+    None = -1,
+    P1 = 0,
+    P2 = 1,
+
+    // A tied final round.
+    Draw = 2,
+}
+
 // Where the match is: its phase and how long it's been in it, the round and its timer, and the
 // score. Part of GameState, so it's checksummed, rolls back and replays like everything else.
 public struct MatchState
@@ -59,8 +71,7 @@ public struct MatchState
     // How the last round ended (shown during the round end).
     public RoundResult LastResult;
 
-    // -1 while the match is on; 0 or 1 for the winner; 2 for a drawn match.
-    public int Winner;
+    public MatchWinner Winner;
 
     // This round decides the match: both players reached match point together.
     public bool FinalRound;
@@ -77,7 +88,7 @@ public struct MatchState
         writer.Write(P1Wins);
         writer.Write(P2Wins);
         writer.Write((int)LastResult);
-        writer.Write(Winner);
+        writer.Write((int)Winner);
         writer.Write(FinalRound);
     }
 }

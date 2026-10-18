@@ -15,6 +15,11 @@
     <Compile Include="../../game/training/InputLog.cs" Link="Linked/InputLog.cs" />
     <Compile Include="../../game/training/InputDemo.cs" Link="Linked/InputDemo.cs" />
     <Compile Include="../../game/training/FrameDataAnalyser.cs" Link="Linked/FrameDataAnalyser.cs" />
+    <Compile Include="../../game/ui/HudModel.cs" Link="Linked/HudModel.cs" />
+    <Compile Include="../../game/ui/MatchHud.cs" Link="Linked/MatchHud.cs" />
+    <Compile Include="../../game/ui/HealthTrail.cs" Link="Linked/HealthTrail.cs" />
+    <Compile Include="../../game/ui/Announcer.cs" Link="Linked/Announcer.cs" />
+    <Compile Include="../../game/ui/RoundLog.cs" Link="Linked/RoundLog.cs" />
   </ItemGroup>
 
   <!-- The characters' moves, to check every notation they use reads as glyphs. -->

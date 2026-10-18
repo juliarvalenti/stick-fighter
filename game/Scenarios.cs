@@ -23,7 +23,8 @@ public sealed record Scenario(
     Func<GameState, GameState>? Setup = null,
     string? PoseSheet = null,
     Func<GameState, GameState>? EachFrame = null,
-    Func<Godot.Control>? StyleFrame = null);
+    Func<Godot.Control>? StyleFrame = null,
+    bool Versus = false);
 
 public static class Scenarios
 {
@@ -50,12 +51,38 @@ public static class Scenarios
             }),
 
             Throws(),
+            VersusMatch(),
         };
 
         // One pose sheet per move: `sheet-5LP`, `sheet-j.HK`, ...
         foreach (var move in Sim.Characters.Characters.Placeholder.Moves)
             all.Add(new Scenario($"sheet-{move.Input}", 1, _ => default, Captures: new[] { 1 }, Frames: 1, PoseSheet: move.Input));
         return all;
+    }
+
+    // A real best-of-three through the match flow, with the HUD and results wired to it: the
+    // `match-double-ko` replay's inputs (both trade to a double KO, then P2 KOs untouched). The
+    // captures are found by playing it: round 1 mid-trade with both damage trails holding, round
+    // 2's K.O. call, and the results screen.
+    private static Scenario VersusMatch()
+    {
+        var replay = Sim.Replays.Replay.Read(Godot.FileAccess.GetFileAsString("res://replays/match-double-ko.sfr"));
+        var state = GameState.NewMatch(replay.Seed, replay.Stage, MatchMode.Versus);
+        int midRound = -1, ko = -1, results = -1;
+        foreach (var input in replay.Inputs)
+        {
+            Simulation.Step(ref state, input);
+            var match = state.Match;
+            if (midRound < 0 && state.Fighters[0].Health <= 500)
+                midRound = state.Frame + 10;
+            if (ko < 0 && match is { Round: 2, Phase: MatchPhase.RoundEnd })
+                ko = state.Frame + 20;
+            if (results < 0 && match.Phase == MatchPhase.MatchEnd)
+                results = state.Frame + UI.MatchHud.ResultsDelay + 10;
+        }
+
+        return new Scenario("match", replay.Seed, f => f < replay.Frames ? replay.Inputs[f] : default,
+            Captures: new[] { midRound, ko, results }, Frames: results, Versus: true);
     }
 
     // Every ground normal, one every 40 frames, at point-blank against a standing P2, captured on its

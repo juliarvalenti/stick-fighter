@@ -17,8 +17,8 @@ public static class MatchFlow
     public const int WinsToMatch = 2;
 
     public static MatchState Start(MatchMode mode) => mode == MatchMode.Versus
-        ? new MatchState { Mode = mode, Phase = MatchPhase.Intro, Round = 1, TimerFrames = RoundFrames, Winner = -1 }
-        : new MatchState { Mode = mode, Phase = MatchPhase.Fight, Winner = -1 };
+        ? new MatchState { Mode = mode, Phase = MatchPhase.Intro, Round = 1, TimerFrames = RoundFrames, Winner = MatchWinner.None }
+        : new MatchState { Mode = mode, Phase = MatchPhase.Fight, Winner = MatchWinner.None };
 
     // Fighters act and attacks land only while fighting. Outside it, inputs are still recorded, so
     // a press in the last frames of the intro is buffered and comes out on the first fighting frame.
@@ -79,7 +79,7 @@ public static class MatchFlow
 
         if (match.FinalRound)
         {
-            match.Winner = tied ? 2 : result == RoundResult.P1 ? 0 : 1;
+            match.Winner = tied ? MatchWinner.Draw : result == RoundResult.P1 ? MatchWinner.P1 : MatchWinner.P2;
             Enter(ref match, MatchPhase.MatchEnd);
             return;
         }
@@ -94,7 +94,7 @@ public static class MatchFlow
         var p2Through = match.P2Wins >= WinsToMatch;
         if (p1Through != p2Through)
         {
-            match.Winner = p1Through ? 0 : 1;
+            match.Winner = p1Through ? MatchWinner.P1 : MatchWinner.P2;
             Enter(ref match, MatchPhase.MatchEnd);
             return;
         }
