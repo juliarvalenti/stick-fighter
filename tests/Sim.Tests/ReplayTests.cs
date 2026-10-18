@@ -1,4 +1,5 @@
 using System;
+using StickFighter.Sim.Combat;
 using StickFighter.Sim.Replays;
 using Xunit;
 
@@ -161,6 +162,14 @@ public class ReplayTests
     [InlineData("block-crouch-low", false, false)]
     [InlineData("low-hits-standing-block", false, true)]
     [InlineData("proximity-guard", false, false)]
+    [InlineData("throw", false, true)]
+    [InlineData("throw-back", false, true)]
+    [InlineData("throw-meaty", false, true)]
+    [InlineData("throw-tech-first", false, false)]
+    [InlineData("throw-tech-last", false, false)]
+    [InlineData("throw-whiff-punished", true, false)]
+    [InlineData("throw-hitstun", false, true)]
+    [InlineData("throw-same-frame", false, false)]
     public void ScriptedReplaysCoverTheirCase(string name, bool p1Hurt, bool p2Hurt)
     {
         var replay = Replay.Read(System.IO.File.ReadAllText(System.IO.Path.Combine(RepoRoot(), "replays", name + ".sfr")));
@@ -184,6 +193,100 @@ public class ReplayTests
         Assert.Equal(Collision.Pushing.MaxX(state.Stage), state.Fighters[1].Position.X);
         Assert.True(state.Fighters[1].Health < Characters.Characters.Placeholder.Stats.Health);
         Assert.True(state.Fighters[1].Position.X - state.Fighters[0].Position.X > Collision.Body.PushHalfWidth * 2);
+    }
+
+    // Every frame of a committed replay: the state after each step, and the inputs.
+    private static (System.Collections.Generic.List<GameState> States, Replay Replay) Play(string name)
+    {
+        var replay = Replay.Read(System.IO.File.ReadAllText(System.IO.Path.Combine(RepoRoot(), "replays", name + ".sfr")));
+        var state = GameState.NewMatch(replay.Seed, replay.Stage);
+        var states = new System.Collections.Generic.List<GameState>();
+        foreach (var input in replay.Inputs)
+        {
+            Simulation.Step(ref state, input);
+            states.Add(state);
+        }
+        return (states, replay);
+    }
+
+    private static int ThrowDamage => Characters.Characters.Placeholder.FindMove("LP+LK")!.Damage;
+    private static int FullHealth => Characters.Characters.Placeholder.Stats.Health;
+
+    // The first frame P2 is held in a throw, or -1.
+    private static int GrabFrame(System.Collections.Generic.List<GameState> states) =>
+        states.FindIndex(s => s.Fighters[1].Action == (int)Characters.FighterAction.Thrown);
+
+    [Theory]
+    [InlineData("throw", false)]
+    [InlineData("throw-back", true)]
+    [InlineData("throw-meaty", false)]
+    public void TheThrowReplaysLand(string name, bool behind)
+    {
+        var (states, _) = Play(name);
+        Assert.True(GrabFrame(states) >= 0);
+        Assert.Contains(states, s => s.Fighters[1].KnockedDown);
+        var end = states[^1];
+        Assert.Equal(FullHealth - ThrowDamage, end.Fighters[1].Health);
+        Assert.False(end.Fighters[1].KnockedDown); // up again by the end
+        Assert.Equal(behind, end.Fighters[1].Position.X < end.Fighters[0].Position.X);
+    }
+
+    // The meaty throw is active on P2's last blockstun frame and doesn't grab; it grabs the next.
+    [Fact]
+    public void TheMeatyThrowFailsInBlockstunThenGrabs()
+    {
+        var (states, _) = Play("throw-meaty");
+        var grab = GrabFrame(states);
+        var throwMove = Characters.Characters.Placeholder.FindMove("LP+LK")!;
+        var before = states[grab - 1];
+        Assert.True(states[grab - 2].Fighters[1].Blockstun > 0); // in blockstun as that frame began
+        Assert.True(throwMove.IsActive(before.Fighters[0].ActionFrame));
+        Assert.Equal(-1, before.Fighters[1].Grab);
+    }
+
+    [Theory]
+    [InlineData("throw-tech-first", -4)]
+    [InlineData("throw-tech-last", 7)]
+    public void TheTechReplaysTechAtTheEdgesOfTheWindow(string name, int pressRelativeToGrab)
+    {
+        var (states, replay) = Play(name);
+        var grab = GrabFrame(states);
+        Assert.True(grab >= 0);
+        var press = System.Linq.Enumerable.ToList(replay.Inputs).FindIndex(i => i.Player2.Has(Buttons.LightPunch | Buttons.LightKick));
+        Assert.Equal(pressRelativeToGrab, press - grab);
+        Assert.DoesNotContain(states, s => s.Fighters[1].KnockedDown);
+        Assert.Equal(FullHealth, states[^1].Fighters[1].Health);
+    }
+
+    [Fact]
+    public void TheWhiffedThrowIsPunishedInItsRecovery()
+    {
+        var (states, _) = Play("throw-whiff-punished");
+        Assert.Equal(-1, GrabFrame(states));
+        var hit = states.FindIndex(s => s.Fighters[0].Hitstun > 0);
+        Assert.Equal(Normals.Throw, states[hit - 1].Fighters[0].Move);
+        Assert.Equal(FullHealth - Characters.Characters.Placeholder.FindMove("5HK")!.Damage, states[^1].Fighters[0].Health);
+    }
+
+    [Fact]
+    public void AThrowOnAFighterInHitstunWhiffs()
+    {
+        var (states, _) = Play("throw-hitstun");
+        var throwMove = Characters.Characters.Placeholder.FindMove("LP+LK")!;
+        Assert.Contains(states, s => s.Fighters[0].Move == Normals.Throw && throwMove.IsActive(s.Fighters[0].ActionFrame) && s.Fighters[1].Hitstun > 0);
+        Assert.Equal(-1, GrabFrame(states));
+        Assert.Equal(FullHealth - Characters.Characters.Placeholder.FindMove("5LP")!.Damage, states[^1].Fighters[1].Health);
+    }
+
+    [Fact]
+    public void SameFrameThrowsTech()
+    {
+        var (states, _) = Play("throw-same-frame");
+        Assert.Contains(states, s => s.Fighters[0].Move == Normals.Throw && s.Fighters[1].Move == Normals.Throw);
+        Assert.DoesNotContain(states, s => s.Fighters[0].Grab >= 0 || s.Fighters[1].Grab >= 0);
+        Assert.Equal(-1, states[^1].Fighters[0].Move);
+        var center = states[^1].Stage.Center;
+        Assert.Equal(center - states[^1].Fighters[0].Position.X, states[^1].Fighters[1].Position.X - center);
     }
 
     private static string RepoRoot()

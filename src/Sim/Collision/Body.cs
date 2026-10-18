@@ -26,7 +26,7 @@ public static class Body
         Skeleton.Solve(Data.Skeleton, PoseOf(fighter), fighter.Position, fighter.Facing);
 
     // Every bone is a hurtbox; the head is a circle. On a move's active frames its striking limb is
-    // also a hitbox, until the move has hit once.
+    // also a hitbox, until the move has hit once. A throw has no hitbox: Throws checks its range.
     public static FighterShapes Shapes(in FighterState fighter)
     {
         var joints = Pose(fighter);
@@ -38,7 +38,7 @@ public static class Body
         for (var limb = Limb.BackUpperArm; limb <= Limb.FrontShin; limb++)
             shapes.AddHurt(Segment(joints, limb, size.LimbRadius));
 
-        if (MoveOf(fighter) is { } move && move.IsActive(fighter.ActionFrame) && !fighter.MoveHit)
+        if (MoveOf(fighter) is { Kind: MoveKind.Normal } move && move.IsActive(fighter.ActionFrame) && !fighter.MoveHit)
             shapes.AddHit(Segment(joints, move.HitboxLimb, move.HitboxRadius + move.ActiveBonus));
 
         shapes.Push = PushBox(fighter.Position);

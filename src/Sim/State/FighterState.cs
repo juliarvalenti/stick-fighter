@@ -4,7 +4,7 @@ namespace StickFighter.Sim;
 
 public struct FighterState
 {
-    public const int EncodedSize = 16 + 16 + 4 + 4 + 4 + 4 + 4 + 1 + 4 + 4 + 1 + 4;
+    public const int EncodedSize = 16 + 16 + 4 + 4 + 4 + 4 + 4 + 1 + 4 + 4 + 1 + 4 + 4 + 4 + 4 + 1;
 
     public FixVec2 Position;
     public FixVec2 Velocity;
@@ -36,6 +36,18 @@ public struct FighterState
     // The frame the last move started, so a buffered press isn't used twice.
     public int LastMoveFrame;
 
+    // Frames since a throw connected, for both the thrower and the thrown; -1 when not in a grab.
+    public int Grab;
+
+    // Frames left lying down (KnockedDown is true while this is above zero).
+    public int Knockdown;
+
+    // Frames of throw invulnerability left after getting up.
+    public int Wakeup;
+
+    // The throw this fighter is holding throws the opponent behind it (chosen by holding back).
+    public bool BackThrow;
+
     public readonly void Encode(ref StateWriter writer)
     {
         writer.Write(Position);
@@ -50,5 +62,9 @@ public struct FighterState
         writer.Write(Blockstun);
         writer.Write(KnockedDown);
         writer.Write(LastMoveFrame);
+        writer.Write(Grab);
+        writer.Write(Knockdown);
+        writer.Write(Wakeup);
+        writer.Write(BackThrow);
     }
 }

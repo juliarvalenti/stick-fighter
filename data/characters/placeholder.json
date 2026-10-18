@@ -15,7 +15,16 @@
     "landingFrames": 4,
     "pushHalfWidth": 30,
     "pushHeight": 230,
-    "proximityGuard": 180
+    "proximityGuard": 180,
+    "comment-throws": "Throw range is feet to feet. After a throw connects, the thrown animation plays techFrame frames, then the game looks back techWindow frames for LP+LK (SF4: 7 and 12). A tech breaks both apart by techSeparation each. A completed throw lands the opponent throwDistance away (in front, or behind for a back throw) and knocks them down for knockdownFrames; the thrower is free throwFollowThrough frames after the tech check. Waking up gives wakeupThrowInvulnerable frames of throw invulnerability.",
+    "throwRange": 100,
+    "techFrame": 7,
+    "techWindow": 12,
+    "techSeparation": 40,
+    "throwDistance": 170,
+    "throwFollowThrough": 14,
+    "knockdownFrames": 31,
+    "wakeupThrowInvulnerable": 2
   },
 
   "skeleton": {
@@ -55,6 +64,25 @@
       "length": 1,
       "keys": [
         { "frame": 0, "hip": [-4, -72], "angles": { "spine": -30, "neck": 10, "backShoulder": 506, "backElbow": -1824, "frontShoulder": -380, "frontElbow": -1817, "backHip": -283, "backKnee": 1106, "frontHip": -753, "frontKnee": 1146 } }
+      ]
+    },
+    "thrown": {
+      "length": 1,
+      "keys": [
+        { "frame": 0, "hip": [0, -110], "angles": { "spine": -230, "neck": -110, "backShoulder": 627, "backElbow": -1483, "frontShoulder": 438, "frontElbow": -1693, "backHip": 3, "backKnee": 296, "frontHip": -293, "frontKnee": 316 } }
+      ]
+    },
+    "throwHold": {
+      "length": 1,
+      "keys": [
+        { "frame": 0, "hip": [4, -110], "angles": { "spine": 80, "neck": -20, "backShoulder": 121, "backElbow": -1453, "frontShoulder": -133, "frontElbow": -1460, "backHip": 54, "backKnee": 288, "frontHip": -331, "frontKnee": 412 } }
+      ]
+    },
+    "knockdown": {
+      "comment": "Lying on the back, head behind, knees up a little.",
+      "length": 1,
+      "keys": [
+        { "frame": 0, "hip": [0, -28], "angles": { "spine": -1024, "neck": 40, "backShoulder": -120, "backElbow": -60, "frontShoulder": -260, "frontElbow": -180, "backHip": -924, "backKnee": 0, "frontHip": -1010, "frontKnee": 170 } }
       ]
     },
     "crouch": {

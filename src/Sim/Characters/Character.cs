@@ -20,9 +20,18 @@ public enum FighterAction
     BlockStand = 5,
     BlockCrouch = 6,
 
+    // Held in the opponent's throw, until it's teched or completes.
+    Thrown = 7,
+
+    // Holding a throw that connected, through the tech check and the follow-through.
+    Throwing = 8,
+
+    // Lying down after a throw (later, after sweeps too). Nothing hits a fighter lying down.
+    Knockdown = 9,
+
     // Performing a move; the pose comes from the move's track, not a stance pose. Last, because
     // every action before it has a stance pose at the same index.
-    Attack = 7,
+    Attack = 10,
 }
 
 public enum Strength
@@ -30,6 +39,15 @@ public enum Strength
     Light,
     Medium,
     Heavy,
+}
+
+public enum MoveKind
+{
+    // Strikes with its hitbox limb.
+    Normal,
+
+    // Grabs an opponent within throw range on its active frames; has no hitbox.
+    Throw,
 }
 
 public enum Guard
@@ -69,7 +87,17 @@ public sealed record Stats(
     Fix PushHeight,
     // Holding back with the opponent's attack in startup or active frames and the fighters at most
     // this far apart (feet to feet) puts you in block stance instead of walking back.
-    Fix ProximityGuard);
+    Fix ProximityGuard,
+    // Throws (see the comment in the character data): range feet to feet, tech timing, landing
+    // distance, how long the thrower holds on, and the knockdown and wakeup that follow.
+    Fix ThrowRange,
+    int TechFrame,
+    int TechWindow,
+    Fix TechSeparation,
+    Fix ThrowDistance,
+    int ThrowFollowThrough,
+    int KnockdownFrames,
+    int WakeupThrowInvulnerable);
 
 public sealed record SkeletonSize(
     Fix Spine,
@@ -137,6 +165,7 @@ public sealed record Move(
     int Recovery,
     int Damage,
     int Stun,
+    MoveKind Kind,
     Strength Strength,
     Guard Guard,
     int PushbackHit,

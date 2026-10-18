@@ -54,6 +54,15 @@ public static class Output
             Field(text, key, s.GetProperty(key).GetInt32().ToString(CultureInfo.InvariantCulture));
         Field(text, "strength", Str(s.GetProperty("strength").GetString()!));
         Field(text, "guard", Str(s.GetProperty("guard").GetString()!));
+        if (s.TryGetProperty("kind", out var kind))
+            Field(text, "kind", Str(kind.GetString()!));
+        foreach (var key in new[] { "chip" })
+        {
+            if (s.TryGetProperty(key, out var value))
+                Field(text, key, value.GetInt32().ToString(CultureInfo.InvariantCulture));
+        }
+        if (s.TryGetProperty("chipKo", out var chipKo))
+            Field(text, "chipKo", chipKo.GetBoolean() ? "true" : "false");
         foreach (var key in new[] { "pushbackHit", "pushbackBlock", "hitstun", "blockstun" })
         {
             if (s.TryGetProperty(key, out var value))

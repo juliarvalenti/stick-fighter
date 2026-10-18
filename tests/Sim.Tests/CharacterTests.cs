@@ -79,7 +79,7 @@ public class CharacterDataTests
         string[] inputs =
         {
             "5LP", "5MP", "5HP", "5LK", "5MK", "5HK", "2LP", "2MP", "2HP", "2LK", "2MK", "2HK",
-            "j.LP", "j.MP", "j.HP", "j.LK", "j.MK", "j.HK", "236P",
+            "j.LP", "j.MP", "j.HP", "j.LK", "j.MK", "j.HK", "LP+LK", "236P",
         };
         foreach (var input in inputs)
             Assert.NotNull(Data.FindMove(input));
@@ -87,6 +87,7 @@ public class CharacterDataTests
         Assert.Equal(Guard.Low, Data.FindMove("2HK")!.Guard);
         Assert.Equal(15, Data.FindMove("2MK")!.Blockstun);
         Assert.NotNull(Data.FindMove("236P")!.Spawn);
+        Assert.Equal(MoveKind.Throw, Data.FindMove("LP+LK")!.Kind);
     }
 
     private static string ReplaceFirst(string text, string find, string replace)
@@ -139,11 +140,19 @@ public class PoseTests
         ActionFrame = frame,
     };
 
-    public static TheoryData<FighterAction, int> AllKeys()
+    public static TheoryData<FighterAction, int> AllKeys() => Keys();
+
+    // Lying down, the feet are off the floor.
+    public static TheoryData<FighterAction, int> StandingKeys() => Keys(except: FighterAction.Knockdown);
+
+    // In a throw the fighters hold each other, so their arms touch by design.
+    public static TheoryData<FighterAction, int> SeparateKeys() => Keys(except: [FighterAction.Thrown, FighterAction.Throwing]);
+
+    // Stance poses only: an attack plays its move's track (the move compiler checks those).
+    private static TheoryData<FighterAction, int> Keys(params FighterAction[] except)
     {
         var data = new TheoryData<FighterAction, int>();
-        // Stance poses only: an attack plays its move's track (the move compiler checks those).
-        foreach (var action in Enum.GetValues<FighterAction>().Where(a => a != FighterAction.Attack))
+        foreach (var action in Enum.GetValues<FighterAction>().Where(a => a != FighterAction.Attack && !except.Contains(a)))
         {
             foreach (var key in Data.Pose(action).Keys)
                 data.Add(action, key.Frame);
@@ -153,6 +162,15 @@ public class PoseTests
 
     [Theory]
     [MemberData(nameof(AllKeys))]
+    public void NothingGoesThroughTheFloor(FighterAction action, int frame)
+    {
+        var joints = Body.Pose(At(640, 1, action, frame));
+        for (var i = 0; i < Skeleton.JointCount; i++)
+            Assert.True((joints[i].Y - Stage.Training.Floor).RoundToInt() <= 2, $"{action} frame {frame}: joint {i} below the floor");
+    }
+
+    [Theory]
+    [MemberData(nameof(StandingKeys))]
     public void FeetStayOnTheFloor(FighterAction action, int frame)
     {
         var joints = Body.Pose(At(640, 1, action, frame));
@@ -161,7 +179,7 @@ public class PoseTests
     }
 
     [Theory]
-    [MemberData(nameof(AllKeys))]
+    [MemberData(nameof(SeparateKeys))]
     public void ArmsAndHeadsDoNotClipAtMinimumDistance(FighterAction action, int frame)
     {
         // Pushboxes touching: as close as two fighters can stand. (Crouching knees may cross, as

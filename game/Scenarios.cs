@@ -48,6 +48,8 @@ public static class Scenarios
                 ("2MK", Buttons.MediumKick | Buttons.Down, Buttons.Right | Buttons.Down),
                 ("2MK", Buttons.MediumKick | Buttons.Down, Buttons.Right),
             }),
+
+            Throws(),
         };
 
         // One pose sheet per move: `sheet-5LP`, `sheet-j.HK`, ...
@@ -100,6 +102,45 @@ public static class Scenarios
         }
 
         return new Scenario(name, 1, Script, captures, steps.Length * NormalPeriod, Boxes: true, EachFrame: Reset);
+    }
+
+    // Throws, boxes on, one every ThrowPeriod frames from a reset. P1 presses LP+LK on frame 1 of
+    // each; it connects on frame 3.
+    //  - A throw at point-blank: held (6), then P2 knocked down in front (14).
+    //  - The same throw teched: P2 presses LP+LK three frames into the grab, and on the seventh
+    //    they break apart (72).
+    //  - A throw from out of range: reaching on its active frame (123), whiffed in recovery (132).
+    private const int ThrowPeriod = 60;
+
+    private static Scenario Throws()
+    {
+        const Buttons lpLk = Buttons.LightPunch | Buttons.LightKick;
+        int[] gaps = { 60, 60, 150 };
+
+        FrameInput Script(int frame)
+        {
+            var k = frame / ThrowPeriod;
+            var f = frame % ThrowPeriod;
+            var p1 = f == 1 && k < gaps.Length ? lpLk : default;
+            var p2 = k == 1 && f == 6 ? lpLk : default;
+            return new FrameInput(p1, p2);
+        }
+
+        GameState Reset(GameState s)
+        {
+            var k = s.Frame / ThrowPeriod;
+            if (s.Frame % ThrowPeriod != 0 || k >= gaps.Length)
+                return s;
+            var fresh = GameState.NewMatch(1);
+            s.Fighters[0] = fresh.Fighters[0];
+            s.Fighters[1] = fresh.Fighters[1];
+            s.Fighters[0].Position = new FixVec2(Fix.FromInt(610), s.Fighters[0].Position.Y);
+            s.Fighters[1].Position = new FixVec2(Fix.FromInt(610 + gaps[k]), s.Fighters[1].Position.Y);
+            return s;
+        }
+
+        return new Scenario("throws", 1, Script, new[] { 6, 14, 72, 123, 132 }, gaps.Length * ThrowPeriod,
+            Boxes: true, EachFrame: Reset);
     }
 
     private static readonly Scenario[] Match =

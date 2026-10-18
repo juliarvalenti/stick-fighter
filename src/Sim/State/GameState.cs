@@ -58,6 +58,7 @@ public struct GameState
         Health = Characters.Characters.Placeholder.Stats.Health,
         Move = -1,
         LastMoveFrame = -1,
+        Grab = -1,
     };
 
     // The canonical encoding: fixed field order, little-endian, no padding.

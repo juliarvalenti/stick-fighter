@@ -23,9 +23,16 @@ public static class Simulation
         // Decided for both before either acts, so neither player sees the other's move a frame ahead.
         var p1Proximity = Blocking.ProximityGuard(state, 0);
         var p2Proximity = Blocking.ProximityGuard(state, 1);
+        var p1Stunned = Throws.Stunned(state.Fighters[0]);
+        var p2Stunned = Throws.Stunned(state.Fighters[1]);
         Act(ref state, 0, p1Proximity);
         Act(ref state, 1, p2Proximity);
 
+        Pushing.Resolve(ref state, p1Before, p2Before);
+        FaceEachOther(ref state);
+
+        // Throws before strikes: a fighter grabbed this frame has no hitbox, so a throw beats a strike.
+        Throws.Resolve(ref state, p1Stunned, p2Stunned);
         Pushing.Resolve(ref state, p1Before, p2Before);
         FaceEachOther(ref state);
 
@@ -49,6 +56,33 @@ public static class Simulation
         var history = state.Inputs[player];
         var now = state.Frame;
 
+        if (fighter.Wakeup > 0)
+            fighter.Wakeup--;
+
+        // Held in a throw, thrower or thrown: Throws.Resolve decides when it ends.
+        if (fighter.Grab >= 0)
+        {
+            fighter.Grab++;
+            fighter.ActionFrame++;
+            fighter.Velocity = FixVec2.Zero;
+            return;
+        }
+
+        // Lying down after a knockdown. On the frame it ends the fighter is up and acts, but can't be
+        // thrown for the first few frames.
+        if (fighter.KnockedDown)
+        {
+            fighter.Velocity = FixVec2.Zero;
+            fighter.Knockdown--;
+            if (fighter.Knockdown > 0)
+            {
+                Continue(ref fighter, FighterAction.Knockdown);
+                return;
+            }
+            fighter.KnockedDown = false;
+            fighter.Wakeup = character.Stats.WakeupThrowInvulnerable;
+        }
+
         if (fighter.Hitstun > 0)
         {
             fighter.Hitstun--;
@@ -65,6 +99,17 @@ public static class Simulation
             return;
         }
 
+        // LP then LK a frame later (or the other way round): the light normal that came out on the
+        // first press becomes the throw.
+        if (fighter.Action == (int)FighterAction.Attack && fighter.Move != Normals.Throw
+            && now - fighter.LastMoveFrame < Normals.ThrowLeniency
+            && Numpad.Vertical(Numpad.Direction(history.At(now, now), fighter.Facing)) >= 0
+            && Normals.ThrowPressedOn(history, now, now))
+        {
+            StartMove(ref fighter, Normals.Throw, now);
+            return;
+        }
+
         if (fighter.Action == (int)FighterAction.Attack && fighter.ActionFrame + 1 < character.Moves[fighter.Move].TotalFrames)
         {
             fighter.ActionFrame++;
@@ -78,12 +123,7 @@ public static class Simulation
         var move = BufferedNormal(history, now, fighter.LastMoveFrame, crouching);
         if (move >= 0)
         {
-            fighter.Action = (int)FighterAction.Attack;
-            fighter.ActionFrame = 0;
-            fighter.Move = move;
-            fighter.MoveHit = false;
-            fighter.LastMoveFrame = now;
-            fighter.Velocity = FixVec2.Zero;
+            StartMove(ref fighter, move, now);
             return;
         }
 
@@ -115,15 +155,28 @@ public static class Simulation
     }
 
     // The newest unused attack press within the buffer window, as a move index, or -1.
+    // Standing LP+LK is a throw rather than either normal.
     private static int BufferedNormal(in InputHistory history, int now, int lastMoveFrame, bool crouching)
     {
         for (var frame = now; frame > now - Normals.BufferWindow && frame > lastMoveFrame; frame--)
         {
+            if (!crouching && Normals.ThrowPressedOn(history, frame, now))
+                return Normals.Throw;
             var move = Normals.Pick(history.PressedOn(frame, now) & Buttons.Attacks, crouching);
             if (move >= 0)
                 return move;
         }
         return -1;
+    }
+
+    private static void StartMove(ref FighterState fighter, int move, int now)
+    {
+        fighter.Action = (int)FighterAction.Attack;
+        fighter.ActionFrame = 0;
+        fighter.Move = move;
+        fighter.MoveHit = false;
+        fighter.LastMoveFrame = now;
+        fighter.Velocity = FixVec2.Zero;
     }
 
     private static void Continue(ref FighterState fighter, FighterAction action)

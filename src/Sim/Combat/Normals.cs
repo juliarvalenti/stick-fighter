@@ -18,8 +18,31 @@ public static class Normals
 
     private static readonly string[] ButtonNames = { "HK", "HP", "MK", "MP", "LK", "LP" };
 
+    // LP and LK count as pressed together when the second goes down within this many frames of the
+    // first, counting the frame of the first.
+    public const int ThrowLeniency = 2;
+
     // [standing or crouching, button in ButtonOrder] -> move index, or -1.
     private static readonly int[,] Table = Build(Characters.Characters.Placeholder);
+
+    // The standing throw. Crouching LP+LK is crouching light kick, the heavier button, as in SF4.
+    public static readonly int Throw = IndexOf(Characters.Characters.Placeholder, "LP+LK");
+
+    // LP+LK completed on this frame: one of them went down now and the other within the leniency.
+    public static bool ThrowPressedOn(in InputHistory history, int frame, int now)
+    {
+        var lp = history.PressedOn(frame, now).Has(Buttons.LightPunch);
+        var lk = history.PressedOn(frame, now).Has(Buttons.LightKick);
+        if (!lp && !lk)
+            return false;
+        for (var earlier = frame; earlier > frame - ThrowLeniency; earlier--)
+        {
+            var pressed = history.PressedOn(earlier, now);
+            if ((lp && pressed.Has(Buttons.LightKick)) || (lk && pressed.Has(Buttons.LightPunch)))
+                return true;
+        }
+        return false;
+    }
 
     private static int[,] Build(Character character)
     {
