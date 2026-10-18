@@ -249,6 +249,13 @@ public static class Scenarios
             StyleFrame: () => new UI.Screens.TitleScreen(menu: true) { Presses = { [10] = "ui_down" } }),
         new Scenario("screen-select", 1, _ => default, Captures: new[] { 5 }, Frames: 5,
             StyleFrame: () => new UI.Screens.SelectScreen()),
+
+        // Training's input display: P1 plays InputDemo (236P, a 66 dash, an MP~LP plink, a held
+        // back). F4 turns the display on (both players) at the start, and again near the end
+        // switches it to player 1 only.
+        new Scenario("training-input-display", 1, Training.InputDemo.Script, Captures: new[] { 79, 85 }, Frames: 85,
+            Setup: s => Place(s, 500, 780),
+            StyleFrame: () => new ScenarioKeys(new() { [1] = Godot.Key.F4, [82] = Godot.Key.F4 })),
         new Scenario("screen-results", 1, _ => default, Captures: new[] { 5 }, Frames: 5,
             StyleFrame: () => new UI.Screens.ResultsScreen()),
         // Pause over a match frozen mid-kick, then down twice to the move list's row; and the move list.
