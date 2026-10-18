@@ -16,8 +16,13 @@ public enum FighterAction
     // Reeling from a hit; can't act until hitstun runs out.
     Hitstun = 4,
 
-    // Performing a move; the pose comes from the move's track, not a stance pose.
-    Attack = 5,
+    // Guarding, standing or crouching: in blockstun, or holding back near an attack (proximity guard).
+    BlockStand = 5,
+    BlockCrouch = 6,
+
+    // Performing a move; the pose comes from the move's track, not a stance pose. Last, because
+    // every action before it has a stance pose at the same index.
+    Attack = 7,
 }
 
 public enum Strength
@@ -61,7 +66,10 @@ public sealed record Stats(
     int AirborneFrames,
     int LandingFrames,
     Fix PushHalfWidth,
-    Fix PushHeight);
+    Fix PushHeight,
+    // Holding back with the opponent's attack in startup or active frames and the fighters at most
+    // this far apart (feet to feet) puts you in block stance instead of walking back.
+    Fix ProximityGuard);
 
 public sealed record SkeletonSize(
     Fix Spine,
@@ -135,6 +143,10 @@ public sealed record Move(
     int PushbackBlock,
     int? HitstunOverride,
     int? BlockstunOverride,
+    // Damage dealt even when blocked. Normals have none, as in SF4. Only moves with ChipKo
+    // (specials and supers) can take the last point of health with it.
+    int Chip,
+    bool ChipKo,
     Limb HitboxLimb,
     Fix HitboxRadius,
     Fix ActiveBonus,

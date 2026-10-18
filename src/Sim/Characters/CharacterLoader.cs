@@ -18,7 +18,7 @@ public static class CharacterLoader
     };
 
     // In FighterAction order; Attack has no stance pose (it plays its move's track).
-    private static readonly string[] PoseNames = { "stand", "crouch", "walkForward", "walkBack", "hitstun" };
+    private static readonly string[] PoseNames = { "stand", "crouch", "walkForward", "walkBack", "hitstun", "blockStand", "blockCrouch" };
 
     // `json` is the character (stats, skeleton, stance poses); `movesJson` is its compiled moves
     // (tools/MoveCompiler's output), or null for a character with no moves yet.
@@ -83,7 +83,8 @@ public static class CharacterLoader
         AirborneFrames: Positive(s, "airborneFrames", h),
         LandingFrames: Positive(s, "landingFrames", h),
         PushHalfWidth: Fix.FromInt(Positive(s, "pushHalfWidth", h)),
-        PushHeight: Fix.FromInt(Positive(s, "pushHeight", h)));
+        PushHeight: Fix.FromInt(Positive(s, "pushHeight", h)),
+        ProximityGuard: Fix.FromInt(Positive(s, "proximityGuard", h)));
 
     private static SkeletonSize ReadSkeleton(JsonElement s, DataHasher h) => new(
         Spine: Fix.FromInt(Positive(s, "spine", h)),
@@ -145,6 +146,8 @@ public static class CharacterLoader
                 Guard: Parse<Guard>(m, "guard", h),
                 PushbackHit: Int(m, "pushbackHit", h),
                 PushbackBlock: Int(m, "pushbackBlock", h),
+                Chip: OptionalInt(m, "chip", h) ?? 0,
+                ChipKo: Flag(m, "chipKo", h),
                 HitstunOverride: OptionalInt(m, "hitstun", h),
                 BlockstunOverride: OptionalInt(m, "blockstun", h),
                 HitboxLimb: limb,
@@ -239,6 +242,20 @@ public static class CharacterLoader
             return null;
         }
         return IntValue(value, key, h);
+    }
+
+    // An optional true/false; missing means false.
+    private static bool Flag(JsonElement e, string key, DataHasher h)
+    {
+        var value = false;
+        if (e.TryGetProperty(key, out var element))
+        {
+            if (element.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+                throw new CharacterDataException($"'{key}' must be true or false");
+            value = element.ValueKind == JsonValueKind.True;
+        }
+        h.Add(value ? 1 : 0);
+        return value;
     }
 
     private static int IntValue(JsonElement value, string key, DataHasher? h)

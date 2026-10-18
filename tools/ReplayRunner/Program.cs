@@ -161,6 +161,31 @@ static List<FrameInput>? Scripts(string name) => name switch
         (Buttons.LightPunch, Buttons.None, 1),
         (Buttons.None, Buttons.None, 30)),
 
+    // P1 walks in and throws 5MP; P2 blocks it standing (holds back from the press on).
+    "block-stand" => Runs(
+        (Buttons.Right, Buttons.None, 46),
+        (Buttons.MediumPunch, Buttons.Right, 1),
+        (Buttons.None, Buttons.Right, 40)),
+
+    // P1 walks in and throws the low 2MK; P2 blocks it crouching.
+    "block-crouch-low" => Runs(
+        (Buttons.Right, Buttons.None, 46),
+        (Buttons.Down | Buttons.MediumKick, Buttons.Down | Buttons.Right, 1),
+        (Buttons.Down, Buttons.Down | Buttons.Right, 40)),
+
+    // The same low against a standing block: it hits.
+    "low-hits-standing-block" => Runs(
+        (Buttons.Right, Buttons.None, 46),
+        (Buttons.Down | Buttons.MediumKick, Buttons.Right, 1),
+        (Buttons.Down, Buttons.Right, 40)),
+
+    // P2 walks back from a distance, then stops in block stance when P1's 5HK starts up nearby
+    // (proximity guard), and blocks it.
+    "proximity-guard" => Runs(
+        (Buttons.Right, Buttons.None, 30),
+        (Buttons.HeavyKick, Buttons.Right, 1),
+        (Buttons.None, Buttons.Right, 40)),
+
     // Both walk in and jab on the same frame: both get hit.
     "trade" => Runs(
         (Buttons.Right, Buttons.Left, 23),

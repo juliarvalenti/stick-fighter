@@ -157,6 +157,10 @@ public class ReplayTests
     [InlineData("hit", false, true)]
     [InlineData("whiff", false, false)]
     [InlineData("trade", true, true)]
+    [InlineData("block-stand", false, false)]
+    [InlineData("block-crouch-low", false, false)]
+    [InlineData("low-hits-standing-block", false, true)]
+    [InlineData("proximity-guard", false, false)]
     public void ScriptedReplaysCoverTheirCase(string name, bool p1Hurt, bool p2Hurt)
     {
         var replay = Replay.Read(System.IO.File.ReadAllText(System.IO.Path.Combine(RepoRoot(), "replays", name + ".sfr")));

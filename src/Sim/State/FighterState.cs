@@ -4,7 +4,7 @@ namespace StickFighter.Sim;
 
 public struct FighterState
 {
-    public const int EncodedSize = 16 + 16 + 4 + 4 + 4 + 4 + 4 + 1 + 4 + 1 + 4;
+    public const int EncodedSize = 16 + 16 + 4 + 4 + 4 + 4 + 4 + 1 + 4 + 4 + 1 + 4;
 
     public FixVec2 Position;
     public FixVec2 Velocity;
@@ -27,6 +27,9 @@ public struct FighterState
     // Frames of hitstun left after this one. The fighter can't act while it's above zero.
     public int Hitstun;
 
+    // Frames of blockstun left after this one. Like hitstun, the fighter can't act, but stays guarding.
+    public int Blockstun;
+
     // Lying down: nothing hits a knocked-down fighter. Nothing knocks down yet (Knockdowns).
     public bool KnockedDown;
 
@@ -44,6 +47,7 @@ public struct FighterState
         writer.Write(Move);
         writer.Write(MoveHit);
         writer.Write(Hitstun);
+        writer.Write(Blockstun);
         writer.Write(KnockedDown);
         writer.Write(LastMoveFrame);
     }

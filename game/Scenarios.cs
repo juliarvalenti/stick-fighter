@@ -36,7 +36,19 @@ public static class Scenarios
 
     private static IReadOnlyList<Scenario> Build()
     {
-        var all = new List<Scenario>(Match) { NormalsScenario() };
+        var all = new List<Scenario>(Match)
+        {
+            Sequence("normals", GroundNormals),
+
+            // Blocking: a mid blocked standing, a low blocked crouching, and a low that hits a
+            // standing guard. P2 holds back (away from P1) throughout.
+            Sequence("blocking", new[]
+            {
+                ("5MP", Buttons.MediumPunch, Buttons.Right),
+                ("2MK", Buttons.MediumKick | Buttons.Down, Buttons.Right | Buttons.Down),
+                ("2MK", Buttons.MediumKick | Buttons.Down, Buttons.Right),
+            }),
+        };
 
         // One pose sheet per move: `sheet-5LP`, `sheet-j.HK`, ...
         foreach (var move in Sim.Characters.Characters.Placeholder.Moves)
@@ -48,29 +60,31 @@ public static class Scenarios
     // first active frame with boxes on. The fighters are reset before each one, so pushback doesn't add up.
     private const int NormalPeriod = 40;
 
-    private static readonly (string Input, Buttons Press)[] GroundNormals =
+    private static readonly (string Input, Buttons Press, Buttons Defence)[] GroundNormals =
     {
-        ("5LP", Buttons.LightPunch), ("5MP", Buttons.MediumPunch), ("5HP", Buttons.HeavyPunch),
-        ("5LK", Buttons.LightKick), ("5MK", Buttons.MediumKick), ("5HK", Buttons.HeavyKick),
-        ("2LP", Buttons.LightPunch | Buttons.Down), ("2MP", Buttons.MediumPunch | Buttons.Down), ("2HP", Buttons.HeavyPunch | Buttons.Down),
-        ("2LK", Buttons.LightKick | Buttons.Down), ("2MK", Buttons.MediumKick | Buttons.Down), ("2HK", Buttons.HeavyKick | Buttons.Down),
+        ("5LP", Buttons.LightPunch, default), ("5MP", Buttons.MediumPunch, default), ("5HP", Buttons.HeavyPunch, default),
+        ("5LK", Buttons.LightKick, default), ("5MK", Buttons.MediumKick, default), ("5HK", Buttons.HeavyKick, default),
+        ("2LP", Buttons.LightPunch | Buttons.Down, default), ("2MP", Buttons.MediumPunch | Buttons.Down, default), ("2HP", Buttons.HeavyPunch | Buttons.Down, default),
+        ("2LK", Buttons.LightKick | Buttons.Down, default), ("2MK", Buttons.MediumKick | Buttons.Down, default), ("2HK", Buttons.HeavyKick | Buttons.Down, default),
     };
 
-    private static Scenario NormalsScenario()
+    // P1 does each move in turn at point-blank while P2 holds `Defence`, captured on the move's first
+    // active frame. The fighters are reset before each one, so pushback doesn't add up.
+    private static Scenario Sequence(string name, (string Input, Buttons Press, Buttons Defence)[] steps)
     {
         var character = Sim.Characters.Characters.Placeholder;
-        var captures = new int[GroundNormals.Length];
-        for (var k = 0; k < GroundNormals.Length; k++)
-            captures[k] = k * NormalPeriod + character.FindMove(GroundNormals[k].Input)!.Startup + 1;
+        var captures = new int[steps.Length];
+        for (var k = 0; k < steps.Length; k++)
+            captures[k] = k * NormalPeriod + character.FindMove(steps[k].Input)!.Startup + 1;
 
         FrameInput Script(int frame)
         {
             var k = frame / NormalPeriod;
-            if (k >= GroundNormals.Length)
+            if (k >= steps.Length)
                 return default;
-            var press = GroundNormals[k].Press;
+            var press = steps[k].Press;
             var crouch = press & Buttons.Down;
-            return new FrameInput(frame % NormalPeriod == 1 ? press : crouch, default);
+            return new FrameInput(frame % NormalPeriod == 1 ? press : crouch, steps[k].Defence);
         }
 
         GameState Reset(GameState s)
@@ -85,7 +99,7 @@ public static class Scenarios
             return s;
         }
 
-        return new Scenario("normals", 1, Script, captures, GroundNormals.Length * NormalPeriod, Boxes: true, EachFrame: Reset);
+        return new Scenario(name, 1, Script, captures, steps.Length * NormalPeriod, Boxes: true, EachFrame: Reset);
     }
 
     private static readonly Scenario[] Match =

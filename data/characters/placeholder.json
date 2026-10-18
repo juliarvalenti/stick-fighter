@@ -14,7 +14,8 @@
     "airborneFrames": 36,
     "landingFrames": 4,
     "pushHalfWidth": 30,
-    "pushHeight": 230
+    "pushHeight": 230,
+    "proximityGuard": 180
   },
 
   "skeleton": {
@@ -42,6 +43,18 @@
       "length": 1,
       "keys": [
         { "frame": 0, "hip": [-8, -112], "angles": { "spine": -170, "neck": -120, "backShoulder": 696, "backElbow": -1386, "frontShoulder": 202, "frontElbow": -1496, "backHip": 3, "backKnee": 296, "frontHip": -293, "frontKnee": 316 } }
+      ]
+    },
+    "blockStand": {
+      "length": 1,
+      "keys": [
+        { "frame": 0, "hip": [-14, -110], "angles": { "spine": -90, "neck": 30, "backShoulder": -267, "backElbow": -1780, "frontShoulder": -545, "frontElbow": -1585, "backHip": -91, "backKnee": 424, "frontHip": -340, "frontKnee": 339 } }
+      ]
+    },
+    "blockCrouch": {
+      "length": 1,
+      "keys": [
+        { "frame": 0, "hip": [-4, -72], "angles": { "spine": -30, "neck": 10, "backShoulder": 506, "backElbow": -1824, "frontShoulder": -380, "frontElbow": -1817, "backHip": -283, "backKnee": 1106, "frontHip": -753, "frontKnee": 1146 } }
       ]
     },
     "crouch": {

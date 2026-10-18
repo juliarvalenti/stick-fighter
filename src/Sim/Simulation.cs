@@ -20,8 +20,11 @@ public static class Simulation
         var p1Before = state.Fighters[0].Position.X;
         var p2Before = state.Fighters[1].Position.X;
 
-        for (var i = 0; i < GameState.PlayerCount; i++)
-            Act(ref state, i);
+        // Decided for both before either acts, so neither player sees the other's move a frame ahead.
+        var p1Proximity = Blocking.ProximityGuard(state, 0);
+        var p2Proximity = Blocking.ProximityGuard(state, 1);
+        Act(ref state, 0, p1Proximity);
+        Act(ref state, 1, p2Proximity);
 
         Pushing.Resolve(ref state, p1Before, p2Before);
         FaceEachOther(ref state);
@@ -37,9 +40,9 @@ public static class Simulation
         state.Frame++;
     }
 
-    // One fighter's frame: reeling in hitstun, carrying on with a move, starting a normal from a
-    // (possibly buffered) press, or moving.
-    private static void Act(ref GameState state, int player)
+    // One fighter's frame: reeling in hitstun, guarding in blockstun, carrying on with a move,
+    // starting a normal from a (possibly buffered) press, guarding by proximity, or moving.
+    private static void Act(ref GameState state, int player, bool proximityGuard)
     {
         ref var fighter = ref state.Fighters[player];
         var character = Characters.Characters.Placeholder;
@@ -50,6 +53,15 @@ public static class Simulation
         {
             fighter.Hitstun--;
             Continue(ref fighter, FighterAction.Hitstun);
+            return;
+        }
+
+        // In blockstun the fighter keeps guarding and can switch between standing and crouching.
+        if (fighter.Blockstun > 0)
+        {
+            fighter.Blockstun--;
+            fighter.Velocity = FixVec2.Zero;
+            Continue(ref fighter, Blocking.HoldingDown(state, player) ? FighterAction.BlockCrouch : FighterAction.BlockStand);
             return;
         }
 
@@ -76,6 +88,15 @@ public static class Simulation
         }
 
         fighter.Move = -1;
+
+        // Holding back near an incoming attack: guard in place rather than walk away.
+        if (proximityGuard)
+        {
+            fighter.Velocity = FixVec2.Zero;
+            Continue(ref fighter, crouching ? FighterAction.BlockCrouch : FighterAction.BlockStand);
+            return;
+        }
+
         var forward = Numpad.Horizontal(direction);
         var action = crouching ? FighterAction.Crouch
             : forward > 0 ? FighterAction.WalkForward
