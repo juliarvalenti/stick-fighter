@@ -269,6 +269,14 @@ public static class Scenarios
         new Scenario("training-input-display", 1, Training.InputDemo.Script, Captures: new[] { InputDemoEnd, 85 }, Frames: 85,
             Setup: s => Place(s, 500, 780),
             StyleFrame: () => new ScenarioKeys(new() { [1] = Godot.Key.F4, [82] = Godot.Key.F4 })),
+
+        // Training's frame data (F5 on at the start): a 5MP that P2 blocks (captured once both are
+        // free); then, back at point-blank (P2 walked off holding back), a 5LP that hits.
+        new Scenario("training-frame-data", 1,
+            f => new FrameInput(f == 2 ? Buttons.MediumPunch : f == 50 ? Buttons.LightPunch : Buttons.None, f < 45 ? Buttons.Right : Buttons.None),
+            Captures: new[] { 40, 85 }, Frames: 85, Setup: s => Place(s, 610, 670),
+            EachFrame: s => s.Frame == 46 ? Place(s, 610, 670) : s,
+            StyleFrame: () => new ScenarioKeys(new() { [1] = Godot.Key.F5 })),
         new Scenario("screen-results", 1, _ => default, Captures: new[] { 5 }, Frames: 5,
             StyleFrame: () => new UI.Screens.ResultsScreen()),
         // Pause over a match frozen mid-kick, then down twice to the move list's row; and the move list.
