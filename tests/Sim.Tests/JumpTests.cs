@@ -400,7 +400,7 @@ public class JumpTests
     }
 
     [Fact]
-    public void AFighterHitInTheAirCantGuardFallsAndLandsWithRecovery()
+    public void AFighterHitInTheAirCantGuardFallsAndIsKnockedDownOnLanding()
     {
         // P2 jumps straight up in front of P1, holding back (no air blocking), and P1 anti-airs with
         // 5HP on the first frame that connects.
@@ -419,8 +419,9 @@ public class JumpTests
             Assert.Equal(0, state.Fighters[1].Blockstun);
             for (var i = 0; i < 100 && state.Fighters[1].Airborne; i++)
                 Simulation.Step(ref state, new FrameInput(default, Buttons.Right));
-            Assert.Equal(FighterAction.Landing, ActionOf(state, 1));
-            Assert.True(state.Fighters[1].AirAttackUsed, "a landing after an air hit has recovery");
+            // Landing from the fall is a soft knockdown (Knockdowns).
+            Assert.Equal(FighterAction.Knockdown, ActionOf(state, 1));
+            Assert.True(state.Fighters[1].KnockedDown);
             return;
         }
         throw new InvalidOperationException("the anti-air never hit P2 in the air");

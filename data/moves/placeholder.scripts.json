@@ -53,7 +53,7 @@
              "active: reach:front-foot opponent-shin 1.0", "lean:-13.640625", "hurt:front-foot shrink", "hitbox:front-foot 9",
              "recovery: hold:0.2", "pose:crouch-guard"] },
 
-    { "name": "Sweep", "input": "2HK", "startup": 7, "active": 4, "recovery": 21, "damage": 90, "stun": 100, "strength": "heavy", "guard": "low", "pushbackHit": 20, "pushbackBlock": 22,
+    { "name": "Sweep", "input": "2HK", "startup": 7, "active": 4, "recovery": 21, "damage": 90, "stun": 100, "strength": "heavy", "guard": "low", "pushbackHit": 20, "pushbackBlock": 22, "hardKnockdown": true,
       "do": ["startup: lean:-11.640625",
              "active: reach:front-foot opponent-shin 1.0", "lean:-19.640625", "ease:overshoot", "hitbox:front-foot 10",
              "recovery: hold:0.3", "pose:crouch-guard"] },

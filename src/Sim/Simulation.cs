@@ -87,6 +87,8 @@ public static class Simulation
             fighter.ComboDamage = 0;
         }
 
+        Knockdowns.RecoverStun(ref fighter, character.Stats);
+
         // Held in a throw, thrower or thrown: Throws.Resolve decides when it ends.
         if (fighter.Grab >= 0)
         {
@@ -130,6 +132,22 @@ public static class Simulation
             fighter.Blockstun--;
             fighter.Velocity = FixVec2.Zero;
             Continue(ref fighter, Blocking.HoldingDown(state, player) ? FighterAction.BlockCrouch : FighterAction.BlockStand);
+            return;
+        }
+
+        // A full stun gauge: once out of hitstun (and up, after a knockdown), the fighter is dizzy
+        // for DizzyFrames and the gauge resets. It can't act or guard; a hit ends it.
+        if (fighter.Dizzy == 0 && fighter.Stun >= character.Stats.Stun)
+        {
+            fighter.Dizzy = character.Stats.DizzyFrames;
+            fighter.Stun = 0;
+        }
+        if (fighter.Dizzy > 0)
+        {
+            fighter.Dizzy--;
+            fighter.Move = -1;
+            fighter.Velocity = FixVec2.Zero;
+            Continue(ref fighter, FighterAction.Dizzy);
             return;
         }
 
@@ -326,7 +344,17 @@ public static class Simulation
 
         fighter.Airborne = false;
         fighter.Hitstun = 0;
-        fighter.Juggle = 0; // landing from a juggle (a knockdown, in Knockdowns)
+
+        // Landing from a juggle fall is a soft knockdown: a quick rise (down or two buttons just
+        // before landing) gets up sooner.
+        if (fighter.Juggle > 0)
+        {
+            var stats = character.Stats;
+            var quick = Knockdowns.QuickRise(state.Inputs[player], now, stats.QuickRiseWindow);
+            Knockdowns.KnockDown(ref fighter, quick ? stats.QuickRiseFrames : stats.KnockdownFrames, stats);
+            return;
+        }
+
         fighter.Action = (int)FighterAction.Landing;
         fighter.ActionFrame = 0;
         fighter.Move = -1;

@@ -71,6 +71,8 @@ public static class Hits
             defender.ComboDamage += damage;
             defender.CounterHit = counter;
             defender.Stun += HitStates.Stun(move.Stun, hitInCombo, counter);
+            defender.StunRecovery = stats.StunRecoveryDelay;
+            defender.Dizzy = 0; // a hit ends a dizzy (the gauge was already reset)
 
             // Hitstun counts the frame of the hit, so the defender acts again move.Hitstun frames
             // after the hit lands, and on-hit advantage is exactly hitstun - active - recovery. A
@@ -90,6 +92,11 @@ public static class Hits
                 defender.Juggle = defender.Juggle == 0 ? move.JuggleStart : defender.Juggle + move.JuggleIncrease;
                 var away = defender.Position.X >= attacker.Position.X ? 1 : -1;
                 defender.Velocity = new FixVec2(stats.AirHitDrift * away, -stats.AirHitRise);
+            }
+            else if (move.HardKnockdown)
+            {
+                // A sweep: straight down, no hitstun and no quick rise.
+                Knockdowns.KnockDown(ref defender, stats.KnockdownFrames, stats);
             }
 
             Push(ref attacker, ref defender, Fix.FromInt(move.PushbackHit), state.Stage);

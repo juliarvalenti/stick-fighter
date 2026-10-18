@@ -179,6 +179,19 @@ public static class Scenarios
                 return s;
             }),
 
+        // Knockdowns and stun, boxes on. P2's stun gauge starts nearly full (950); P1's sweep (100 stun)
+        // fills it and knocks P2 down: lying there (25). A knockdown resets the gauge unless it's full,
+        // so P2 gets up dizzy, swaying (60, 80).
+        new Scenario("knockdowns", 1, f => new FrameInput(f == 1 ? Buttons.Down | Buttons.HeavyKick : f < 8 ? Buttons.Down : default, default),
+            Captures: new[] { 25, 60, 80 }, Frames: 80, Boxes: true,
+            Setup: s =>
+            {
+                s.Fighters[0].Position = new FixVec2(Fix.FromInt(610), s.Fighters[0].Position.Y);
+                s.Fighters[1].Position = new FixVec2(Fix.FromInt(670), s.Fighters[1].Position.Y);
+                s.Fighters[1].Stun = 950;
+                return s;
+            }),
+
         // The data-driven poses at minimum distance (pushboxes touching), boxes on: standing, then
         // crouching, then both walking forward into each other. The arms must not cross.
         new Scenario("poses", 1, f => f < 20 ? default : f < 40 ? new FrameInput(Buttons.Down, Buttons.Down) : WalkIn,

@@ -365,6 +365,7 @@
       "stun": 100,
       "strength": "heavy",
       "guard": "low",
+      "hardKnockdown": true,
       "pushbackHit": 20,
       "pushbackBlock": 22,
       "hitbox": { "limb": "frontShin", "radius": 10, "activeBonus": 0 },
