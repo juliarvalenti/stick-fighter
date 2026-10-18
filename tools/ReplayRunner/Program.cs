@@ -24,6 +24,7 @@ using StickFighter.Sim;
 using StickFighter.Sim.Characters;
 using StickFighter.Sim.Numerics;
 using StickFighter.Sim.Replays;
+using StickFighter.Sim.Training;
 
 if (args.Length < 2)
     return Usage();
@@ -42,10 +43,10 @@ switch (args[0])
         return Trace(args[1], int.Parse(args[2]), int.Parse(args[3]));
     case "generate" when args.Length == 4:
         return Write(args[1], Replay.Record(ulong.Parse(args[2]), Stage.Training, Walkabout(ulong.Parse(args[2]), int.Parse(args[3]))));
-    // Scripts named match-… are versus matches (rounds, timer, KO); the rest are training.
+    // Scripts named match-… are versus matches (rounds, timer, KO), dummy-… are training mode (the
+    // sandbox with health refilling, against the dummy), and the rest are sandbox.
     case "script" when args.Length == 3 && Scripts(args[2]) is { } script:
-        return Write(args[1], Replay.Record(1, Stage.Training, script,
-            args[2].StartsWith("match-", StringComparison.Ordinal) ? MatchMode.Versus : MatchMode.Training));
+        return Write(args[1], Replay.Record(1, Stage.Training, script, ScriptMode(args[2])));
     default:
         return Usage();
 }
@@ -593,8 +594,79 @@ static List<FrameInput>? Scripts(string name) => name switch
     // P1 wins one, P2 wins one, then a double KO: 2-2 and a final round, which P2 wins.
     "match-final-round" => Played(Plan.P1Kos, Plan.P2Kos, Plan.Trade, Plan.P2Kos),
 
+    // The training dummy as P2, in training mode, against P1 walking in and attacking (see
+    // AgainstDummy). Standing: two 5MPs, both hit, and the health refills after each.
+    "dummy-stand" => AgainstDummy(DummyAction.Stand, 200, attacks: new[] { Buttons.MediumPunch, Buttons.MediumPunch }),
+
+    // Crouching throughout, and hit crouching by a 5HP.
+    "dummy-crouch" => AgainstDummy(DummyAction.Crouch, 120, attacks: new[] { Buttons.HeavyPunch }),
+
+    // Neutral jumps, one after another.
+    "dummy-jump" => AgainstDummy(DummyAction.Jump, 200),
+
+    // A mid guarded standing, then a low (2MK) guarded crouching.
+    "dummy-block-all" => AgainstDummy(DummyAction.BlockAll, 200, attacks: new[] { Buttons.MediumPunch, Buttons.Down | Buttons.MediumKick }),
+
+    // Two 5MPs: the first hits, the second is guarded. After five seconds alone, another hits.
+    "dummy-block-after-first-hit" => AgainstDummy(DummyAction.BlockAfterFirstHit, 400,
+        attacks: new[] { Buttons.MediumPunch, Buttons.MediumPunch }, later: (300, Buttons.MediumPunch)),
+
+    // A recording played on a loop: walk forward for 20 frames, jab, wait. P1 stands.
+    "dummy-playback" => AgainstDummy(DummyAction.Playback, 200, recording: PlaybackRecording()),
+
     _ => null,
 };
+
+static MatchMode ScriptMode(string name) =>
+    name.StartsWith("match-", StringComparison.Ordinal) ? MatchMode.Versus
+    : name.StartsWith("dummy-", StringComparison.Ordinal) ? MatchMode.Training
+    : MatchMode.Sandbox;
+
+// P2 is the dummy; P1 walks in and throws each of `attacks` from close range once both fighters
+// are free, then stands (and from `later.Frame`, one more attack the same way).
+static List<FrameInput> AgainstDummy(DummyAction action, int frames, Buttons[]? attacks = null,
+    (int Frame, Buttons Attack)? later = null, InputRecording? recording = null)
+{
+    var dummy = new Dummy { Action = action };
+    if (recording is not null)
+        dummy.Recording = recording;
+    var first = Attacking(attacks ?? Array.Empty<Buttons>());
+    var second = Attacking(later is { } l ? new[] { l.Attack } : Array.Empty<Buttons>());
+
+    var state = GameState.NewMatch(1, Stage.Training, MatchMode.Training);
+    var inputs = new List<FrameInput>();
+    for (var f = 0; f < frames; f++)
+    {
+        var p1 = later is { } at && f >= at.Frame ? second(state) : first(state);
+        var input = new FrameInput(p1, dummy.Next(state, 1));
+        inputs.Add(input);
+        Simulation.Step(ref state, input);
+    }
+    return inputs;
+}
+
+static Func<GameState, Buttons> Attacking(Buttons[] attacks)
+{
+    var next = 0;
+    return state =>
+    {
+        var me = state.Fighters[0];
+        var them = state.Fighters[1];
+        var free = me.Action is (int)FighterAction.Stand or (int)FighterAction.WalkForward or (int)FighterAction.Crouch;
+        if (next >= attacks.Length || !free || them.Hitstun > 0 || them.Blockstun > 0)
+            return Buttons.None;
+        return Fix.Abs(them.Position.X - me.Position.X) <= Fix.FromInt(70) ? attacks[next++] : Buttons.Right;
+    };
+}
+
+// P2 walks forward (left, facing left) for 20 frames, jabs, then waits 19.
+static InputRecording PlaybackRecording()
+{
+    var recording = new InputRecording();
+    for (var f = 0; f < 40; f++)
+        recording.Add(f < 20 ? Buttons.Left : f == 20 ? Buttons.LightPunch : Buttons.None, -1);
+    return recording;
+}
 
 // A versus match played out against the live state, a plan per round, so a script needn't count
 // frames to a KO; then a second of the result. The replay is just the inputs it came to.

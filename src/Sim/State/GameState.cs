@@ -58,7 +58,7 @@ public struct GameState
 
     public static GameState NewMatch(ulong seed) => NewMatch(seed, Stage.Training);
 
-    public static GameState NewMatch(ulong seed, in Stage stage, MatchMode mode = MatchMode.Training)
+    public static GameState NewMatch(ulong seed, in Stage stage, MatchMode mode = MatchMode.Sandbox)
     {
         var state = new GameState { Rng = Rng.Create(seed), Stage = stage };
         PlaceFighters(ref state);

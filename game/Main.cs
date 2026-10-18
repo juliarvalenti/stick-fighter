@@ -333,7 +333,7 @@ public partial class Main : Node2D
             return;
         }
 
-        _state = GameState.NewMatch(_scenario.Seed, Stage.Training, _scenario.Versus ? MatchMode.Versus : MatchMode.Training);
+        _state = GameState.NewMatch(_scenario.Seed, Stage.Training, _scenario.Versus ? MatchMode.Versus : MatchMode.Sandbox);
         if (_scenario.Setup is { } setup)
             _state = setup(_state);
         if (_scenario.Versus)
