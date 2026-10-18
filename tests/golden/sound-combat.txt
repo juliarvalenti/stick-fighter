@@ -1,4 +1,6 @@
 # effects volume 80 (-3.9 dB), 6 voices
+# music volume 80 (-3.9 dB, -10 dB more paused)
+display frame    0  music Match
 frame    4  HitLight    P1  pitch 1.007
 frame   57  HitMedium   P1  pitch 0.976
 frame  108  HitHeavy    P1  pitch 0.996

@@ -72,6 +72,7 @@ public static class Scenarios
             Sparks(),
             Fireball(),
             SoundCombat(),
+            SoundMusic(),
             TrainingRoom(),
         };
 
@@ -164,6 +165,19 @@ public static class Scenarios
         return new Scenario("sound-combat", 1, Script, Array.Empty<int>(), SoundSteps.Length * SoundPeriod,
             EachFrame: Reset, SoundLog: true);
     }
+
+    // The music through the real menus: the menu loop on the title and menu, the match loop once
+    // training starts, ducked while paused and back up on resume.
+    private static Scenario SoundMusic() =>
+        new("sound-music", 1, _ => default, Array.Empty<int>(), 100, Flow: true, SoundLog: true,
+            Actions: new()
+            {
+                [10] = "ui_accept", // press start
+                [18] = "ui_down", // Training
+                [20] = "ui_accept",
+                [50] = "pause",
+                [80] = "pause", // resume
+            });
 
     private static Scenario Sparks()
     {
