@@ -17,13 +17,19 @@ public struct GameState
     public const int MaxProjectiles = 2;
 
     public const int EncodedSize =
-        4 + 16 + PlayerCount * FighterState.EncodedSize + MaxProjectiles * ProjectileState.EncodedSize;
+        4 + 16
+        + PlayerCount * InputHistory.EncodedSize
+        + PlayerCount * FighterState.EncodedSize
+        + MaxProjectiles * ProjectileState.EncodedSize;
 
     public int Frame;
 
     // Mutable struct: call it in place (`state.Rng.NextInt(…)` on a `ref` state).
     // `var r = state.Rng; r.NextInt(…)` advances a copy and the match's RNG never moves.
     public Rng Rng;
+
+    // Each player's recent input, written by Step before anything reads it.
+    public InputHistories Inputs;
 
     public FighterPair Fighters;
     public ProjectileSlots Projectiles;
@@ -43,6 +49,8 @@ public struct GameState
         writer.Write(Frame);
         writer.Write(Rng.State);
         writer.Write(Rng.Increment);
+        for (var i = 0; i < PlayerCount; i++)
+            Inputs[i].Encode(ref writer);
         for (var i = 0; i < PlayerCount; i++)
             Fighters[i].Encode(ref writer);
         for (var i = 0; i < MaxProjectiles; i++)

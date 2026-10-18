@@ -10,7 +10,7 @@ public class AllocationTests
     {
         var state = GameState.NewMatch(1);
         var buffer = new StateBuffer(8);
-        var input = new FrameInput(FrameInput.Right, FrameInput.Left);
+        var input = new FrameInput(Buttons.Right | Buttons.LightPunch, Buttons.Left);
         ulong checksum = 0;
 
         // Warm up so JIT and static initialisation don't count.

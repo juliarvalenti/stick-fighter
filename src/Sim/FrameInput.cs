@@ -1,20 +1,17 @@
 namespace StickFighter.Sim;
 
-// Both players' buttons for one frame. A placeholder until the input layer task
-// defines the real encoding; the simulation only ever sees this, never a device.
+// Both players' raw input for one frame: everything the simulation learns from the outside world.
+// The input layer in game/ builds it from devices; later the rollback layer builds it from the network.
 public struct FrameInput
 {
-    public const ushort Left = 1 << 0;
-    public const ushort Right = 1 << 1;
+    public Buttons Player1;
+    public Buttons Player2;
 
-    public ushort Player1;
-    public ushort Player2;
-
-    public FrameInput(ushort player1, ushort player2)
+    public FrameInput(Buttons player1, Buttons player2)
     {
         Player1 = player1;
         Player2 = player2;
     }
 
-    public readonly ushort For(int player) => player == 0 ? Player1 : Player2;
+    public readonly Buttons For(int player) => player == 0 ? Player1 : Player2;
 }

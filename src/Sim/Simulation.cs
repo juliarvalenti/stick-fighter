@@ -10,19 +10,37 @@ public static class Simulation
     // Advances the match by one frame. Must not allocate.
     public static void Step(ref GameState state, in FrameInput input)
     {
+        // The input layer: raw buttons are cleaned and recorded, and from here on
+        // game logic reads input only through the history.
+        for (var i = 0; i < GameState.PlayerCount; i++)
+            state.Inputs[i].Record(state.Frame, input.For(i).Cleaned());
+
         for (var i = 0; i < GameState.PlayerCount; i++)
         {
             ref var fighter = ref state.Fighters[i];
-            var buttons = input.For(i);
-            var direction = ((buttons & FrameInput.Right) != 0 ? 1 : 0) - ((buttons & FrameInput.Left) != 0 ? 1 : 0);
-            fighter.Velocity = new FixVec2(WalkSpeed * direction, Fix.Zero);
+            var buttons = state.Inputs[i].At(state.Frame, state.Frame);
+            var forward = Numpad.Horizontal(Numpad.Direction(buttons, fighter.Facing));
+            fighter.Velocity = new FixVec2(WalkSpeed * (forward * fighter.Facing), Fix.Zero);
             fighter.Position += fighter.Velocity;
             fighter.ActionFrame++;
         }
+
+        FaceEachOther(ref state);
 
         // Placeholder: draw from the RNG every frame so the rollback tests prove its state restores.
         state.Rng.NextUInt();
 
         state.Frame++;
+    }
+
+    // Both facings come from positions after movement, so neither player is processed first.
+    private static void FaceEachOther(ref GameState state)
+    {
+        var p1 = state.Fighters[0].Position.X;
+        var p2 = state.Fighters[1].Position.X;
+        if (p1 == p2)
+            return;
+        state.Fighters[0].Facing = p1 < p2 ? 1 : -1;
+        state.Fighters[1].Facing = -state.Fighters[0].Facing;
     }
 }
