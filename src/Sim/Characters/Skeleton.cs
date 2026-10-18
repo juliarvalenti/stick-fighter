@@ -35,6 +35,7 @@ public static class Skeleton
 
     private static readonly Angle Up = Angle.FromUnits(Angle.UnitsPerTurn * 3 / 4);
     private static readonly Angle HalfTurn = Angle.FromUnits(Angle.UnitsPerTurn / 2);
+    private static readonly Angle Down = Angle.FromUnits(Angle.UnitsPerTurn / 4);
 
     // Each limb's two joints, so a segment can become a hurt or hit capsule.
     public static (Joint From, Joint To) Ends(Limb limb) => limb switch
@@ -66,8 +67,9 @@ public static class Skeleton
 
         Chain(ref local, neck, down + pose.BackShoulder, pose.BackElbow, size.UpperArm, size.Forearm, Joint.BackElbow, Joint.BackHand);
         Chain(ref local, neck, down + pose.FrontShoulder, pose.FrontElbow, size.UpperArm, size.Forearm, Joint.FrontElbow, Joint.FrontHand);
-        Chain(ref local, hip, down + pose.BackHip, pose.BackKnee, size.Thigh, size.Shin, Joint.BackKnee, Joint.BackFoot);
-        Chain(ref local, hip, down + pose.FrontHip, pose.FrontKnee, size.Thigh, size.Shin, Joint.FrontKnee, Joint.FrontFoot);
+        // Legs hang from straight down, not from the spine, so leaning the torso keeps the feet planted.
+        Chain(ref local, hip, Down + pose.BackHip, pose.BackKnee, size.Thigh, size.Shin, Joint.BackKnee, Joint.BackFoot);
+        Chain(ref local, hip, Down + pose.FrontHip, pose.FrontKnee, size.Thigh, size.Shin, Joint.FrontKnee, Joint.FrontFoot);
 
         var world = new Joints();
         for (var i = 0; i < JointCount; i++)

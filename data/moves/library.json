@@ -1,0 +1,9 @@
+{
+  "comment": "Named key poses for move scripts: the only place raw joint angles appear (Angle units, 4096 per turn; see data/characters/placeholder.json for the conventions). 'guard' and 'crouch-guard' are the character's own stand and crouch poses and aren't repeated here.",
+  "poses": {
+    "windup-punch": { "hip": [-4, -112], "angles": { "spine": -60, "neck": 30, "backShoulder": 531, "backElbow": -1598, "frontShoulder": 435, "frontElbow": -1510, "backHip": -18, "backKnee": 317, "frontHip": -294, "frontKnee": 296 } },
+    "windup-kick": { "hip": [-6, -112], "angles": { "spine": -80, "neck": 40, "backShoulder": 463, "backElbow": -815, "frontShoulder": -59, "frontElbow": -1572, "backHip": -124, "backKnee": 394, "frontHip": -1055, "frontKnee": 1332 } },
+    "jump-tuck": { "hip": [0, -112], "angles": { "spine": 60, "neck": 0, "backShoulder": 579, "backElbow": -952, "frontShoulder": 500, "frontElbow": -1755, "backHip": -441, "backKnee": 1384, "frontHip": -830, "frontKnee": 1286 } },
+    "recoil": { "hip": [-8, -112], "angles": { "spine": -170, "neck": -120, "backShoulder": 696, "backElbow": -1386, "frontShoulder": 202, "frontElbow": -1496, "backHip": 3, "backKnee": 296, "frontHip": -293, "frontKnee": 316 } }
+  }
+}

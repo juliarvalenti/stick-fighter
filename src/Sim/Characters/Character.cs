@@ -100,6 +100,21 @@ public sealed record PoseTrack(int Length, ImmutableArray<PoseKey> Keys)
     }
 }
 
+public enum HurtMode
+{
+    // The limb's hurtbox shrinks (a low-profile or tucked limb).
+    Shrink,
+
+    // Projectiles pass through the limb's hurtbox.
+    IgnoreProjectiles,
+}
+
+// A change to one limb's hurtbox on frames From..To of a move. Applied when moves run.
+public sealed record HurtModifier(Limb Limb, HurtMode Mode, int From, int To);
+
+// A projectile leaves the given joint on this frame of the move.
+public sealed record Spawn(int Frame, Joint From);
+
 public sealed record Move(
     string Name,
     string Input,
@@ -117,6 +132,8 @@ public sealed record Move(
     Limb HitboxLimb,
     Fix HitboxRadius,
     Fix ActiveBonus,
+    ImmutableArray<HurtModifier> Hurt,
+    Spawn? Spawn,
     PoseTrack Track)
 {
     // Startup includes the first active frame, so frames are counted from 0.

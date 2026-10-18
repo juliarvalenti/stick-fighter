@@ -90,6 +90,13 @@ public partial class Main : Node2D
         _overlay.Visible = _scenario.Overlay;
         _overlay.Deterministic = true;
 
+        // A pose sheet replaces the match picture with every frame of one move.
+        if (_scenario.PoseSheet is { } input)
+        {
+            var move = Characters.Placeholder.FindMove(input)!;
+            AddChild(new PoseSheet(move) { ZIndex = 20 });
+        }
+
         _scenarioRun = new ScenarioRun(
             _scenario,
             Arg(args, "--out") ?? "user://scenarios",
