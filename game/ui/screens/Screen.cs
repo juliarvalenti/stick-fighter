@@ -53,7 +53,7 @@ public abstract partial class Screen : Control, IScenarioClock
         foreach (var item in items)
         {
             var row = Ui.Row(item);
-            row.Pressed += () => Chosen?.Invoke(item);
+            row.Pressed += () => Choose(item);
             into.AddChild(row);
             first ??= row;
         }

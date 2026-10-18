@@ -151,6 +151,7 @@ public partial class Main : Node2D
     {
         _flow = Flow.PressStart;
         _paused = null;
+        _training = null;
         _presenter.Visible = false;
         _state = GameState.NewMatch(MatchSeed);
         _camera.Cut();
@@ -203,10 +204,16 @@ public partial class Main : Node2D
         _settings = settings;
         _playerColors = settings.Colors(DefaultP1, DefaultP2);
         _state = GameState.NewMatch(seed, Stage.Training, settings.Mode);
-        _recorder = new ReplayRecorder(seed, Stage.Training, new DeviceInputSource(), settings.Mode);
+        _training = null;
+        _replayFromMatchStart = true;
 
-        // A flow scenario plays its scripted players instead of the devices.
-        _input = _scenario is { Flow: true } ? new Scenarios.Source(_scenario) : _recorder;
+        // A flow scenario plays its scripted players instead of the devices. In training the
+        // session sits between them and the match: player 1 plays, and the dummy is P2.
+        IInputSource players = _scenario is { Flow: true } ? new Scenarios.Source(_scenario) : new DeviceInputSource();
+        if (settings.Mode == MatchMode.Training)
+            players = StartTraining(seed, players);
+        _recorder = new ReplayRecorder(seed, Stage.Training, players, settings.Mode);
+        _input = _scenario is { Flow: true } ? players : _recorder;
         _driver = new TickDriver();
         _camera.Cut();
         _effects.Clear();
@@ -244,13 +251,17 @@ public partial class Main : Node2D
     private void Pause(UI.Screens.PauseScreen.Page page, string focus = UI.Screens.PauseScreen.Resume)
     {
         _paused = page;
-        var screen = new UI.Screens.PauseScreen(page, focus);
+        _trainingMenuOpen = false;
+        var screen = new UI.Screens.PauseScreen(page, focus, training: _training is not null);
         screen.Chosen += item =>
         {
             switch (item)
             {
                 case UI.Screens.PauseScreen.Resume:
                     Unpause();
+                    break;
+                case UI.Screens.PauseScreen.TrainingMenuItem:
+                    OpenTrainingMenu();
                     break;
                 case UI.Screens.PauseScreen.MoveListItem:
                     Pause(UI.Screens.PauseScreen.Page.MoveList);
@@ -277,6 +288,7 @@ public partial class Main : Node2D
     private void Unpause()
     {
         _paused = null;
+        _trainingMenuOpen = false;
         _pauseCheck = null;
         ShowScreen(null);
     }
@@ -287,6 +299,9 @@ public partial class Main : Node2D
     {
         switch (_flow)
         {
+            case Flow.Match when _trainingMenuOpen:
+                CloseTrainingMenu();
+                break;
             case Flow.Match when _paused is UI.Screens.PauseScreen.Page.MoveList:
                 Pause(UI.Screens.PauseScreen.Page.Menu, UI.Screens.PauseScreen.MoveListItem);
                 break;
@@ -339,6 +354,8 @@ public partial class Main : Node2D
         if (_scenario.Versus)
             _presenter.Begin();
         _input = new Scenarios.Source(_scenario);
+        if (_scenario.Training is { } training)
+            _input = StartTrainingScenario(training, _input);
         _pacer = new FramePacer(ScenarioRefreshMilliHz);
         _debugView.Visible = _scenario.Boxes;
         _debugView.ShowChecksum = false;
@@ -428,6 +445,9 @@ public partial class Main : Node2D
         _frameData.Present(_state);
         _presenter.Present(_state);
         _effects.Present(_state);
+        PresentTraining();
+        if (_scenario is { TrainingMenuAt: >= 0 } && _state.Frame == _scenario.TrainingMenuAt && _paused is null)
+            OpenTrainingMenu();
         if (_flow == Flow.Match && _paused is null && _state.Match is { Phase: MatchPhase.MatchEnd, PhaseFrame: >= UI.MatchHud.ResultsDelay })
             ShowResults();
         _clock?.At(_state.Frame);
@@ -492,6 +512,7 @@ public partial class Main : Node2D
         var stage = _state.Stage;
         var floor = stage.Floor.ToFloat();
         DrawLine(new Vector2(stage.LeftWall.ToFloat(), floor), new Vector2(stage.RightWall.ToFloat(), floor), _ink, 4);
+        DrawTrainingGrid();
 
         for (var i = 0; i < GameState.PlayerCount; i++)
             DrawFighter(_state.Fighters[i], _playerColors[i]);
@@ -548,11 +569,20 @@ public partial class Main : Node2D
             GoBack();
             GetViewport().SetInputAsHandled();
         }
+        else
+        {
+            TrainingKey(@event);
+        }
     }
 
     // Saves the match so far. Copy the file into replays/ to make it a CI test.
     private void SaveReplay()
     {
+        if (!_replayFromMatchStart)
+        {
+            GD.Print("Not saved: this training session was reset to a corner, and a replay can only start from the match start (reset to the middle first)");
+            return;
+        }
         DirAccess.MakeDirRecursiveAbsolute("user://replays");
         var path = $"user://replays/match-{Time.GetDatetimeStringFromSystem().Replace(':', '-')}.sfr";
         using var file = FileAccess.Open(path, FileAccess.ModeFlags.Write);
