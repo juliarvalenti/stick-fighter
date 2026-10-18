@@ -112,7 +112,11 @@ public partial class Main : Node2D
             _ink = Look.Ink;
             _playerColors = new[] { Look.P1, Look.P2 };
             RenderingServer.SetDefaultClearColor(Look.Paper);
-            AddChild(frame());
+
+            // Screen-anchored UI over the stage, so it stays put whatever the camera does.
+            var layer = new CanvasLayer { Layer = 5 };
+            layer.AddChild(frame());
+            AddChild(layer);
         }
 
         _scenarioRun = new ScenarioRun(
