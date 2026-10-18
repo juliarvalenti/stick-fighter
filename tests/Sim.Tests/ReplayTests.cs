@@ -138,16 +138,17 @@ public class ReplayTests
     [Theory]
     [InlineData("not-a-replay 1\nseed 1\nframes 0\nfinal 0\n")]
     [InlineData("stick-fighter-replay 99\nseed 1\ndata 00\nframes 0\nfinal 0\n")]
-    [InlineData("stick-fighter-replay 5\nseed 1\ndata 00\nstage 0 2560 600 1280\nmode training\nframes 2\ninput 0000 0000 1\nfinal 00\n")] // too few inputs
-    [InlineData("stick-fighter-replay 5\nseed 1\ndata 00\nstage 0 2560 600 1280\nmode training\nframes 1\ninput 0000 0000 1\nfinal 00\n")] // no checkpoint
-    [InlineData("stick-fighter-replay 5\nseed 1\ndata 00\nstage 0 2560 600 1280\nmode training\nframes 1\ninput 0000 0000 1\nat 0 p1 1\nfinal 00\n")] // short checkpoint
-    [InlineData("stick-fighter-replay 5\nseed 1\ndata 00\nstage 0 2560 600 1280\nmode training\nframes 0\nbogus line\n")]
-    [InlineData("stick-fighter-replay 5\nseed 1\ndata 00\nstage 0 2560 600 1280\nmode training\nframes 0\n")] // no final checksum
-    [InlineData("stick-fighter-replay 5\nseed 1\nstage 0 2560 600 1280\nmode training\nframes 0\nfinal 0\n")] // no data line
-    [InlineData("stick-fighter-replay 5\nseed 1\ndata 00\nmode training\nframes 0\nfinal 0\n")] // no stage line
-    [InlineData("stick-fighter-replay 5\nseed 1\ndata 00\nstage 0 2560 600\nmode training\nframes 0\nfinal 0\n")] // short stage line
-    [InlineData("stick-fighter-replay 5\nseed 1\ndata 00\nstage 0 2560 600 1280\nframes 0\nfinal 0\n")] // no mode line
-    [InlineData("stick-fighter-replay 5\nseed 1\ndata 00\nstage 0 2560 600 1280\nmode arcade\nframes 0\nfinal 0\n")] // unknown mode
+    [InlineData("stick-fighter-replay 6\nseed 1\ndata 00\nstage 0 2560 600 1280\nmode sandbox\nframes 2\ninput 0000 0000 1\nfinal 00\n")] // too few inputs
+    [InlineData("stick-fighter-replay 6\nseed 1\ndata 00\nstage 0 2560 600 1280\nmode sandbox\nframes 1\ninput 0000 0000 1\nfinal 00\n")] // no checkpoint
+    [InlineData("stick-fighter-replay 6\nseed 1\ndata 00\nstage 0 2560 600 1280\nmode sandbox\nframes 1\ninput 0000 0000 1\nat 0 p1 1\nfinal 00\n")] // short checkpoint
+    [InlineData("stick-fighter-replay 6\nseed 1\ndata 00\nstage 0 2560 600 1280\nmode sandbox\nframes 0\nbogus line\n")]
+    [InlineData("stick-fighter-replay 6\nseed 1\ndata 00\nstage 0 2560 600 1280\nmode sandbox\nframes 0\n")] // no final checksum
+    [InlineData("stick-fighter-replay 6\nseed 1\nstage 0 2560 600 1280\nmode sandbox\nframes 0\nfinal 0\n")] // no data line
+    [InlineData("stick-fighter-replay 6\nseed 1\ndata 00\nmode sandbox\nframes 0\nfinal 0\n")] // no stage line
+    [InlineData("stick-fighter-replay 6\nseed 1\ndata 00\nstage 0 2560 600\nmode sandbox\nframes 0\nfinal 0\n")] // short stage line
+    [InlineData("stick-fighter-replay 6\nseed 1\ndata 00\nstage 0 2560 600 1280\nframes 0\nfinal 0\n")] // no mode line
+    [InlineData("stick-fighter-replay 6\nseed 1\ndata 00\nstage 0 2560 600 1280\nmode arcade\nframes 0\nfinal 0\n")] // unknown mode
+    [InlineData("stick-fighter-replay 5\nseed 1\ndata 00\nstage 0 2560 600 1280\nmode training\nframes 0\nfinal 00\n")] // old: training meant sandbox
     [InlineData("stick-fighter-replay 4\nseed 1\ndata 00\nstage 0 2560 600 1280\nmode training\nframes 1\ninput 0000 0000 1\nchecksum 00\nfinal 00\n")] // old: rerecord it
     public void MalformedReplaysAreRejected(string text)
     {
@@ -158,9 +159,40 @@ public class ReplayTests
     [Fact]
     public void AMinimalReplayReads()
     {
-        var replay = Replay.Read("stick-fighter-replay 5\nseed 1\ndata 00\nstage 0 2560 600 1280\nmode versus\nframes 0\nfinal 00\n");
+        var replay = Replay.Read("stick-fighter-replay 6\nseed 1\ndata 00\nstage 0 2560 600 1280\nmode versus\nframes 0\nfinal 00\n");
         Assert.Equal(MatchMode.Versus, replay.Mode);
         Assert.Empty(replay.Checkpoints);
+    }
+
+    [Theory]
+    [InlineData(MatchMode.Sandbox, "sandbox")]
+    [InlineData(MatchMode.Versus, "versus")]
+    [InlineData(MatchMode.Training, "training")]
+    public void EveryModeRoundTrips(MatchMode mode, string written)
+    {
+        var replay = Replay.Record(1, Stage.Training, Recorded(70).Inputs, mode);
+        var text = replay.Write();
+        Assert.Contains($"\nmode {written}\n", text, StringComparison.Ordinal);
+        Assert.Equal(mode, Replay.Read(text).Mode);
+        Assert.Null(Replay.Read(text).Verify());
+    }
+
+    // Format 5's "training" was the sandbox: refused as it is, read as sandbox to be rerecorded,
+    // never as today's training mode.
+    [Fact]
+    public void Format5TrainingIsReadAsSandboxForRerecord()
+    {
+        var text = Replay.Record(1, Stage.Training, Recorded(70).Inputs).Write()
+            .Replace("stick-fighter-replay 6", "stick-fighter-replay 5", StringComparison.Ordinal)
+            .Replace("mode sandbox", "mode training", StringComparison.Ordinal);
+
+        var refused = Assert.Throws<FormatException>(() => Replay.Read(text));
+        Assert.Contains("sandbox", refused.Message, StringComparison.Ordinal);
+
+        var old = Replay.Read(text, allowOldVersions: true);
+        Assert.Equal(MatchMode.Sandbox, old.Mode);
+        Assert.NotEmpty(old.Checkpoints); // kept, so rerecord can say whether behavior changed
+        Assert.Null(old.Verify());
     }
 
     [Fact]

@@ -52,10 +52,10 @@ public class MatchFlowTests
     }
 
     [Fact]
-    public void TrainingHasNoIntroTimerOrRounds()
+    public void TheSandboxHasNoIntroTimerOrRounds()
     {
         var state = GameState.NewMatch(1);
-        Assert.Equal(MatchMode.Training, state.Match.Mode);
+        Assert.Equal(MatchMode.Sandbox, state.Match.Mode);
         Assert.True(MatchFlow.Fighting(state.Match));
 
         state.Fighters[1].Health = 0;
@@ -63,6 +63,58 @@ public class MatchFlowTests
         Assert.Equal(MatchPhase.Fight, state.Match.Phase);
         Assert.Equal(0, state.Match.TimerFrames);
         Assert.Equal(0, state.Match.Round);
+    }
+
+    // Training: the jab's damage stays on the bar through the hitstun, and the bar refills on the
+    // first frame the defender is free again. The sandbox never refills.
+    [Theory]
+    [InlineData(MatchMode.Training, true)]
+    [InlineData(MatchMode.Sandbox, false)]
+    public void TrainingRefillsHealthOnceTheDefenderRecovers(MatchMode mode, bool refills)
+    {
+        var state = GameState.NewMatch(1, Stage.Training, mode);
+        Close(ref state);
+        var full = Data.Stats.Health;
+        var damage = Data.FindMove("5LP")!.Damage;
+        Simulation.Step(ref state, new FrameInput(Buttons.LightPunch, default));
+
+        var damaged = false;
+        for (var i = 0; i < 40; i++)
+        {
+            Simulation.Step(ref state, default);
+            var defender = state.Fighters[1];
+            if (defender.Hitstun > 0)
+            {
+                damaged = true;
+                Assert.Equal(full - damage, defender.Health);
+            }
+            else if (damaged)
+            {
+                Assert.Equal(refills ? full : full - damage, defender.Health);
+            }
+        }
+        Assert.True(damaged, "the jab hit");
+        Assert.Equal(MatchPhase.Fight, state.Match.Phase);
+    }
+
+    [Fact]
+    public void TrainingKeepsTheDamageUpWhileAThrowAndItsKnockdownPlayOut()
+    {
+        var state = GameState.NewMatch(1, Stage.Training, MatchMode.Training);
+        Close(ref state);
+        Simulation.Step(ref state, new FrameInput(Buttons.LightPunch | Buttons.LightKick, default));
+        var lowest = Data.Stats.Health;
+        var refilledWhileDown = false;
+        for (var i = 0; i < 120; i++)
+        {
+            Simulation.Step(ref state, default);
+            var thrown = state.Fighters[1];
+            lowest = System.Math.Min(lowest, thrown.Health);
+            refilledWhileDown |= (thrown.KnockedDown || thrown.Grab >= 0) && thrown.Health == Data.Stats.Health && lowest < Data.Stats.Health;
+        }
+        Assert.True(lowest < Data.Stats.Health, "the throw did damage");
+        Assert.False(refilledWhileDown, "no refill while held or lying down");
+        Assert.Equal(Data.Stats.Health, state.Fighters[1].Health);
     }
 
     [Fact]

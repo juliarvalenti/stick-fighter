@@ -1,11 +1,13 @@
 namespace StickFighter.Sim;
 
-// Training: fighting from the first frame with no rounds, timer or KO (the default, and what every
-// test and scenario before match flow assumed). Versus: a best-of-three match.
+// Sandbox: fighting from the first frame with no rounds, timer, KO or refills (the default, and what
+// tests and scripted replays use). Versus: a best-of-three match. Training: training mode, as the
+// menu starts it: the sandbox, plus health refilling once a combo is over.
 public enum MatchMode
 {
-    Training = 0,
+    Sandbox = 0,
     Versus = 1,
+    Training = 2,
 }
 
 public enum MatchPhase
