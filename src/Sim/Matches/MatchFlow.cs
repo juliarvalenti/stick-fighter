@@ -24,10 +24,13 @@ public static class MatchFlow
     // a press in the last frames of the intro is buffered and comes out on the first fighting frame.
     public static bool Fighting(in MatchState match) => match.Phase == MatchPhase.Fight;
 
-    // After the frame's fighting: the timer, KO and time over, and moving between phases.
+    // After the frame's fighting: the timer, KO and time over, and moving between phases; in
+    // training, refilling health.
     public static void Advance(ref GameState state)
     {
         ref var match = ref state.Match;
+        if (match.Mode == MatchMode.Training)
+            RefillHealth(ref state);
         if (match.Mode != MatchMode.Versus)
             return;
 
@@ -106,6 +109,21 @@ public static class MatchFlow
         match.LastResult = RoundResult.None;
         GameState.PlaceFighters(ref state);
         Enter(ref match, MatchPhase.Intro);
+    }
+
+    // SF4's training room: health stays down while a combo is going, so its damage reads on the
+    // bar, then refills once the fighter is free again (out of hitstun, a juggle, a throw and a
+    // knockdown).
+    private static void RefillHealth(ref GameState state)
+    {
+        var full = Characters.Characters.Placeholder.Stats.Health;
+        for (var p = 0; p < GameState.PlayerCount; p++)
+        {
+            ref var fighter = ref state.Fighters[p];
+            var reeling = fighter.Hitstun > 0 || (fighter.Airborne && fighter.Juggle > 0) || fighter.Grab >= 0 || fighter.KnockedDown;
+            if (!reeling)
+                fighter.Health = full;
+        }
     }
 
     private static void Enter(ref MatchState match, MatchPhase phase)

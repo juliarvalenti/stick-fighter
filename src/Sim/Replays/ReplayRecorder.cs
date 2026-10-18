@@ -10,7 +10,7 @@ public sealed class ReplayRecorder : IInputSource
     private readonly IInputSource _source;
     private readonly List<FrameInput> _inputs = new();
 
-    public ReplayRecorder(ulong seed, in Stage stage, IInputSource source, MatchMode mode = MatchMode.Training)
+    public ReplayRecorder(ulong seed, in Stage stage, IInputSource source, MatchMode mode = MatchMode.Sandbox)
     {
         Seed = seed;
         Stage = stage;

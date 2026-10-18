@@ -26,12 +26,16 @@ public sealed record Scenario(
     Func<Godot.Control>? StyleFrame = null,
     bool Versus = false,
     bool Flow = false,
-    Dictionary<int, string>? Actions = null);
+    Dictionary<int, string>? Actions = null,
+    Action<Training.TrainingSession>? Training = null,
+    int TrainingMenuAt = -1);
 
 // A Flow scenario runs the game's own menus from the title: its frames, captures and Actions are
 // counted in display frames (the sim doesn't tick on the menus), and Actions are Godot input actions
 // ("ui_accept", "ui_down", "pause", ...) pressed on those frames and released on the next. Script
 // still plays the players' inputs once a match is on, by sim frame.
+// A Training scenario plays the real training session, set up by Training, and opens the training
+// menu on sim frame TrainingMenuAt.
 
 public static class Scenarios
 {
@@ -60,6 +64,7 @@ public static class Scenarios
             Throws(),
             VersusMatch(),
             Sparks(),
+            TrainingRoom(),
         };
 
         // One pose sheet per move: `sheet-5LP`, `sheet-j.HK`, ...
@@ -123,6 +128,41 @@ public static class Scenarios
         }
 
         return new Scenario("sparks", 1, Script, new[] { 11, 51, 91 }, 3 * SparkPeriod, EachFrame: Reset);
+    }
+
+    // Training mode through the real session: reset with the dummy in the right corner, set to block
+    // all, the floor grid on. P1 walks in and throws a low (2MK), which the dummy guards crouching
+    // (captured in the blockstun); then the training menu opens over the frozen match. P1's script
+    // is worked out by playing against the same dummy, so it walks exactly far enough.
+    private static Scenario TrainingRoom()
+    {
+        static void Setup(Training.TrainingSession session)
+        {
+            session.Dummy.Action = Sim.Training.DummyAction.BlockAll;
+            session.ResetTo = Sim.Training.ResetPosition.RightCorner;
+            session.Grid = true;
+        }
+
+        var dummy = new Sim.Training.Dummy { Action = Sim.Training.DummyAction.BlockAll };
+        var state = Sim.Training.TrainingReset.Fresh(1, Stage.Training, MatchMode.Training, Sim.Training.ResetPosition.RightCorner);
+        var p1 = new List<Buttons>();
+        int pressed = -1, blocked = -1;
+        while (blocked < 0 && p1.Count < 300)
+        {
+            var gap = Fix.Abs(state.Fighters[1].Position.X - state.Fighters[0].Position.X);
+            var press = pressed >= 0 ? Buttons.None : gap > Fix.FromInt(70) ? Buttons.Right : Buttons.Down | Buttons.MediumKick;
+            if (press.Has(Buttons.MediumKick))
+                pressed = p1.Count;
+            p1.Add(press);
+            var before = state.Fighters[1].Blockstun;
+            Simulation.Step(ref state, new FrameInput(press, dummy.Next(state, 1)));
+            if (state.Fighters[1].Blockstun > before)
+                blocked = state.Frame;
+        }
+
+        var menu = blocked + 40;
+        return new Scenario("training", 1, f => new FrameInput(f < p1.Count ? p1[f] : Buttons.None, Buttons.None),
+            Captures: new[] { blocked + 2, menu }, Frames: menu, Training: Setup, TrainingMenuAt: menu);
     }
 
     // Every ground normal, one every 40 frames, at point-blank against a standing P2, captured on its

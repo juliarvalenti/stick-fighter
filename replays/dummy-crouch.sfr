@@ -1,0 +1,12 @@
+stick-fighter-replay 6
+seed 1
+data a25ed9f5779f0a87
+stage 0 2560 600 1280
+mode training
+frames 120
+input 0008 0002 44
+input 0040 0002 1
+input 0000 0002 75
+at 59 p1 1410.7479248046875 600 1 Attack 7 1000 p2 1500 600 -1 Hitstun 0 900 match Fight 0 0 0 0
+at 119 p1 1410.7479248046875 600 1 Stand 37 1000 p2 1500 600 -1 Crouch 29 1000 match Fight 0 0 0 0
+final 20c4f7204e240ec9

@@ -16,6 +16,7 @@
     <Compile Include="../../game/training/InputLog.cs" Link="Linked/InputLog.cs" />
     <Compile Include="../../game/training/InputDemo.cs" Link="Linked/InputDemo.cs" />
     <Compile Include="../../game/training/FrameDataAnalyser.cs" Link="Linked/FrameDataAnalyser.cs" />
+    <Compile Include="../../game/training/TrainingSession.cs" Link="Linked/TrainingSession.cs" />
     <Compile Include="../../game/ui/HudModel.cs" Link="Linked/HudModel.cs" />
     <Compile Include="../../game/ui/MatchHud.cs" Link="Linked/MatchHud.cs" />
     <Compile Include="../../game/ui/HealthTrail.cs" Link="Linked/HealthTrail.cs" />

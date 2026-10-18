@@ -22,6 +22,7 @@ public partial class PauseScreen : Screen
     }
 
     public const string Resume = "Resume";
+    public const string TrainingMenuItem = "Training menu";
     public const string MoveListItem = "Move list";
     public const string CommandListItem = "Command list";
     public const string Options = "Options";
@@ -31,12 +32,15 @@ public partial class PauseScreen : Screen
 
     private readonly Page _page;
     private readonly string _focus;
+    private readonly bool _training;
 
     // `focus` is the menu row to land on, so coming back from a page returns to where it was.
-    public PauseScreen(Page page = Page.Menu, string focus = Resume)
+    // `training` adds the training menu's row (training mode only).
+    public PauseScreen(Page page = Page.Menu, string focus = Resume, bool training = false)
     {
         _page = page;
         _focus = focus;
+        _training = training;
     }
 
     // The old way to ask for the move list page, kept for the kit's screen scenarios.
@@ -71,7 +75,10 @@ public partial class PauseScreen : Screen
         var column = new VBoxContainer();
         panel.AddChild(column);
         column.AddChild(new Label { Text = "PAUSED", ThemeTypeVariation = UiTheme.Heading, HorizontalAlignment = HorizontalAlignment.Center });
-        Menu(column, Resume, MoveListItem, CommandListItem, Options, Quit);
+        if (_training)
+            Menu(column, Resume, TrainingMenuItem, MoveListItem, CommandListItem, Options, Quit);
+        else
+            Menu(column, Resume, MoveListItem, CommandListItem, Options, Quit);
         AddChild(panel);
         CenterAt(panel, 120);
 
