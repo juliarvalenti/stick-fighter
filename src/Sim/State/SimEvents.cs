@@ -13,6 +13,9 @@ public enum EventKind
     Throw = 4,
     Knockdown = 5,
     Ko = 6,
+
+    // Two fireballs met and cancelled out.
+    Clash = 7,
 }
 
 // One event: when, what, who did it to whom with which move (-1 for none), and where (the contact

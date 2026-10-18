@@ -45,6 +45,9 @@ public static class Simulation
         Pushing.Resolve(ref state, p1Before, p2Before);
         FaceEachOther(ref state);
 
+        // Fireballs fly on, and any thrown this frame appear at the hand.
+        Projectiles.Step(ref state);
+
         if (fighting)
         {
             // Throws before strikes: a fighter grabbed this frame has no hitbox, so a throw beats a strike.
@@ -85,6 +88,8 @@ public static class Simulation
         {
             fighter.ComboHits = 0;
             fighter.ComboDamage = 0;
+            fighter.ComboMoves = 0;
+            fighter.ComboKey = 0;
         }
 
         Knockdowns.RecoverStun(ref fighter, character.Stats);
@@ -226,7 +231,16 @@ public static class Simulation
             return;
         }
 
-        // Free to act. Normals don't cancel into each other yet (Specials, cancels, links).
+        // Free to act. A special comes out ahead of the normal its button would give. Normals don't
+        // cancel into each other or into specials yet (cancels, links).
+        var special = Specials.FireballStrength(state, player, fighter.LastMoveFrame);
+        if (special >= 0)
+        {
+            StartMove(ref fighter, Specials.Fireball, now, backThrow: false);
+            fighter.SpecialStrength = special;
+            return;
+        }
+
         var crouching = Numpad.Vertical(direction) < 0;
         var wasLow = IsLow(fighter, character);
         var move = BufferedNormal(state, history, fighter.LastMoveFrame, crouching ? NormalStance.Crouching : NormalStance.Standing);

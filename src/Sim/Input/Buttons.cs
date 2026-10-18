@@ -21,6 +21,7 @@ public enum Buttons : ushort
 
     Directions = Up | Down | Left | Right,
     Attacks = LightPunch | MediumPunch | HeavyPunch | LightKick | MediumKick | HeavyKick,
+    Punches = LightPunch | MediumPunch | HeavyPunch,
 }
 
 public static class ButtonsExtensions

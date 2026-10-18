@@ -84,7 +84,7 @@
       "do": ["active: reach:both-hands opponent-chest 0.8", "lean:14", "hitbox:both-hands 8",
              "recovery: hold:0.15", "lean:4", "pose:guard"] },
 
-    { "name": "Fireball", "input": "236P", "startup": 13, "active": 2, "recovery": 31, "damage": 60, "stun": 100, "strength": "medium", "guard": "mid", "pushbackHit": 16, "pushbackBlock": 18,
+    { "name": "Fireball", "input": "236P", "startup": 13, "active": 2, "recovery": 31, "damage": 60, "stun": 100, "strength": "medium", "guard": "mid", "pushbackHit": 16, "pushbackBlock": 18, "chip": 15, "chipKo": true,
       "do": ["startup: pose:windup-punch", "reach:both-hands hip 0.4", "lean:-8",
              "active: reach:both-hands opponent-chest 1.0", "lean:6", "ease:snap", "spawn:projectile from:both-hands", "hitbox:both-hands 8",
              "recovery: hold:0.3", "pose:guard"] }

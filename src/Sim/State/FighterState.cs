@@ -4,7 +4,7 @@ namespace StickFighter.Sim;
 
 public struct FighterState
 {
-    public const int EncodedSize = 16 + 16 + 4 + 4 + 4 + 4 + 4 + 1 + 4 + 4 + 1 + 4 + 4 + 4 + 4 + 1 + 1 + 1 + 1 + 4 + 4 + 1 + 4 + 4 + 4 + 4;
+    public const int EncodedSize = 16 + 16 + 4 + 4 + 4 + 4 + 4 + 1 + 4 + 4 + 1 + 4 + 4 + 4 + 4 + 1 + 1 + 1 + 1 + 4 + 4 + 1 + 4 + 4 + 4 + 4 + 4 + 4 + 4;
 
     public FixVec2 Position;
     public FixVec2 Velocity;
@@ -66,6 +66,15 @@ public struct FighterState
     public int ComboHits;
     public int ComboDamage;
 
+    // Combo scaling counts moves, not hits (a move that hits twice is one step): how many moves have
+    // hit in this combo, and which one hit last (Hits.ComboKey).
+    public int ComboMoves;
+    public int ComboKey;
+
+    // The strength of the special being performed (0 light, 1 medium, 2 heavy: which punch), for its
+    // projectile's speed.
+    public int SpecialStrength;
+
     // The last hit this fighter took was a counter hit (landed in the startup of its own attack).
     // The HUD's COUNTER callout reads it.
     public bool CounterHit;
@@ -107,6 +116,9 @@ public struct FighterState
         writer.Write(AirAttackUsed);
         writer.Write(ComboHits);
         writer.Write(ComboDamage);
+        writer.Write(ComboMoves);
+        writer.Write(ComboKey);
+        writer.Write(SpecialStrength);
         writer.Write(CounterHit);
         writer.Write(Juggle);
         writer.Write(Stun);

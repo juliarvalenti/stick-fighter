@@ -5,9 +5,9 @@ using StickFighter.Sim.Combat;
 namespace StickFighter.Menus;
 
 // The moves a player can actually do right now: the ones the sim's own input tables reach. That's
-// every normal (each attack button, standing, crouching and in the air) and the throw. A move in the
-// data with no way in yet (the fireball, 236P, until Specials adds motion inputs) isn't listed, so
-// the move list never promises what the game can't do. When Specials adds its table, add it here.
+// every normal (each attack button, standing, crouching and in the air), the throw, and the specials
+// (Combat.Specials: the fireball). A move in the data with no way in isn't listed, so the move list
+// never promises what the game can't do. A new special goes here when Specials learns its motion.
 public static class Triggerable
 {
     private static readonly Buttons[] Attacks =
@@ -31,6 +31,8 @@ public static class Triggerable
         }
         if (Normals.Throw >= 0)
             moves.Add(Normals.Throw);
+        if (Specials.Fireball >= 0)
+            moves.Add(Specials.Fireball);
         return moves;
     }
 }

@@ -60,6 +60,7 @@ public static class Scenarios
             Throws(),
             VersusMatch(),
             Sparks(),
+            Fireball(),
         };
 
         // One pose sheet per move: `sheet-5LP`, `sheet-j.HK`, ...
@@ -123,6 +124,60 @@ public static class Scenarios
         }
 
         return new Scenario("sparks", 1, Script, new[] { 11, 51, 91 }, 3 * SparkPeriod, EachFrame: Reset);
+    }
+
+    // The fireball, from a reset 400 px apart, two parts of FireballPeriod frames. First P1 throws a
+    // heavy one: the throw as it leaves the hand, in flight, and its hit spark on P2. Then both throw a
+    // light one on the same frame, and they cancel out in the middle. The captures are found by
+    // playing the script, like the match's.
+    private const int FireballPeriod = 90;
+
+    private static Scenario Fireball()
+    {
+        var qcf = new[] { Buttons.Down, Buttons.Down | Buttons.Right, Buttons.Right };
+        var mirrored = new[] { Buttons.Down, Buttons.Down | Buttons.Left, Buttons.Left };
+
+        FrameInput Script(int frame)
+        {
+            var k = frame / FireballPeriod;
+            var f = frame % FireballPeriod - 1;
+            if (f < 0 || f > 2 || k > 1)
+                return default;
+            var p1 = qcf[f] | (f == 2 ? (k == 0 ? Buttons.HeavyPunch : Buttons.LightPunch) : default);
+            var p2 = k == 1 ? mirrored[f] | (f == 2 ? Buttons.LightPunch : default) : default;
+            return new FrameInput(p1, p2);
+        }
+
+        GameState Reset(GameState s)
+        {
+            if (s.Frame % FireballPeriod != 0 || s.Frame / FireballPeriod >= 2)
+                return s;
+            var fresh = GameState.NewMatch(1);
+            s.Fighters[0] = fresh.Fighters[0];
+            s.Fighters[1] = fresh.Fighters[1];
+            s.Projectiles = fresh.Projectiles;
+            s.Fighters[0].Position = new FixVec2(Fix.FromInt(440), s.Fighters[0].Position.Y);
+            s.Fighters[1].Position = new FixVec2(Fix.FromInt(840), s.Fighters[1].Position.Y);
+            return s;
+        }
+
+        // Play it to find the frames: the fireball's first frame out, its hit, and the clash.
+        var state = GameState.NewMatch(1);
+        int thrown = -1, hit = -1, clash = -1;
+        for (var frame = 0; frame < 2 * FireballPeriod; frame++)
+        {
+            state = Reset(state);
+            var health = state.Fighters[1].Health;
+            Simulation.Step(ref state, Script(frame));
+            if (thrown < 0 && state.Projectiles[0].Active)
+                thrown = state.Frame;
+            if (hit < 0 && state.Fighters[1].Health < health)
+                hit = state.Frame;
+            if (clash < 0 && frame >= FireballPeriod && state.NextEvent > 0 && state.Events[state.NextEvent - 1] is { Kind: EventKind.Clash } e && e.Frame == frame)
+                clash = state.Frame;
+        }
+
+        return new Scenario("fireball", 1, Script, new[] { thrown, thrown + 10, hit + 3, clash + 3 }, 2 * FireballPeriod, EachFrame: Reset);
     }
 
     // Every ground normal, one every 40 frames, at point-blank against a standing P2, captured on its

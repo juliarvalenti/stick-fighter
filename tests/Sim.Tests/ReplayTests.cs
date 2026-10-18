@@ -248,6 +248,15 @@ public class ReplayTests
     [InlineData("sweep-knockdown", false, true)]
     [InlineData("quick-rise", true, false)]
     [InlineData("dizzy", false, true)]
+    [InlineData("fireball-hit", false, true)]
+    [InlineData("fireball-block-chip", false, true)]
+    [InlineData("fireball-chip-ko", false, true)]
+    [InlineData("fireball-clash", false, false)]
+    [InlineData("fireball-one-on-screen", false, true)]
+    [InlineData("motion-lenient", false, true)]
+    [InlineData("negative-edge", false, true)]
+    [InlineData("fireball-separation-limit", false, true)]
+    [InlineData("throw-in-blockstun", false, true)]
     [InlineData("throw", false, true)]
     [InlineData("throw-back", false, true)]
     [InlineData("throw-meaty", false, true)]
@@ -497,6 +506,112 @@ public class ReplayTests
         Assert.Equal(0, states[dizzy].Fighters[1].Stun);
         var stats = Characters.Characters.Placeholder.Stats;
         Assert.Equal(stats.DizzyFrames, UnfrozenWhile(states, dizzy, s => s.Fighters[1].Action == (int)Characters.FighterAction.Dizzy));
+    }
+
+    // Specials. Every frame on which P1 was starting or doing the fireball.
+    private static bool ThrewAFireball(System.Collections.Generic.List<GameState> states) =>
+        states.Exists(s => s.Fighters[0].Move == Specials.Fireball);
+
+    private static bool FireballOut(in GameState s, int owner) => Projectiles.HasOneOut(s, owner);
+
+    [Fact]
+    public void TheFireballHitReplayHitsOnce()
+    {
+        var (states, _) = Play("fireball-hit");
+        Assert.True(states.Exists(s => FireballOut(s, 0)));
+        var (_, damage) = Assert.Single(Hits(states, 1));
+        Assert.Equal(Characters.Characters.Placeholder.FindMove("236P")!.Damage, damage);
+    }
+
+    [Fact]
+    public void TheBlockedFireballChips()
+    {
+        var (states, _) = Play("fireball-block-chip");
+        var (frame, damage) = Assert.Single(Hits(states, 1));
+        Assert.Equal(Characters.Characters.Placeholder.FindMove("236P")!.Chip, damage);
+        Assert.True(states[frame].Fighters[1].Blockstun > 0, "blocked, not hit");
+    }
+
+    [Fact]
+    public void TheChipKoReplayEndsOnABlock()
+    {
+        var (states, _) = Play("fireball-chip-ko");
+        var ko = states.FindIndex(s => s.Fighters[1].Health == 0);
+        Assert.True(ko > 0, "P2 was chipped out");
+        Assert.True(states[ko].Fighters[1].Blockstun > 0, "the last point went on a block");
+        var chip = Characters.Characters.Placeholder.FindMove("236P")!.Chip;
+        Assert.All(Hits(states, 1), h => Assert.True(h.Damage <= chip, "every point came from chip")); // the last one may be what was left
+    }
+
+    [Fact]
+    public void TheClashReplayCancelsBothFireballs()
+    {
+        var (states, _) = Play("fireball-clash");
+        Assert.True(states.Exists(s => FireballOut(s, 0) && FireballOut(s, 1)), "both were thrown");
+        Assert.True(states.Exists(s => HasEvent(s, EventKind.Clash)));
+        Assert.False(FireballOut(states[^1], 0) || FireballOut(states[^1], 1));
+    }
+
+    private static bool HasEvent(in GameState state, EventKind kind)
+    {
+        for (var slot = 0; slot < SimEventRing.Capacity; slot++)
+        {
+            if (state.Events[slot].Kind == kind)
+                return true;
+        }
+        return false;
+    }
+
+    // The second motion, with the first fireball still out, gives a jab; only one fireball ever flies.
+    [Fact]
+    public void TheOneOnScreenReplayGetsAJabNotASecondFireball()
+    {
+        var (states, _) = Play("fireball-one-on-screen");
+        var jab = Characters.Characters.Placeholder.Moves.IndexOf(Characters.Characters.Placeholder.FindMove("5LP")!);
+        Assert.True(states.Exists(s => s.Fighters[0].Move == jab && FireballOut(s, 0)), "a jab while the fireball flew");
+        Assert.All(states, s => Assert.False(s.Projectiles[0].Active && s.Projectiles[1].Active));
+    }
+
+    [Theory]
+    [InlineData("motion-lenient", 1)]
+    [InlineData("negative-edge", 2)]
+    public void SloppyAndNegativeEdgeMotionsThrowAFireball(string name, int strength)
+    {
+        var (states, _) = Play(name);
+        var started = states.Find(s => s.Fighters[0].Move == Specials.Fireball);
+        Assert.True(ThrewAFireball(states));
+        Assert.Equal(strength, started.Fighters[0].SpecialStrength);
+        Assert.Single(Hits(states, 1));
+    }
+
+    // Owed from Normals: hit at the separation limit, P2 stays within it and P1 isn't moved.
+    [Fact]
+    public void AFireballAtTheSeparationLimitDoesntDragTheThrower()
+    {
+        var (states, _) = Play("fireball-separation-limit");
+        var thrown = states.FindIndex(s => s.Fighters[0].Move == Specials.Fireball);
+        var (hit, _) = Assert.Single(Hits(states, 1));
+        var limit = Collision.Pushing.MaxGap(states[hit].Stage);
+        for (var i = thrown; i < states.Count; i++)
+        {
+            Assert.Equal(states[thrown].Fighters[0].Position.X, states[i].Fighters[0].Position.X);
+            Assert.True(states[i].Fighters[1].Position.X - states[i].Fighters[0].Position.X <= limit);
+        }
+    }
+
+    // Owed from Throws: P1's throw is active in range while P2 is still in blockstun from the
+    // fireball, and it whiffs; P2 takes only the chip.
+    [Fact]
+    public void AThrowOnAFighterInFullBlockstunFails()
+    {
+        var (states, _) = Play("throw-in-blockstun");
+        var throwMove = Characters.Characters.Placeholder.FindMove("LP+LK")!;
+        var tried = states.FindIndex(1, s => s.Fighters[0].Move == Normals.Throw && throwMove.IsActive(s.Fighters[0].ActionFrame));
+        Assert.True(tried > 0, "the throw was active");
+        Assert.True(states[tried - 1].Fighters[1].Blockstun > 0, "P2 was in blockstun as that frame began");
+        Assert.True(states[tried].Fighters[1].Position.X - states[tried].Fighters[0].Position.X <= Characters.Characters.Placeholder.Stats.ThrowRange);
+        Assert.DoesNotContain(states, s => s.Fighters[1].Action == (int)Characters.FighterAction.Thrown);
+        Assert.Equal(FullHealth - Characters.Characters.Placeholder.FindMove("236P")!.Chip, states[^1].Fighters[1].Health);
     }
 
     [Fact]

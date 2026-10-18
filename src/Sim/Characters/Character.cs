@@ -151,7 +151,14 @@ public sealed record Stats(
     int QuickRiseWindow,
     int DizzyFrames,
     int StunRecoveryDelay,
-    int StunRecoveryRate);
+    int StunRecoveryRate,
+    // Specials: a motion completes within MotionWindow frames, and its button may come up to
+    // MotionButtonLeniency frames after the last direction. A fireball flies at its strength's speed.
+    int MotionWindow,
+    int MotionButtonLeniency,
+    Fix ProjectileSpeedLight,
+    Fix ProjectileSpeedMedium,
+    Fix ProjectileSpeedHeavy);
 
 public sealed record SkeletonSize(
     Fix Spine,
