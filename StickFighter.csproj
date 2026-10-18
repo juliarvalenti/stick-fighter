@@ -1,0 +1,21 @@
+<Project Sdk="Godot.NET.Sdk/4.7.2">
+  <!-- Presentation: Godot nodes that draw the simulation and poll input. -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <RootNamespace>StickFighter</RootNamespace>
+  </PropertyGroup>
+
+  <!-- The simulation and its tests are their own projects; keep them out of this one. -->
+  <ItemGroup>
+    <Compile Remove="src/**" />
+    <Compile Remove="tests/**" />
+    <Compile Remove="build/**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="src/Sim/Sim.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  GODOT_VERSION: 4.7.2
+  DOTNET_VERSION: 8.0.x
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  DOTNET_NOLOGO: 1
+
+jobs:
+  sim-tests:
+    name: Simulation tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+      - run: dotnet test tests/Sim.Tests/Sim.Tests.csproj
+
+  godot-smoke:
+    name: Godot headless smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+      - name: Install Godot
+        run: |
+          name="Godot_v${GODOT_VERSION}-stable_mono_linux_x86_64"
+          curl -fsSL -o godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/${name}.zip"
+          unzip -q godot.zip -d "$HOME/godot"
+          echo "GODOT=$HOME/godot/${name}/Godot_v${GODOT_VERSION}-stable_mono_linux.x86_64" >> "$GITHUB_ENV"
+      - run: dotnet build StickFighter.sln
+      - run: $GODOT --headless --import
+      - name: Run the main scene headless
+        shell: bash  # sets pipefail, so a Godot crash fails the step even through tee
+        run: |
+          timeout 120 $GODOT --headless --path . --quit-after 600 -- --smoke | tee smoke.log
+          grep -q "smoke ok" smoke.log
+
+  macos-build:
+    name: macOS build
+    runs-on: macos-latest
+    needs: [sim-tests, godot-smoke]
+    # Pushes to main, or run by hand (workflow_dispatch) to try the export on a branch.
+    if: github.event_name != 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+      - name: Cache export templates
+        id: templates
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Application Support/Godot/export_templates/${{ env.GODOT_VERSION }}.stable.mono
+          key: godot-templates-mono-${{ env.GODOT_VERSION }}
+      - name: Install Godot
+        run: |
+          curl -fsSL -o godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_mono_macos.universal.zip"
+          unzip -q godot.zip -d "$HOME/godot"
+          echo "GODOT=$HOME/godot/Godot_mono.app/Contents/MacOS/Godot" >> "$GITHUB_ENV"
+      - name: Install export templates
+        if: steps.templates.outputs.cache-hit != 'true'
+        run: |
+          curl -fsSL -o templates.tpz "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_mono_export_templates.tpz"
+          unzip -q templates.tpz -d templates
+          dest="$HOME/Library/Application Support/Godot/export_templates/${GODOT_VERSION}.stable.mono"
+          mkdir -p "$dest"
+          mv templates/templates/* "$dest/"
+      - run: $GODOT --headless --import
+      - name: Export
+        run: |
+          mkdir -p build
+          $GODOT --headless --export-release "macOS" build/StickFighter.zip
+          test -s build/StickFighter.zip
+      # The zip keeps the app's executable bits, which a bare .app upload would lose.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: StickFighter-macOS-${{ github.sha }}
+          path: build/StickFighter.zip
+          retention-days: 30

@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Simulation: deterministic game logic. Plain .NET, no Godot types. -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <RootNamespace>StickFighter.Sim</RootNamespace>
+    <AssemblyName>StickFighter.Sim</AssemblyName>
+  </PropertyGroup>
+</Project>
