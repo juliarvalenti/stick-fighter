@@ -49,7 +49,7 @@
              "recovery: hold:0.2", "pose:crouch-guard"] },
 
     { "name": "Crouching medium kick", "input": "2MK", "startup": 5, "active": 5, "recovery": 12, "damage": 60, "stun": 100, "strength": "medium", "guard": "low", "pushbackHit": 16, "pushbackBlock": 18, "blockstun": 15,
-      "do": ["startup: reach:front-foot opponent-shin 0.5",
+      "do": ["startup: reach:front-foot opponent-shin 0.5", "lean:18",
              "active: reach:front-foot opponent-shin 1.0", "lean:18", "hurt:front-foot shrink", "hitbox:front-foot 9",
              "recovery: hold:0.2", "pose:crouch-guard"] },
 

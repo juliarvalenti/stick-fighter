@@ -69,11 +69,11 @@
       "length": 40,
       "pushHeight": 150,
       "keys": [
-        { "frame": 0, "hip": [-58, -40], "angles": { "spine": 343, "neck": 283, "backShoulder": 422, "backElbow": -1763, "frontShoulder": -39, "frontElbow": -1812, "backHip": -735, "backKnee": 1597, "frontHip": -1176, "frontKnee": 927 } },
-        { "frame": 10, "hip": [-58, -39], "angles": { "spine": 343, "neck": 283, "backShoulder": 422, "backElbow": -1763, "frontShoulder": -39, "frontElbow": -1812, "backHip": -739, "backKnee": 1609, "frontHip": -1186, "frontKnee": 934 } },
-        { "frame": 15, "hip": [-58, -38], "angles": { "spine": 343, "neck": 283, "backShoulder": 422, "backElbow": -1763, "frontShoulder": -39, "frontElbow": -1812, "backHip": -743, "backKnee": 1620, "frontHip": -1196, "frontKnee": 942 } },
-        { "frame": 30, "hip": [-58, -39], "angles": { "spine": 343, "neck": 283, "backShoulder": 422, "backElbow": -1763, "frontShoulder": -39, "frontElbow": -1812, "backHip": -739, "backKnee": 1609, "frontHip": -1186, "frontKnee": 934 } },
-        { "frame": 35, "hip": [-58, -40], "angles": { "spine": 343, "neck": 283, "backShoulder": 422, "backElbow": -1763, "frontShoulder": -39, "frontElbow": -1812, "backHip": -735, "backKnee": 1597, "frontHip": -1176, "frontKnee": 927 } }
+        { "frame": 0, "hip": [-60, -30], "angles": { "spine": 360, "neck": -132, "backShoulder": 405, "backElbow": -1763, "frontShoulder": -56, "frontElbow": -1812, "backHip": -771, "backKnee": 1713, "frontHip": -1266, "frontKnee": 962 } },
+        { "frame": 10, "hip": [-60, -29], "angles": { "spine": 360, "neck": -132, "backShoulder": 405, "backElbow": -1763, "frontShoulder": -56, "frontElbow": -1812, "backHip": -774, "backKnee": 1724, "frontHip": -1276, "frontKnee": 968 } },
+        { "frame": 15, "hip": [-60, -28], "angles": { "spine": 360, "neck": -132, "backShoulder": 405, "backElbow": -1763, "frontShoulder": -56, "frontElbow": -1812, "backHip": -776, "backKnee": 1736, "frontHip": -1285, "frontKnee": 973 } },
+        { "frame": 30, "hip": [-60, -29], "angles": { "spine": 360, "neck": -132, "backShoulder": 405, "backElbow": -1763, "frontShoulder": -56, "frontElbow": -1812, "backHip": -774, "backKnee": 1724, "frontHip": -1276, "frontKnee": 968 } },
+        { "frame": 35, "hip": [-60, -30], "angles": { "spine": 360, "neck": -132, "backShoulder": 405, "backElbow": -1763, "frontShoulder": -56, "frontElbow": -1812, "backHip": -771, "backKnee": 1713, "frontHip": -1266, "frontKnee": 962 } }
       ]
     },
     "crouchDown": {
