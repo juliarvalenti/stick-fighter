@@ -1,11 +1,14 @@
 // Headless replay runner.
 //
 //   dotnet run --project tools/ReplayRunner -- check replays/          every *.sfr must reproduce
+//   dotnet run --project tools/ReplayRunner -- synctest replays/       every frame survives rollback
 //   dotnet run --project tools/ReplayRunner -- rerecord replays/       after a deliberate sim change
 //   dotnet run --project tools/ReplayRunner -- generate out.sfr SEED FRAMES
 //   dotnet run --project tools/ReplayRunner -- script out.sfr NAME      a scripted match, see Scripts
 //
 // check prints the first diverging frame of each failing replay and exits 1 if any fail.
+// synctest plays each replay's inputs, rolling back 1 to 8 frames after every frame (see SyncTest),
+// and exits 1 if any resimulated frame comes out different.
 // rerecord keeps each replay's inputs and rewrites its checksums; review the diff, since this is
 // how an intended behavior change gets accepted.
 
@@ -24,6 +27,8 @@ switch (args[0])
 {
     case "check":
         return Check(args[1]);
+    case "synctest":
+        return SyncTestAll(args[1]);
     case "rerecord":
         return Rerecord(args[1]);
     case "generate" when args.Length == 4:
@@ -75,6 +80,31 @@ static int Check(string folder)
         failures++;
         Console.WriteLine($"FAIL {file}  diverges at frame {frame}: expected {expected:x16}, got {actual:x16}");
         Console.WriteLine($"     inputs on that frame: p1 {replay.Inputs[frame].Player1}, p2 {replay.Inputs[frame].Player2}");
+    }
+    return failures == 0 ? 0 : 1;
+}
+
+static int SyncTestAll(string folder)
+{
+    var files = Files(folder);
+    if (files.Length == 0)
+    {
+        Console.WriteLine($"FAIL no replays in {folder}");
+        return 1;
+    }
+
+    var failures = 0;
+    foreach (var file in files)
+    {
+        var replay = Replay.Read(File.ReadAllText(file));
+        if (SyncTest.Run(replay.Seed, replay.Stage, replay.Inputs) is { } failure)
+        {
+            failures++;
+            Console.WriteLine($"FAIL {file}  {failure}");
+            Console.WriteLine($"     inputs on that frame: p1 {replay.Inputs[failure.Frame].Player1}, p2 {replay.Inputs[failure.Frame].Player2}");
+            continue;
+        }
+        Console.WriteLine($"ok   {file}  {replay.Frames} frames, rolled back 1-{SyncTest.MaxRollback} after each");
     }
     return failures == 0 ? 0 : 1;
 }
@@ -313,6 +343,6 @@ static int Write(string file, Replay replay)
 
 static int Usage()
 {
-    Console.WriteLine("usage: ReplayRunner check|rerecord <folder> | generate <file> <seed> <frames> | script <file> <name>");
+    Console.WriteLine("usage: ReplayRunner check|synctest|rerecord <folder> | generate <file> <seed> <frames> | script <file> <name>");
     return 2;
 }

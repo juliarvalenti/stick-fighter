@@ -1,0 +1,76 @@
+using System.Collections.Generic;
+using StickFighter.Sim.Replays;
+using Xunit;
+
+namespace StickFighter.Sim.Tests;
+
+public class SyncTestTests
+{
+    // P1 walks right then left, a frame each, while P2 jabs now and then: no input is held for two
+    // frames running, so a held (predicted) input never occurs in the real match.
+    private static List<FrameInput> Alternating(int frames)
+    {
+        var inputs = new List<FrameInput>();
+        for (var i = 0; i < frames; i++)
+            inputs.Add(new FrameInput(i % 2 == 0 ? Buttons.Right : Buttons.Left, i % 7 == 3 ? Buttons.LightPunch : Buttons.None));
+        return inputs;
+    }
+
+    [Fact]
+    public void TheRealSimulationSurvivesRollback()
+    {
+        Assert.Null(SyncTest.Run(1, Stage.Training, Alternating(120)));
+    }
+
+    // A step that counts its calls outside GameState: resimulating a frame is another call, so the
+    // count, and the state it touches, comes out different the first time a frame is rolled back.
+    [Fact]
+    public void StateOutsideGameStateIsCaught()
+    {
+        var calls = 0;
+        Stepper leaky = (ref GameState state, in FrameInput input) =>
+        {
+            Simulation.Step(ref state, input);
+            if (++calls % 5 == 0)
+                state.Fighters[0].Health--;
+        };
+
+        var failure = SyncTest.Run(1, Stage.Training, Alternating(60), leaky);
+        Assert.NotNull(failure);
+        Assert.Equal(1, failure.Value.Depth);
+        Assert.False(failure.Value.Mispredicted);
+    }
+
+    // A step that remembers, outside GameState, whether it ever saw the same input three frames
+    // running. The real match never holds an input, so rolling back on the same inputs never sets it;
+    // only a misprediction (a held input) does, and the correction then comes out different.
+    [Fact]
+    public void ATraceLeftByAMispredictionIsCaught()
+    {
+        var last = default(FrameInput);
+        var run = 0;
+        var tainted = false;
+        Stepper leaky = (ref GameState state, in FrameInput input) =>
+        {
+            run = input.Player1 == last.Player1 && input.Player2 == last.Player2 ? run + 1 : 1;
+            last = input;
+            tainted |= run >= 3;
+            Simulation.Step(ref state, input);
+            if (tainted)
+                state.Fighters[0].Health--;
+        };
+
+        var failure = SyncTest.Run(1, Stage.Training, Alternating(60), leaky);
+        Assert.NotNull(failure);
+        Assert.True(failure.Value.Mispredicted);
+    }
+
+    [Fact]
+    public void AFailureSaysWhereAndHow()
+    {
+        var failure = new SyncTest.Failure(41, 3, true, 0xabc, 0xdef);
+        Assert.Equal(
+            "frame 41 differs after rolling back 3 frames from a misprediction: expected 0000000000000abc, got 0000000000000def",
+            failure.ToString());
+    }
+}
