@@ -32,6 +32,7 @@ public partial class Main : Node2D
     private IInputSource _input = null!;
     private DebugOverlay _overlay = null!;
     private DebugView _debugView = null!;
+    private StageCamera _camera = null!;
     private FramePacer _pacer = new(0);
     private int _screen = -1;
 
@@ -48,6 +49,8 @@ public partial class Main : Node2D
         AddChild(_overlay);
         _debugView = new DebugView();
         AddChild(_debugView);
+        _camera = new StageCamera();
+        AddChild(_camera);
 
         var args = OS.GetCmdlineUserArgs();
 
@@ -72,6 +75,7 @@ public partial class Main : Node2D
 
         if (Arg(args, "--scenario") is { } name)
             StartScenario(name, args);
+        _camera.Present(_state, 0);
     }
 
     private void StartScenario(string name, string[] args)
@@ -93,11 +97,14 @@ public partial class Main : Node2D
         _overlay.Visible = _scenario.Overlay;
         _overlay.Deterministic = true;
 
-        // A pose sheet replaces the match picture with every frame of one move.
+        // A pose sheet replaces the match picture with every frame of one move. It's on its own
+        // layer, so it's fixed to the screen whatever the camera does.
         if (_scenario.PoseSheet is { } input)
         {
             var move = Characters.Placeholder.FindMove(input)!;
-            AddChild(new PoseSheet(move) { ZIndex = 20 });
+            var layer = new CanvasLayer { Layer = 20 };
+            layer.AddChild(new PoseSheet(move));
+            AddChild(layer);
         }
 
         if (_scenario.StyleFrame is { } frame)
@@ -105,7 +112,11 @@ public partial class Main : Node2D
             _ink = Look.Ink;
             _playerColors = new[] { Look.P1, Look.P2 };
             RenderingServer.SetDefaultClearColor(Look.Paper);
-            AddChild(frame());
+
+            // Screen-anchored UI over the stage, so it stays put whatever the camera does.
+            var layer = new CanvasLayer { Layer = 5 };
+            layer.AddChild(frame());
+            AddChild(layer);
         }
 
         _scenarioRun = new ScenarioRun(
@@ -131,9 +142,15 @@ public partial class Main : Node2D
         if (_scenario is { PacingCheck: true })
             delta += _jitter.NextInt(-300, 300) / 1_000_000.0;
 
-        // Some scenarios set the stage up again between steps (the harness, not gameplay).
+        // Some scenarios set the stage up again between steps (the harness, not gameplay). The
+        // camera cuts to a reset rather than panning across the stage to it.
         if (_scenario?.EachFrame is { } eachFrame)
+        {
+            var before = _state;
             _state = eachFrame(_state);
+            if (!_state.StateEquals(before))
+                _camera.Cut();
+        }
 
         var start = Stopwatch.GetTimestamp();
         var elapsed = _pacer.ToMicroseconds((long)System.Math.Round(delta * 1_000_000_000));
@@ -141,6 +158,7 @@ public partial class Main : Node2D
         var simMs = Stopwatch.GetElapsedTime(start).TotalMilliseconds;
 
         _overlay.Record(delta * 1000, simMs, ticks, _driver.DroppedTicks, _state.Frame);
+        _camera.Present(_state, ticks);
         _debugView.Present(_state);
         QueueRedraw();
 
@@ -160,27 +178,15 @@ public partial class Main : Node2D
         _pacer = new FramePacer(hz > 0 ? (long)System.Math.Round(hz * 1000) : 0);
     }
 
+    // Drawn in stage coordinates; the camera decides which part is on screen.
     public override void _Draw()
     {
-        var size = GetViewportRect().Size;
-        DrawSetTransform(new Vector2(-ViewLeft(_state, size.X), 0));
-
         var stage = _state.Stage;
         var floor = stage.Floor.ToFloat();
         DrawLine(new Vector2(stage.LeftWall.ToFloat(), floor), new Vector2(stage.RightWall.ToFloat(), floor), _ink, 4);
 
         for (var i = 0; i < GameState.PlayerCount; i++)
             DrawFighter(_state.Fighters[i], _playerColors[i]);
-    }
-
-    // The stage x at the screen's left edge: centered on the fighters, stopping at the walls.
-    // A placeholder until the camera (Camera that follows both fighters) replaces it.
-    public static float ViewLeft(in GameState state, float viewWidth)
-    {
-        var stage = state.Stage;
-        var middle = (state.Fighters[0].Position.X + state.Fighters[1].Position.X).ToFloat() / 2;
-        var max = Mathf.Max(stage.LeftWall.ToFloat(), stage.RightWall.ToFloat() - viewWidth);
-        return Mathf.Clamp(middle - viewWidth / 2, stage.LeftWall.ToFloat(), max);
     }
 
     private void DrawFighter(FighterState fighter, Color color)
