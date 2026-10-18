@@ -30,6 +30,9 @@ jobs:
       - name: Tests
         # A test stuck in a loop fails after 2 minutes instead of holding the runner.
         run: dotnet test StickFighter.sln --no-build --blame-hang-timeout 2m
+      # The determinism gate: every recorded match must replay to the same checksum on every frame.
+      - name: Replays
+        run: dotnet run --no-build --project tools/ReplayRunner -- check replays
 
   perf:
     name: Perf benchmark

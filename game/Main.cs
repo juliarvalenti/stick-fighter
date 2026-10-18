@@ -3,6 +3,7 @@ using Godot;
 using StickFighter.Sim;
 using StickFighter.Sim.Collision;
 using StickFighter.Sim.Numerics;
+using StickFighter.Sim.Replays;
 
 namespace StickFighter;
 
@@ -14,9 +15,12 @@ public partial class Main : Node2D
     private static readonly Color[] PlayerColors = { new(0.85f, 0.2f, 0.25f), new(0.2f, 0.4f, 0.85f) };
     private const float Stroke = 10f;
 
-    private GameState _state = GameState.NewMatch(1);
+    private GameState _state = GameState.NewMatch(MatchSeed);
     private readonly TickDriver _driver = new();
-    private readonly DeviceInputSource _input = new();
+    private const ulong MatchSeed = 1;
+
+    // Every match records its replay; F9 saves it to user://replays/.
+    private readonly ReplayRecorder _input = new(MatchSeed, new DeviceInputSource());
     private DebugOverlay _overlay = null!;
     private DebugView _debugView = null!;
     private FramePacer _pacer = new(0);
@@ -95,6 +99,22 @@ public partial class Main : Node2D
         DrawLine(from, to, color, Stroke);
         DrawCircle(from, Stroke / 2, color);
         DrawCircle(to, Stroke / 2, color);
+    }
+
+    public override void _UnhandledInput(InputEvent @event)
+    {
+        if (@event is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.F9 })
+            SaveReplay();
+    }
+
+    // Saves the match so far. Copy the file into replays/ to make it a CI test.
+    private void SaveReplay()
+    {
+        DirAccess.MakeDirRecursiveAbsolute("user://replays");
+        var path = $"user://replays/match-{Time.GetDatetimeStringFromSystem().Replace(':', '-')}.sfr";
+        using var file = FileAccess.Open(path, FileAccess.ModeFlags.Write);
+        file.StoreString(_input.Build().Write());
+        GD.Print($"Saved replay ({_input.Frames} frames) to {ProjectSettings.GlobalizePath(path)}");
     }
 
     // Live play: devices are sampled once per simulation tick.
