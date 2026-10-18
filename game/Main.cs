@@ -138,9 +138,15 @@ public partial class Main : Node2D
         if (_scenario is { PacingCheck: true })
             delta += _jitter.NextInt(-300, 300) / 1_000_000.0;
 
-        // Some scenarios set the stage up again between steps (the harness, not gameplay).
+        // Some scenarios set the stage up again between steps (the harness, not gameplay). The
+        // camera cuts to a reset rather than panning across the stage to it.
         if (_scenario?.EachFrame is { } eachFrame)
+        {
+            var before = _state;
             _state = eachFrame(_state);
+            if (!_state.StateEquals(before))
+                _camera.Cut();
+        }
 
         var start = Stopwatch.GetTimestamp();
         var elapsed = _pacer.ToMicroseconds((long)System.Math.Round(delta * 1_000_000_000));

@@ -36,6 +36,10 @@ public partial class StageCamera : Camera2D
         MakeCurrent();
     }
 
+    // Jumps straight to the fighters on the next Present instead of lagging there: for when they
+    // were moved rather than walked (a scenario resetting them, later a new round).
+    public void Cut() => _placed = false;
+
     // Shakes the screen from now, fading over `frames` frames.
     public void Shake(float amplitude, int frames)
     {
