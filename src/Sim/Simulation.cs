@@ -15,16 +15,21 @@ public static class Simulation
         for (var i = 0; i < GameState.PlayerCount; i++)
             state.Inputs[i].Record(state.Frame, input.For(i).Cleaned());
 
+        // Where both stood when the frame began: Pushing measures movement from here, so walking and
+        // hit pushback both count as moving away when the separation limit applies.
+        var p1Before = state.Fighters[0].Position.X;
+        var p2Before = state.Fighters[1].Position.X;
+
         for (var i = 0; i < GameState.PlayerCount; i++)
             Act(ref state, i);
 
-        Pushing.Resolve(ref state);
+        Pushing.Resolve(ref state, p1Before, p2Before);
         FaceEachOther(ref state);
 
         // Every contact is found from both fighters' poses before any is applied, so trades hit both.
         var contacts = Contacts.Find(state, Body.Shapes(state.Fighters[0]), Body.Shapes(state.Fighters[1]));
         Hits.Apply(ref state, contacts);
-        Pushing.Resolve(ref state); // pushback can't shove anyone through a wall or the other fighter
+        Pushing.Resolve(ref state, p1Before, p2Before);
 
         // Placeholder: draw from the RNG every frame so the rollback tests prove its state restores.
         state.Rng.NextUInt();

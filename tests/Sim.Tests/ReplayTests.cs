@@ -169,6 +169,19 @@ public class ReplayTests
         Assert.Equal(p2Hurt, state.Fighters[1].Health < full);
     }
 
+    [Fact]
+    public void TheCornerPushbackReplayEndsWithTheDefenderPinned()
+    {
+        var replay = Replay.Read(System.IO.File.ReadAllText(System.IO.Path.Combine(RepoRoot(), "replays", "pushback-corner.sfr")));
+        var state = GameState.NewMatch(replay.Seed, replay.Stage);
+        foreach (var input in replay.Inputs)
+            Simulation.Step(ref state, input);
+
+        Assert.Equal(Collision.Pushing.MaxX(state.Stage), state.Fighters[1].Position.X);
+        Assert.True(state.Fighters[1].Health < Characters.Characters.Placeholder.Stats.Health);
+        Assert.True(state.Fighters[1].Position.X - state.Fighters[0].Position.X > Collision.Body.PushHalfWidth * 2);
+    }
+
     private static string RepoRoot()
     {
         var dir = new System.IO.DirectoryInfo(AppContext.BaseDirectory);
