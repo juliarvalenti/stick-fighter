@@ -107,6 +107,10 @@ public class GameStateTests
             Changes(s => { s.Projectiles[i].Velocity += new FixVec2(Fix.Zero, Fix.FromRaw(1)); return s; });
             Changes(s => { s.Projectiles[i].Frame++; return s; });
         }
+        Changes(s => { s.Stage = new Stage(1, 2560, 600, 1280); return s; });
+        Changes(s => { s.Stage = new Stage(0, 2561, 600, 1280); return s; });
+        Changes(s => { s.Stage = new Stage(0, 2560, 601, 1280); return s; });
+        Changes(s => { s.Stage = new Stage(0, 2560, 600, 1281); return s; });
     }
 
     [Fact]
@@ -128,7 +132,7 @@ public class GameStateTests
         Assert.Equal(PinnedChecksum, state.Checksum());
     }
 
-    private const ulong PinnedChecksum = 18002904041162152494;
+    private const ulong PinnedChecksum = 13356634606340277518;
 
     private static GameState Busy()
     {

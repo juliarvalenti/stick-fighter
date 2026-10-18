@@ -18,7 +18,7 @@ public class ReplayTests
 
     private static Replay Recorded(int frames)
     {
-        var recorder = new ReplayRecorder(11, new Pattern());
+        var recorder = new ReplayRecorder(11, Stage.Training, new Pattern());
         var state = GameState.NewMatch(11);
         var driver = new TickDriver();
         while (state.Frame < frames)
@@ -36,7 +36,7 @@ public class ReplayTests
     [Fact]
     public void RecordingMatchesTheLiveState()
     {
-        var recorder = new ReplayRecorder(11, new Pattern());
+        var recorder = new ReplayRecorder(11, Stage.Training, new Pattern());
         var state = GameState.NewMatch(11);
         var driver = new TickDriver();
         while (state.Frame < 120)
@@ -74,7 +74,7 @@ public class ReplayTests
             inputs[i] = replay.Inputs[i];
         inputs[42] = new FrameInput(Buttons.Left, Buttons.Right);
 
-        var tampered = new Replay(replay.Seed, replay.DataHash, inputs, replay.Checksums);
+        var tampered = new Replay(replay.Seed, replay.DataHash, replay.Stage, inputs, replay.Checksums);
         Assert.Equal(42, tampered.FirstDivergence(out var expected, out var actual));
         Assert.NotEqual(expected, actual);
     }
@@ -82,12 +82,45 @@ public class ReplayTests
     [Theory]
     [InlineData("not-a-replay 1\nseed 1\nframes 0\nfinal 0\n")]
     [InlineData("stick-fighter-replay 99\nseed 1\ndata 00\nframes 0\nfinal 0\n")]
-    [InlineData("stick-fighter-replay 2\nseed 1\ndata 00\nframes 2\ninput 0000 0000 1\nchecksum 00\nfinal 00\n")]
-    [InlineData("stick-fighter-replay 2\nseed 1\ndata 00\nframes 0\nbogus line\n")]
-    [InlineData("stick-fighter-replay 2\nseed 1\nframes 0\nfinal 0\n")] // no data line
+    [InlineData("stick-fighter-replay 3\nseed 1\ndata 00\nstage 0 2560 600 1280\nframes 2\ninput 0000 0000 1\nchecksum 00\nfinal 00\n")]
+    [InlineData("stick-fighter-replay 3\nseed 1\ndata 00\nstage 0 2560 600 1280\nframes 0\nbogus line\n")]
+    [InlineData("stick-fighter-replay 3\nseed 1\nstage 0 2560 600 1280\nframes 0\nfinal 0\n")] // no data line
+    [InlineData("stick-fighter-replay 3\nseed 1\ndata 00\nframes 0\nfinal 0\n")] // no stage line
+    [InlineData("stick-fighter-replay 3\nseed 1\ndata 00\nstage 0 2560 600\nframes 0\nfinal 0\n")] // short stage line
     public void MalformedReplaysAreRejected(string text)
     {
         Assert.Throws<FormatException>(() => Replay.Read(text));
+    }
+
+    [Fact]
+    public void ReplaysRecordTheStage()
+    {
+        var stage = new Stage(100, 1900, 580, 900);
+        var replay = Replay.Record(5, stage, Recorded(120).Inputs);
+        Assert.Contains("stage 100 1900 580 900\n", replay.Write(), StringComparison.Ordinal);
+
+        var read = Replay.Read(replay.Write());
+        Assert.Equal(stage, read.Stage);
+        Assert.Equal(-1, read.FirstDivergence(out _, out _));
+    }
+
+    [Fact]
+    public void TheStageIsInTheChecksum()
+    {
+        // The same inputs on another stage give other checksums from the very first frame, so a
+        // replay can't quietly pass on a stage it wasn't recorded on.
+        var inputs = Recorded(10).Inputs;
+        var wider = Replay.Record(11, new Stage(0, 2560, 600, 1281), inputs);
+        Assert.NotEqual(Replay.Record(11, Stage.Training, inputs).Checksums[0], wider.Checksums[0]);
+    }
+
+    [Fact]
+    public void Version2IsRefusedButRerecordReadsItOnTheTrainingStage()
+    {
+        const string v2 = "stick-fighter-replay 2\nseed 1\ndata 00\nframes 1\ninput 0000 0000 1\nchecksum 00\nfinal 0000000000000000\n";
+        var error = Assert.Throws<FormatException>(() => Replay.Read(v2));
+        Assert.Contains("stage", error.Message, StringComparison.Ordinal);
+        Assert.Equal(Stage.Training, Replay.Read(v2, allowOldVersions: true).Stage);
     }
 
     [Fact]
@@ -103,7 +136,7 @@ public class ReplayTests
     public void AReplayFromOtherDataIsFlagged()
     {
         var replay = Recorded(30);
-        var other = new Replay(replay.Seed, replay.DataHash ^ 1, replay.Inputs, replay.Checksums);
+        var other = new Replay(replay.Seed, replay.DataHash ^ 1, replay.Stage, replay.Inputs, replay.Checksums);
         Assert.False(other.MatchesLoadedData);
     }
 
@@ -114,7 +147,7 @@ public class ReplayTests
         var error = Assert.Throws<FormatException>(() => Replay.Read(v1));
         Assert.Contains("rerecord", error.Message, StringComparison.Ordinal);
 
-        var old = Replay.Read(v1, allowVersion1: true);
+        var old = Replay.Read(v1, allowOldVersions: true);
         Assert.Equal(0UL, old.DataHash);
         Assert.Equal(1, old.Frames);
     }

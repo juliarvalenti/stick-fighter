@@ -25,7 +25,7 @@ public partial class Main : Node2D
     private readonly TickDriver _driver = new();
 
     // Every match records its replay; F9 saves it to user://replays/.
-    private readonly ReplayRecorder _recorder = new(MatchSeed, new DeviceInputSource());
+    private readonly ReplayRecorder _recorder = new(MatchSeed, Stage.Training, new DeviceInputSource());
     private IInputSource _input = null!;
     private DebugOverlay _overlay = null!;
     private DebugView _debugView = null!;
@@ -148,11 +148,24 @@ public partial class Main : Node2D
     public override void _Draw()
     {
         var size = GetViewportRect().Size;
-        var floor = Stage.Floor.ToFloat();
-        DrawLine(new Vector2(0, floor), new Vector2(size.X, floor), Ink, 4);
+        DrawSetTransform(new Vector2(-ViewLeft(_state, size.X), 0));
+
+        var stage = _state.Stage;
+        var floor = stage.Floor.ToFloat();
+        DrawLine(new Vector2(stage.LeftWall.ToFloat(), floor), new Vector2(stage.RightWall.ToFloat(), floor), Ink, 4);
 
         for (var i = 0; i < GameState.PlayerCount; i++)
             DrawFighter(_state.Fighters[i], PlayerColors[i]);
+    }
+
+    // The stage x at the screen's left edge: centered on the fighters, stopping at the walls.
+    // A placeholder until the camera (Camera that follows both fighters) replaces it.
+    public static float ViewLeft(in GameState state, float viewWidth)
+    {
+        var stage = state.Stage;
+        var middle = (state.Fighters[0].Position.X + state.Fighters[1].Position.X).ToFloat() / 2;
+        var max = Mathf.Max(stage.LeftWall.ToFloat(), stage.RightWall.ToFloat() - viewWidth);
+        return Mathf.Clamp(middle - viewWidth / 2, stage.LeftWall.ToFloat(), max);
     }
 
     private void DrawFighter(FighterState fighter, Color color)

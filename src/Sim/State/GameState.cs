@@ -20,7 +20,11 @@ public struct GameState
         4 + 16
         + PlayerCount * InputHistory.EncodedSize
         + PlayerCount * FighterState.EncodedSize
-        + MaxProjectiles * ProjectileState.EncodedSize;
+        + MaxProjectiles * ProjectileState.EncodedSize
+        + Stage.EncodedSize;
+
+    // How far each fighter starts from the middle of the stage.
+    public const int StartOffset = 200;
 
     public int Frame;
 
@@ -34,11 +38,16 @@ public struct GameState
     public FighterPair Fighters;
     public ProjectileSlots Projectiles;
 
-    public static GameState NewMatch(ulong seed)
+    // Fixed for the match, but kept here so the checksum covers it.
+    public Stage Stage;
+
+    public static GameState NewMatch(ulong seed) => NewMatch(seed, Stage.Training);
+
+    public static GameState NewMatch(ulong seed, in Stage stage)
     {
-        var state = new GameState { Rng = Rng.Create(seed) };
-        state.Fighters[0] = new FighterState { Position = new FixVec2(Fix.FromInt(440), Fix.FromInt(600)), Facing = 1 };
-        state.Fighters[1] = new FighterState { Position = new FixVec2(Fix.FromInt(840), Fix.FromInt(600)), Facing = -1 };
+        var state = new GameState { Rng = Rng.Create(seed), Stage = stage };
+        state.Fighters[0] = new FighterState { Position = new FixVec2(stage.Center - StartOffset, stage.Floor), Facing = 1 };
+        state.Fighters[1] = new FighterState { Position = new FixVec2(stage.Center + StartOffset, stage.Floor), Facing = -1 };
         return state;
     }
 
@@ -55,6 +64,7 @@ public struct GameState
             Fighters[i].Encode(ref writer);
         for (var i = 0; i < MaxProjectiles; i++)
             Projectiles[i].Encode(ref writer);
+        Stage.Encode(ref writer);
     }
 
     // 64-bit FNV-1a over the canonical encoding. Same state, same checksum, on every machine.

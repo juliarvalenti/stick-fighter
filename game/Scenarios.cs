@@ -65,6 +65,15 @@ public static class Scenarios
                 return s;
             }),
 
+        // The stage bounds, boxes on. Both walk back until the separation limit stops them, pushboxes
+        // spanning one screen (110); then P2 walks P1 into the left corner (380); then P2 walks back
+        // and stops at the limit from the cornered P1 (660).
+        new Scenario("stage-bounds", 1,
+            f => f < 120 ? new FrameInput(Buttons.Left, Buttons.Right)
+                : f < 400 ? new FrameInput(Buttons.Left, Buttons.Left)
+                : new FrameInput(Buttons.Left, Buttons.Right),
+            Captures: new[] { 110, 380, 660 }, Frames: 660, Boxes: true),
+
         // The frame-time overlay, with fixed numbers so the image is stable.
         new Scenario("overlay", 1, _ => WalkIn, Captures: new[] { 60 }, Frames: 60, Overlay: true),
 
