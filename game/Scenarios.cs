@@ -28,12 +28,14 @@ public sealed record Scenario(
     bool Flow = false,
     Dictionary<int, string>? Actions = null,
     Action<Training.TrainingSession>? Training = null,
-    int TrainingMenuAt = -1);
+    int TrainingMenuAt = -1,
+    Dictionary<int, (int Device, bool Connected)>? Pads = null);
 
 // A Flow scenario runs the game's own menus from the title: its frames, captures and Actions are
 // counted in display frames (the sim doesn't tick on the menus), and Actions are Godot input actions
 // ("ui_accept", "ui_down", "pause", ...) pressed on those frames and released on the next. Script
-// still plays the players' inputs once a match is on, by sim frame.
+// still plays the players' inputs once a match is on, by sim frame. Pads plugs and unplugs
+// controllers on display frames, as Godot reports real ones (no pads are connected otherwise).
 // A Training scenario plays the real training session, set up by Training, and opens the training
 // menu on sim frame TrainingMenuAt.
 
@@ -461,6 +463,27 @@ public static class Scenarios
         new Scenario("screen-movelist", 1, _ => default, Captures: new[] { 5 }, Frames: 5,
             Setup: s => Place(s, 540, 740), StyleFrame: () => new UI.Screens.PauseScreen(moveList: true)),
 
+        // Options on the defaults: the music slider focused, then down three times to input delay
+        // and right once, to 1 frame.
+        new Scenario("screen-options", 1, _ => default, Captures: new[] { 5, 25 }, Frames: 25,
+            Setup: s => Place(s, 540, 740),
+            StyleFrame: () => new UI.Screens.OptionsScreen(new Settings.UserSettings(DeviceInput.Defaults))
+            {
+                Presses = { [10] = "ui_down", [13] = "ui_down", [16] = "ui_down", [20] = "ui_right" },
+            }),
+
+        // Rebinding: player 1's keyboard, down to Down and chosen, waiting for a key (mid-bind);
+        // and player 2's pad as it starts.
+        new Scenario("screen-rebind", 1, _ => default, Captures: new[] { 5, 20 }, Frames: 20,
+            Setup: s => Place(s, 540, 740),
+            StyleFrame: () => new UI.Screens.RebindScreen(0, new Settings.UserSettings(DeviceInput.Defaults))
+            {
+                Presses = { [8] = "ui_down", [12] = "ui_accept" },
+            }),
+        new Scenario("screen-rebind-pad", 1, _ => default, Captures: new[] { 5 }, Frames: 5,
+            Setup: s => Place(s, 540, 740),
+            StyleFrame: () => new UI.Screens.RebindScreen(1, new Settings.UserSettings(DeviceInput.Defaults), UI.Screens.RebindScreen.Device.Pad)),
+
         // The menus, driven like a player would: from the title through select into a versus match,
         // then pause (the sim must not move for 60 frames: checked, not just captured), the move
         // list, back, the command list, back, and play resumes. Frames are display frames.
@@ -482,6 +505,24 @@ public static class Scenarios
                 [155] = "ui_accept",
                 [165] = "ui_cancel",
                 [170] = "pause", // while paused, pause steps back: resume
+            }),
+
+        // Controller hot-plug, from the title into training: a pad connects and goes to player 1
+        // (the toast, 35); it's pulled out and the match pauses under "Controller disconnected"
+        // (60; checked, and the sim must not move for 60 frames); it's plugged back in and play
+        // resumes (checked), with the toast (175, the earlier toasts gone).
+        new Scenario("hotplug", 1, _ => WalkIn, Captures: new[] { 35, 60, 175 }, Frames: 180, Flow: true,
+            Actions: new()
+            {
+                [10] = "ui_accept", // press start
+                [18] = "ui_down", // Training
+                [20] = "ui_accept",
+            },
+            Pads: new()
+            {
+                [30] = (0, true),
+                [50] = (0, false),
+                [160] = (0, true),
             }),
     };
 

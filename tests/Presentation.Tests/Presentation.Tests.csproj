@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <Compile Include="../../game/CameraMath.cs" Link="Linked/CameraMath.cs" />
+    <Compile Include="../../game/DrawnBounds.cs" Link="Linked/DrawnBounds.cs" />
     <Compile Include="../../game/fx/EffectLedger.cs" Link="Linked/EffectLedger.cs" />
     <Compile Include="../../game/ui/Notation.cs" Link="Linked/Notation.cs" />
     <Compile Include="../../game/training/InputLog.cs" Link="Linked/InputLog.cs" />
@@ -23,6 +24,9 @@
     <Compile Include="../../game/ui/Announcer.cs" Link="Linked/Announcer.cs" />
     <Compile Include="../../game/ui/RoundLog.cs" Link="Linked/RoundLog.cs" />
     <Compile Include="../../game/flow/Triggerable.cs" Link="Linked/Triggerable.cs" />
+    <Compile Include="../../game/settings/Bindings.cs" Link="Linked/Bindings.cs" />
+    <Compile Include="../../game/settings/UserSettings.cs" Link="Linked/UserSettings.cs" />
+    <Compile Include="../../game/settings/PadSlots.cs" Link="Linked/PadSlots.cs" />
   </ItemGroup>
 
   <!-- The characters' moves, to check every notation they use reads as glyphs. -->
