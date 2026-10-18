@@ -77,6 +77,7 @@ public partial class Main : Node2D
     private FX.EffectsView _effects = null!;
     private Sound.SoundView _sound = null!;
     private Sound.MusicView _music = null!;
+    private Sound.VoiceView _voice = null!;
     private CanvasLayer _screens = null!;
     private StageCamera _camera = null!;
     private StageBackdrop _backdrop = null!;
@@ -117,6 +118,8 @@ public partial class Main : Node2D
         AddChild(_effects);
         _sound = new Sound.SoundView();
         AddChild(_sound);
+        _voice = new Sound.VoiceView();
+        AddChild(_voice);
         _music = new Sound.MusicView();
         AddChild(_music);
         _screens = new CanvasLayer { Layer = 10 };
@@ -315,6 +318,7 @@ public partial class Main : Node2D
         _camera.Cut();
         _effects.Clear();
         _sound.Director.Clear();
+        _voice.Begin();
         ShowScreen(new UI.Screens.TitleScreen());
     }
 
@@ -380,6 +384,7 @@ public partial class Main : Node2D
         _camera.Cut();
         _effects.Clear();
         _sound.Director.Clear();
+        _voice.Begin();
         _presenter.Begin(new[] { settings.P1Color, settings.P2Color });
         _flow = Flow.Match;
         _paused = null;
@@ -527,7 +532,10 @@ public partial class Main : Node2D
         if (_scenario.Setup is { } setup)
             _state = setup(_state);
         if (_scenario.Versus)
+        {
             _presenter.Begin();
+            _voice.Begin();
+        }
         _input = new Scenarios.Source(_scenario);
         if (_scenario.Training is { } training)
             _input = StartTrainingScenario(training, _input);
@@ -577,6 +585,12 @@ public partial class Main : Node2D
                 $"# effects volume {volume} ({Sound.SoundDirector.VolumeDb(volume):0.0} dB), {Sound.SoundDirector.Voices} voices",
                 $"# music volume {music} ({Sound.MusicDirector.GainDb(music, paused: false):0.0} dB, {Sound.MusicDirector.PausedDuckDb:0} dB more paused)",
             };
+            if (_scenario.Versus)
+            {
+                var announcer = DeviceInput.Settings.AnnouncerVolume;
+                log.Add($"# announcer volume {announcer} ({Sound.SoundDirector.VolumeDb(announcer):0.0} dB), music {Sound.MusicDirector.VoiceDuckDb:0} dB under it");
+                _voice.Director.Log = log;
+            }
             _sound.Director.Log = log;
             _music.Director.Log = log;
             _scenarioRun.Log = log;
@@ -639,8 +653,10 @@ public partial class Main : Node2D
         _presenter.Present(_state);
         _effects.Present(_state);
         _sound.Present(_state, DeviceInput.Settings.EffectsVolume);
+        _voice.Present(_state, DeviceInput.Settings.AnnouncerVolume, _displayFrame);
         _music.Director.Update(_flow == Flow.Match ? Sound.Track.Match : Sound.Track.Menu,
-            DeviceInput.Settings.MusicVolume, paused: _paused is not null, _displayFrame);
+            DeviceInput.Settings.MusicVolume, paused: _paused is not null, _displayFrame,
+            voice: _voice.Director.Speaking(_displayFrame));
         PresentTraining();
         if (_scenario is { TrainingMenuAt: >= 0 } && _state.Frame == _scenario.TrainingMenuAt && _paused is null)
             OpenTrainingMenu();

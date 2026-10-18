@@ -73,6 +73,7 @@ public static class Scenarios
             Fireball(),
             SoundCombat(),
             SoundMusic(),
+            SoundAnnouncer(),
             TrainingRoom(),
         };
 
@@ -105,6 +106,23 @@ public static class Scenarios
 
         return new Scenario("match", replay.Seed, f => f < replay.Frames ? replay.Inputs[f] : default,
             Captures: new[] { midRound, ko, results }, Frames: results, Versus: true);
+    }
+
+    // The announcer through the same best-of-three: every call voiced once, on the frame it shows,
+    // with the music ducking under it, then the result. The log is the evidence.
+    private static Scenario SoundAnnouncer()
+    {
+        var replay = Sim.Replays.Replay.Read(Godot.FileAccess.GetFileAsString("res://replays/match-double-ko.sfr"));
+        var state = GameState.NewMatch(replay.Seed, replay.Stage, MatchMode.Versus);
+        var end = -1;
+        for (var f = 0; end < 0 && f < replay.Frames + 600; f++)
+        {
+            Simulation.Step(ref state, f < replay.Frames ? replay.Inputs[f] : default);
+            if (state.Match.Phase == MatchPhase.MatchEnd)
+                end = state.Frame;
+        }
+        return new Scenario("sound-announcer", replay.Seed, f => f < replay.Frames ? replay.Inputs[f] : default,
+            Array.Empty<int>(), Frames: end + 120, Versus: true, SoundLog: true);
     }
 
     // Hit effects, from the sim's events (game/fx), one every SparkPeriod frames from a reset at

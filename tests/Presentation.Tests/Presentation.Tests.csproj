@@ -33,6 +33,7 @@
     <Compile Include="../../game/sound/SoundDirector.cs" Link="Linked/SoundDirector.cs" />
     <Compile Include="../../game/sound/MusicSynth.cs" Link="Linked/MusicSynth.cs" />
     <Compile Include="../../game/sound/MusicDirector.cs" Link="Linked/MusicDirector.cs" />
+    <Compile Include="../../game/sound/Voice.cs" Link="Linked/Voice.cs" />
   </ItemGroup>
 
   <!-- The characters' moves, to check every notation they use reads as glyphs. -->
