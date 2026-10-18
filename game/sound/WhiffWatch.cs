@@ -6,8 +6,8 @@ namespace StickFighter.Sound;
 
 // Whiffs, worked out in presentation rather than recorded by the sim: a sim event would go into
 // GameState and change the checksum of every replay with a missed attack in it. A whiff is a move
-// reaching its first active frame without connecting that frame (a move that lands later still
-// swished first, as a swing does).
+// that has reached its first active frame without connecting (one that lands on a later active frame
+// still swished first, as a swing does, if an update saw it unconnected).
 //
 // It follows the ledger's rollback rules as far as one state per update allows. A whiff is keyed by
 // its frame, fighter and move, so seeing it again after a resimulation doesn't restart it; one the
@@ -47,26 +47,43 @@ public sealed class WhiffWatch
                 Cancelled.Add(w); // a rollback took it away
                 _playing.RemoveAt(i);
             }
-            else if (age >= Lifetime)
+            else if (age >= Lifetime && age > move.TotalFrames)
             {
                 _playing.RemoveAt(i);
             }
         }
 
-        // Hitstop holds fighters on the same frame of their moves; nothing starts while it does.
-        if (now >= state.FreezeFrom && now < state.FreezeUntil)
-            return;
+        // A move that has reached or passed its first active frame without connecting swishes, once
+        // per move instance: an update may come several frames after the first active one (two
+        // ticks a display frame at 30 Hz, a catch-up), and the swish still plays, keyed to that frame.
         for (var p = 0; p < GameState.PlayerCount; p++)
         {
             var f = state.Fighters[p];
-            if (f.Action != (int)FighterAction.Attack || f.Move < 0 || f.MoveHit || f.ActionFrame != moves[f.Move].FirstActiveFrame)
+            if (f.Action != (int)FighterAction.Attack || f.Move < 0 || f.MoveHit)
                 continue;
-            var whiff = new Whiff(now, p, f.Move);
-            if (_playing.Contains(whiff))
+            var move = moves[f.Move];
+            if (f.ActionFrame < move.FirstActiveFrame)
                 continue;
+            var first = now - (f.ActionFrame - move.FirstActiveFrame);
+            if (Swished(p, f.Move, first, move.TotalFrames))
+                continue;
+            var whiff = new Whiff(first, p, f.Move);
             _playing.Add(whiff);
             Started.Add(whiff);
         }
+    }
+
+    // Whether this move instance has swished already. Hitstop holds a fighter on one frame of its move
+    // while the frames go by, so the first active frame worked out from the move frame can come out
+    // later than the swish's: the same instance is any swish of that move since it could have started.
+    private bool Swished(int player, int move, int first, int total)
+    {
+        foreach (var w in _playing)
+        {
+            if (w.Player == player && w.Move == move && w.Frame <= first && w.Frame > first - total)
+                return true;
+        }
+        return false;
     }
 
     public void Clear()
