@@ -2,13 +2,14 @@
 //
 //   dotnet run --project tools/ReplayRunner -- check replays/          every *.sfr must reproduce
 //   dotnet run --project tools/ReplayRunner -- synctest replays/       every frame survives rollback
+//                                                (check and synctest also take one .sfr file)
 //   dotnet run --project tools/ReplayRunner -- rerecord replays/       after a deliberate sim change
 //   dotnet run --project tools/ReplayRunner -- generate out.sfr SEED FRAMES
 //   dotnet run --project tools/ReplayRunner -- script out.sfr NAME      a scripted match, see Scripts
 //
 // check prints the first diverging frame of each failing replay and exits 1 if any fail.
 // synctest plays each replay's inputs, rolling back 1 to 8 frames after every frame (see SyncTest),
-// and exits 1 if any resimulated frame comes out different.
+// and exits 1 if any resimulated frame comes out different, listing the GameState fields that differ.
 // rerecord keeps each replay's inputs and rewrites its checksums; review the diff, since this is
 // how an intended behavior change gets accepted.
 
@@ -121,8 +122,11 @@ static int Rerecord(string folder)
     return 0;
 }
 
-static string[] Files(string folder) =>
-    Directory.GetFiles(folder, "*.sfr").OrderBy(f => f, StringComparer.Ordinal).ToArray();
+// Every replay in a folder, or the one replay named.
+static string[] Files(string path) =>
+    File.Exists(path)
+        ? new[] { path }
+        : Directory.GetFiles(path, "*.sfr").OrderBy(f => f, StringComparer.Ordinal).ToArray();
 
 // A scripted placeholder match: random holds of walking, crouching, jumping and attacks for both
 // players, from a seeded RNG, so it covers the input layer, pushing, walls and facing.

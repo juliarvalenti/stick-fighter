@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 
 namespace StickFighter.Sim.Replays;
 
@@ -22,11 +23,14 @@ public static class SyncTest
     // GGPO's usual prediction limit; the rollback perf budget is sized for it.
     public const int MaxRollback = 8;
 
-    public readonly record struct Failure(int Frame, int Depth, bool Mispredicted, ulong Expected, ulong Actual)
+    // Differences: the GameState fields that came out different, first-run value then resimulated
+    // ("Fighters[1].Hitstun: 7 vs 6"), from StateDiff.
+    public readonly record struct Failure(int Frame, int Depth, bool Mispredicted, ulong Expected, ulong Actual, IReadOnlyList<string> Differences)
     {
         public override string ToString() =>
             $"frame {Frame} differs after rolling back {Depth} frame{(Depth == 1 ? "" : "s")}"
-            + $"{(Mispredicted ? " from a misprediction" : "")}: expected {Expected:x16}, got {Actual:x16}";
+            + $"{(Mispredicted ? " from a misprediction" : "")}: expected {Expected:x16}, got {Actual:x16}"
+            + string.Concat(Differences.Select(d => "\n  " + d));
     }
 
     public static Failure? Run(ulong seed, in Stage stage, IReadOnlyList<FrameInput> inputs) =>
@@ -38,12 +42,14 @@ public static class SyncTest
         var state = GameState.NewMatch(seed, stage);
         var saved = new StateBuffer(MaxRollback + 1);
         var checksums = new ulong[inputs.Count];
+        var firstRun = new GameState[inputs.Count]; // to say which fields differ on a failure
 
         for (var frame = 0; frame < inputs.Count; frame++)
         {
             saved.Save(state);
             step(ref state, inputs[frame]);
             checksums[frame] = state.Checksum();
+            firstRun[frame] = state;
 
             for (var depth = 1; depth <= MaxRollback && depth <= frame + 1; depth++)
             {
@@ -64,7 +70,7 @@ public static class SyncTest
                         step(ref state, inputs[f]);
                         var actual = state.Checksum();
                         if (actual != checksums[f])
-                            return new Failure(f, depth, mispredicted, checksums[f], actual);
+                            return new Failure(f, depth, mispredicted, checksums[f], actual, StateDiff.Between(firstRun[f], state));
                     }
                 }
             }

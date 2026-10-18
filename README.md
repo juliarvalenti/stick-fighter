@@ -45,6 +45,15 @@ Every PR has to pass these:
 - **Perf.** `tools/Bench` measures the p99 of one save + step against **1 ms**, and of a rollback frame (1 load + 9 × save + step) against **10 ms**. On a PR that touches `src/Sim`, `data` or `tools/Bench`, CI also benchmarks the base branch with the same harness, in five rounds alternating with this change's on the same runner, and fails if the median of either mode is more than 20% slower (and by more than 0.1 µs). Medians, because a p99 near the noise floor flips on a single slow frame. Tiered compilation is off in the bench, so it times optimized code from the first frame. Each mode stops after 15 s, so a slow step fails rather than hangs.
 
 - **Replays.** Every `replays/*.sfr` must replay to the same checksum on every frame. `ReplayRunner check` prints the first diverging frame. In the game, **F9** saves the current match to `user://replays/`; copy it into `replays/` to turn a bug into a test. After a deliberate behavior change, `ReplayRunner rerecord replays` rewrites the checksums. Review that diff. A replay records the stage it was played on, and `ReplayRunner script <file> <name>` writes one of the scripted matches (`stage-apart`, `stage-walls`, `stage-corner`).
+- **Rollback (SyncTest).** GGPO's SyncTest mode, offline: `ReplayRunner synctest replays` plays every replay and, after every frame, rolls back 1 to 8 frames and resimulates. It does this twice: on the same inputs, and after a misprediction (each player's last input held, then corrected, as an online session does). Every resimulated frame must reproduce its checksum. It catches state the step reads but `GameState` doesn't hold, such as a static, a cache, or anything a load doesn't restore, in the PR that adds it rather than online. Run it on one replay with `ReplayRunner synctest replays/hit.sfr`. A failure says where, and then what. Here a step bumped P2's hitstun from a static counter:
+
+  ```
+  FAIL replays/hit.sfr  frame 9 differs after rolling back 4 frames: expected e528b4b49fc1fa65, got a8184677625171aa
+    Fighters[1].Hitstun: 0 vs 1
+       inputs on that frame: p1 Right, p2 None
+  ```
+
+  The frame is the first resimulated frame that came out different, and the depth is how far back the rollback went. "from a misprediction" means only a wrong guess followed by a correction shows it, so look for something the predicted frames left behind. Each indented line is a `GameState` field: the first-run value, then the resimulated one. A field that differs points at the code that writes it. If nothing changed in `GameState` itself but the step still came out different, the step read something outside it.
 - **Scenarios and golden images.** Each scenario in `game/Scenarios.cs` is a scripted match. The game renders its own viewport to PNG at chosen frames and compares each capture with `tests/golden/`. CI uploads every capture, plus a `.diff.png` on a mismatch, as the `scenarios` artifact. Reviewers look at those instead of opening a build. The `pacing` scenario fails if any jittered 60 Hz frame runs other than one tick. Every visible feature adds a scenario.
 
 - **Moves.** `tools/MoveCompiler --check` fails if the compiled moves don't match their scripts, or if any frame breaks the body checks (elbows or knees bending backwards, no planted foot, a foot through the floor, a shin through the torso). Each move has a `sheet-<input>` scenario: every frame side by side with boxes, compared with its golden image.
@@ -54,6 +63,7 @@ dotnet run --project tools/MoveCompiler       # after editing data/moves/: recom
 dotnet format StickFighter.sln --verify-no-changes
 dotnet run -c Release --project tools/Bench
 dotnet run --project tools/ReplayRunner -- check replays
+dotnet run --project tools/ReplayRunner -- synctest replays
 godot --path . --rendering-method gl_compatibility --fixed-fps 60 -- --scenario walk-in --out /tmp/shots
 tools/update-goldens.sh <ci-run-id>   # accept CI's captures as the new goldens after an intended change
 ```
@@ -64,7 +74,7 @@ Goldens come from CI's software renderer, not a local machine, since GPUs anti-a
 
 `.github/workflows/ci.yml` runs on every pull request and on every push to `main`:
 
-- **Build, lint and tests:** format check, the build with all analyzers, `dotnet test` and the replays.
+- **Build, lint and tests:** format check, the build with all analyzers, `dotnet test`, the replays, and SyncTest over the replays.
 - **Perf benchmark:** `tools/Bench` within budget, and on PRs that change the simulation, compared against the base branch in alternating rounds.
 - **Godot headless smoke test:** imports the project and runs the main scene headless.
 - **Scenarios and golden images:** renders every scenario under `xvfb` and compares with the goldens.

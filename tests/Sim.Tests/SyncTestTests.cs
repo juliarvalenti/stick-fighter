@@ -39,6 +39,30 @@ public class SyncTestTests
         Assert.NotNull(failure);
         Assert.Equal(1, failure.Value.Depth);
         Assert.False(failure.Value.Mispredicted);
+
+        // It says which field: health, one point apart, and nothing else.
+        var full = Characters.Characters.Placeholder.Stats.Health;
+        Assert.Equal(new[] { $"Fighters[0].Health: {full - 1} vs {full}" }, failure.Value.Differences);
+    }
+
+    [Fact]
+    public void TheDiffNamesNestedFieldsAndPrintsFixAsNumbers()
+    {
+        var a = GameState.NewMatch(1);
+        var b = a;
+        b.Fighters[1].Hitstun = 6;
+        b.Fighters[0].Position = new Numerics.FixVec2(a.Fighters[0].Position.X + Numerics.Fix.FromRatio(3, 2), a.Fighters[0].Position.Y);
+        b.Inputs[1].Record(0, Buttons.LightPunch);
+
+        Assert.Equal(
+            new[]
+            {
+                "Inputs[1][0]: None vs LightPunch",
+                $"Fighters[0].Position.X: {a.Fighters[0].Position.X} vs {b.Fighters[0].Position.X}",
+                "Fighters[1].Hitstun: 0 vs 6",
+            },
+            StateDiff.Between(a, b));
+        Assert.Empty(StateDiff.Between(a, a));
     }
 
     // A step that remembers, outside GameState, whether it ever saw the same input three frames
@@ -68,9 +92,10 @@ public class SyncTestTests
     [Fact]
     public void AFailureSaysWhereAndHow()
     {
-        var failure = new SyncTest.Failure(41, 3, true, 0xabc, 0xdef);
+        var failure = new SyncTest.Failure(41, 3, true, 0xabc, 0xdef, new[] { "Fighters[1].Hitstun: 7 vs 6" });
         Assert.Equal(
-            "frame 41 differs after rolling back 3 frames from a misprediction: expected 0000000000000abc, got 0000000000000def",
+            "frame 41 differs after rolling back 3 frames from a misprediction: expected 0000000000000abc, got 0000000000000def"
+            + "\n  Fighters[1].Hitstun: 7 vs 6",
             failure.ToString());
     }
 }
