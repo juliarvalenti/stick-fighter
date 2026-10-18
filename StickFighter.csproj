@@ -12,6 +12,7 @@
   <ItemGroup>
     <Compile Remove="src/**" />
     <Compile Remove="tests/**" />
+    <Compile Remove="tools/**" />
     <Compile Remove="build/**" />
   </ItemGroup>
 

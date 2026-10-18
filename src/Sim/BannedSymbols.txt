@@ -1,0 +1,15 @@
+T:System.Random; Use the match's seeded RNG in game state
+T:System.DateTime; No wall clock in the simulation: count ticks
+T:System.DateTimeOffset; No wall clock in the simulation: count ticks
+T:System.TimeSpan; No wall clock in the simulation: count ticks
+T:System.Diagnostics.Stopwatch; No wall clock in the simulation: count ticks
+P:System.Environment.TickCount; No wall clock in the simulation: count ticks
+P:System.Environment.TickCount64; No wall clock in the simulation: count ticks
+M:System.Guid.NewGuid; Not deterministic
+T:System.Math; Math is floating-point; use Fix
+T:System.MathF; MathF is floating-point; use Fix
+M:System.String.GetHashCode; Randomized per process; never use it in game logic
+M:System.Object.GetHashCode; Not stable across machines; never use it in game logic
+T:System.Threading.Tasks.Parallel; Simulation runs on one thread in a fixed order
+T:System.Threading.Tasks.Task; Simulation runs on one thread in a fixed order
+T:System.Threading.Thread; Simulation runs on one thread in a fixed order

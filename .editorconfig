@@ -1,0 +1,21 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.cs]
+indent_style = space
+indent_size = 4
+csharp_style_namespace_declarations = file_scoped:warning
+dotnet_sort_system_directives_first = true
+
+[src/Sim/**.cs]
+# Game state is plain structs with public fields so a frame saves as one copy.
+dotnet_diagnostic.CA1051.severity = none
+
+[*.{csproj,props,targets,yml,yaml,json}]
+indent_style = space
+indent_size = 2

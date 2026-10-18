@@ -4,7 +4,22 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <RootNamespace>StickFighter.Sim</RootNamespace>
     <AssemblyName>StickFighter.Sim</AssemblyName>
   </PropertyGroup>
+
+  <!-- Determinism gate: SF0001 (floating-point), SF0002 (unordered iteration), RS0030 (BannedSymbols.txt). -->
+  <ItemGroup>
+    <ProjectReference Include="../../tools/Determinism.Analyzers/Determinism.Analyzers.csproj"
+                      OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="3.3.4" PrivateAssets="all" />
+    <AdditionalFiles Include="BannedSymbols.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Sim.Tests" />
+    <InternalsVisibleTo Include="StickFighter.Bench" />
+  </ItemGroup>
 </Project>
