@@ -15,6 +15,7 @@ public enum Sfx
     Throw,
     Knockdown,
     Ko,
+    Clash,
 }
 
 // Which sound each of the sim's events makes, and how loud it sits in the mix.
@@ -33,6 +34,7 @@ public static class Cues
         EventKind.Throw => Sfx.Throw,
         EventKind.Knockdown => Sfx.Knockdown,
         EventKind.Ko => Sfx.Ko,
+        EventKind.Clash => Sfx.Clash,
         _ => null,
     };
 
@@ -44,6 +46,7 @@ public static class Cues
         Sfx.HitLight => -4,
         Sfx.HitMedium => -2,
         Sfx.Knockdown => -3,
+        Sfx.Clash => -4,
         Sfx.Ko => 0,
         _ => -1,
     };

@@ -47,6 +47,9 @@ public static class CharacterLoader
                 throw new CharacterDataException("stats: backDashInvincibleFrames is longer than the back-dash");
             if (stats.DashInputWindow > InputHistory.MaxWindow)
                 throw new CharacterDataException($"stats: dashInputWindow is at most {InputHistory.MaxWindow} (the input history's depth)");
+            // A motion's window plus the buffer it can be pressed in has to fit the input history.
+            if (stats.MotionWindow + Combat.Normals.BufferWindow > InputHistory.MaxWindow)
+                throw new CharacterDataException($"stats: motionWindow plus the buffer is at most {InputHistory.MaxWindow} (the input history's depth)");
             if (stats.QuickRiseWindow > InputHistory.MaxWindow)
                 throw new CharacterDataException($"stats: quickRiseWindow is at most {InputHistory.MaxWindow} (the input history's depth)");
             var skeleton = ReadSkeleton(Obj(root, "skeleton"), hash);
@@ -138,7 +141,12 @@ public static class CharacterLoader
         QuickRiseWindow: Positive(s, "quickRiseWindow", h),
         DizzyFrames: Positive(s, "dizzyFrames", h),
         StunRecoveryDelay: Int(s, "stunRecoveryDelay", h),
-        StunRecoveryRate: Int(s, "stunRecoveryRate", h));
+        StunRecoveryRate: Int(s, "stunRecoveryRate", h),
+        MotionWindow: Positive(s, "motionWindow", h),
+        MotionButtonLeniency: Int(s, "motionButtonLeniency", h),
+        ProjectileSpeedLight: Fix.FromRatio(Positive(s, "projectileSpeedLight", h), 1000),
+        ProjectileSpeedMedium: Fix.FromRatio(Positive(s, "projectileSpeedMedium", h), 1000),
+        ProjectileSpeedHeavy: Fix.FromRatio(Positive(s, "projectileSpeedHeavy", h), 1000));
 
     // A share from 1 to 1000.
     private static int PerMille(JsonElement s, string key, DataHasher h)

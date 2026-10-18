@@ -36,9 +36,12 @@ public static class Blocking
         _ => true,
     };
 
-    // The opponent's attack is coming (startup or active, not yet connected) and close enough that
-    // holding back means guarding rather than walking back.
-    public static bool ProximityGuard(in GameState state, int defender)
+    // The opponent's attack is coming (startup or active, not yet connected), or the opponent's
+    // fireball is, and close enough that holding back means guarding rather than walking back.
+    public static bool ProximityGuard(in GameState state, int defender) =>
+        (AttackComing(state, defender) || FireballComing(state, defender)) && HoldingBack(state, defender);
+
+    private static bool AttackComing(in GameState state, int defender)
     {
         ref readonly var me = ref state.Fighters[defender];
         ref readonly var them = ref state.Fighters[1 - defender];
@@ -48,6 +51,19 @@ public static class Blocking
         if (them.ActionFrame >= move.FirstActiveFrame + move.Active)
             return false;
         var range = Characters.Characters.Placeholder.Stats.ProximityGuard;
-        return Fix.Abs(them.Position.X - me.Position.X) <= range && HoldingBack(state, defender);
+        return Fix.Abs(them.Position.X - me.Position.X) <= range;
+    }
+
+    private static bool FireballComing(in GameState state, int defender)
+    {
+        var range = Characters.Characters.Placeholder.Stats.ProximityGuard;
+        var me = state.Fighters[defender].Position.X;
+        for (var slot = 0; slot < GameState.MaxProjectiles; slot++)
+        {
+            ref readonly var projectile = ref state.Projectiles[slot];
+            if (projectile.Active && projectile.Owner != defender && Fix.Abs(projectile.Position.X - me) <= range)
+                return true;
+        }
+        return false;
     }
 }

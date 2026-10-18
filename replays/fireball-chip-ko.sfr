@@ -1,0 +1,357 @@
+stick-fighter-replay 6
+seed 1
+data 1ba8a54ffb938c84
+stage 0 2560 600 1280
+mode sandbox
+frames 4584
+input 0008 0008 300
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+input 0002 0008 1
+input 000a 0008 1
+input 0048 0008 1
+input 0000 0008 60
+at 59 p1 1531.0198974609375 600 1 WalkForward 59 1000 p2 1780.6591796875 600 -1 WalkBack 59 1000 match Fight 0 0 0 0
+at 119 p1 1982.039794921875 600 1 WalkForward 119 1000 p2 2081.318359375 600 -1 WalkBack 119 1000 match Fight 0 0 0 0
+at 179 p1 2366.40997314453125 600 1 WalkForward 179 1000 p2 2426.410003662109375 600 -1 WalkBack 179 1000 match Fight 0 0 0 0
+at 239 p1 2470 600 1 WalkForward 239 1000 p2 2530 600 -1 WalkBack 239 1000 match Fight 0 0 0 0
+at 299 p1 2470 600 1 WalkForward 299 1000 p2 2530 600 -1 WalkBack 299 1000 match Fight 0 0 0 0
+at 359 p1 2470 600 1 Stand 4 1000 p2 2530 600 -1 WalkBack 23 985 match Fight 0 0 0 0
+at 419 p1 2470 600 1 Stand 1 1000 p2 2530 600 -1 WalkBack 20 970 match Fight 0 0 0 0
+at 479 p1 2470 600 1 Attack 43 1000 p2 2530 600 -1 WalkBack 17 955 match Fight 0 0 0 0
+at 539 p1 2470 600 1 Attack 40 1000 p2 2530 600 -1 WalkBack 14 940 match Fight 0 0 0 0
+at 599 p1 2470 600 1 Attack 37 1000 p2 2530 600 -1 WalkBack 11 925 match Fight 0 0 0 0
+at 659 p1 2470 600 1 Attack 34 1000 p2 2530 600 -1 WalkBack 8 910 match Fight 0 0 0 0
+at 719 p1 2470 600 1 Attack 31 1000 p2 2530 600 -1 WalkBack 5 895 match Fight 0 0 0 0
+at 779 p1 2470 600 1 Attack 28 1000 p2 2530 600 -1 WalkBack 2 880 match Fight 0 0 0 0
+at 839 p1 2470 600 1 Attack 25 1000 p2 2530 600 -1 BlockStand 13 865 match Fight 0 0 0 0
+at 899 p1 2470 600 1 Attack 22 1000 p2 2530 600 -1 BlockStand 10 850 match Fight 0 0 0 0
+at 959 p1 2470 600 1 Attack 19 1000 p2 2530 600 -1 BlockStand 7 835 match Fight 0 0 0 0
+at 1019 p1 2470 600 1 Attack 16 1000 p2 2530 600 -1 BlockStand 4 820 match Fight 0 0 0 0
+at 1079 p1 2470 600 1 Attack 13 1000 p2 2530 600 -1 BlockStand 1 805 match Fight 0 0 0 0
+at 1139 p1 2470 600 1 Attack 12 1000 p2 2530 600 -1 BlockStand 0 790 match Fight 0 0 0 0
+at 1199 p1 2470 600 1 Attack 12 1000 p2 2530 600 -1 BlockStand 0 775 match Fight 0 0 0 0
+at 1259 p1 2470 600 1 Attack 12 1000 p2 2530 600 -1 BlockStand 0 760 match Fight 0 0 0 0
+at 1319 p1 2470 600 1 Attack 9 1000 p2 2530 600 -1 BlockStand 8 760 match Fight 0 0 0 0
+at 1379 p1 2470 600 1 Attack 6 1000 p2 2530 600 -1 BlockStand 5 745 match Fight 0 0 0 0
+at 1439 p1 2470 600 1 Attack 3 1000 p2 2530 600 -1 BlockStand 2 730 match Fight 0 0 0 0
+at 1499 p1 2470 600 1 Attack 0 1000 p2 2530 600 -1 WalkBack 29 715 match Fight 0 0 0 0
+at 1559 p1 2470 600 1 Stand 7 1000 p2 2530 600 -1 WalkBack 26 700 match Fight 0 0 0 0
+at 1619 p1 2470 600 1 Stand 4 1000 p2 2530 600 -1 WalkBack 23 685 match Fight 0 0 0 0
+at 1679 p1 2470 600 1 Stand 1 1000 p2 2530 600 -1 WalkBack 20 670 match Fight 0 0 0 0
+at 1739 p1 2470 600 1 Attack 43 1000 p2 2530 600 -1 WalkBack 17 655 match Fight 0 0 0 0
+at 1799 p1 2470 600 1 Attack 40 1000 p2 2530 600 -1 WalkBack 14 640 match Fight 0 0 0 0
+at 1859 p1 2470 600 1 Attack 37 1000 p2 2530 600 -1 WalkBack 11 625 match Fight 0 0 0 0
+at 1919 p1 2470 600 1 Attack 34 1000 p2 2530 600 -1 WalkBack 8 610 match Fight 0 0 0 0
+at 1979 p1 2470 600 1 Attack 31 1000 p2 2530 600 -1 WalkBack 5 595 match Fight 0 0 0 0
+at 2039 p1 2470 600 1 Attack 28 1000 p2 2530 600 -1 WalkBack 2 580 match Fight 0 0 0 0
+at 2099 p1 2470 600 1 Attack 25 1000 p2 2530 600 -1 BlockStand 13 565 match Fight 0 0 0 0
+at 2159 p1 2470 600 1 Attack 22 1000 p2 2530 600 -1 BlockStand 10 550 match Fight 0 0 0 0
+at 2219 p1 2470 600 1 Attack 19 1000 p2 2530 600 -1 BlockStand 7 535 match Fight 0 0 0 0
+at 2279 p1 2470 600 1 Attack 16 1000 p2 2530 600 -1 BlockStand 4 520 match Fight 0 0 0 0
+at 2339 p1 2470 600 1 Attack 13 1000 p2 2530 600 -1 BlockStand 1 505 match Fight 0 0 0 0
+at 2399 p1 2470 600 1 Attack 12 1000 p2 2530 600 -1 BlockStand 0 490 match Fight 0 0 0 0
+at 2459 p1 2470 600 1 Attack 12 1000 p2 2530 600 -1 BlockStand 0 475 match Fight 0 0 0 0
+at 2519 p1 2470 600 1 Attack 12 1000 p2 2530 600 -1 BlockStand 0 460 match Fight 0 0 0 0
+at 2579 p1 2470 600 1 Attack 9 1000 p2 2530 600 -1 BlockStand 8 460 match Fight 0 0 0 0
+at 2639 p1 2470 600 1 Attack 6 1000 p2 2530 600 -1 BlockStand 5 445 match Fight 0 0 0 0
+at 2699 p1 2470 600 1 Attack 3 1000 p2 2530 600 -1 BlockStand 2 430 match Fight 0 0 0 0
+at 2759 p1 2470 600 1 Attack 0 1000 p2 2530 600 -1 WalkBack 29 415 match Fight 0 0 0 0
+at 2819 p1 2470 600 1 Stand 7 1000 p2 2530 600 -1 WalkBack 26 400 match Fight 0 0 0 0
+at 2879 p1 2470 600 1 Stand 4 1000 p2 2530 600 -1 WalkBack 23 385 match Fight 0 0 0 0
+at 2939 p1 2470 600 1 Stand 1 1000 p2 2530 600 -1 WalkBack 20 370 match Fight 0 0 0 0
+at 2999 p1 2470 600 1 Attack 43 1000 p2 2530 600 -1 WalkBack 17 355 match Fight 0 0 0 0
+at 3059 p1 2470 600 1 Attack 40 1000 p2 2530 600 -1 WalkBack 14 340 match Fight 0 0 0 0
+at 3119 p1 2470 600 1 Attack 37 1000 p2 2530 600 -1 WalkBack 11 325 match Fight 0 0 0 0
+at 3179 p1 2470 600 1 Attack 34 1000 p2 2530 600 -1 WalkBack 8 310 match Fight 0 0 0 0
+at 3239 p1 2470 600 1 Attack 31 1000 p2 2530 600 -1 WalkBack 5 295 match Fight 0 0 0 0
+at 3299 p1 2470 600 1 Attack 28 1000 p2 2530 600 -1 WalkBack 2 280 match Fight 0 0 0 0
+at 3359 p1 2470 600 1 Attack 25 1000 p2 2530 600 -1 BlockStand 13 265 match Fight 0 0 0 0
+at 3419 p1 2470 600 1 Attack 22 1000 p2 2530 600 -1 BlockStand 10 250 match Fight 0 0 0 0
+at 3479 p1 2470 600 1 Attack 19 1000 p2 2530 600 -1 BlockStand 7 235 match Fight 0 0 0 0
+at 3539 p1 2470 600 1 Attack 16 1000 p2 2530 600 -1 BlockStand 4 220 match Fight 0 0 0 0
+at 3599 p1 2470 600 1 Attack 13 1000 p2 2530 600 -1 BlockStand 1 205 match Fight 0 0 0 0
+at 3659 p1 2470 600 1 Attack 12 1000 p2 2530 600 -1 BlockStand 0 190 match Fight 0 0 0 0
+at 3719 p1 2470 600 1 Attack 12 1000 p2 2530 600 -1 BlockStand 0 175 match Fight 0 0 0 0
+at 3779 p1 2470 600 1 Attack 12 1000 p2 2530 600 -1 BlockStand 0 160 match Fight 0 0 0 0
+at 3839 p1 2470 600 1 Attack 9 1000 p2 2530 600 -1 BlockStand 8 160 match Fight 0 0 0 0
+at 3899 p1 2470 600 1 Attack 6 1000 p2 2530 600 -1 BlockStand 5 145 match Fight 0 0 0 0
+at 3959 p1 2470 600 1 Attack 3 1000 p2 2530 600 -1 BlockStand 2 130 match Fight 0 0 0 0
+at 4019 p1 2470 600 1 Attack 0 1000 p2 2530 600 -1 WalkBack 29 115 match Fight 0 0 0 0
+at 4079 p1 2470 600 1 Stand 7 1000 p2 2530 600 -1 WalkBack 26 100 match Fight 0 0 0 0
+at 4139 p1 2470 600 1 Stand 4 1000 p2 2530 600 -1 WalkBack 23 85 match Fight 0 0 0 0
+at 4199 p1 2470 600 1 Stand 1 1000 p2 2530 600 -1 WalkBack 20 70 match Fight 0 0 0 0
+at 4259 p1 2470 600 1 Attack 43 1000 p2 2530 600 -1 WalkBack 17 55 match Fight 0 0 0 0
+at 4319 p1 2470 600 1 Attack 40 1000 p2 2530 600 -1 WalkBack 14 40 match Fight 0 0 0 0
+at 4379 p1 2470 600 1 Attack 37 1000 p2 2530 600 -1 WalkBack 11 25 match Fight 0 0 0 0
+at 4439 p1 2470 600 1 Attack 34 1000 p2 2530 600 -1 WalkBack 8 10 match Fight 0 0 0 0
+at 4499 p1 2470 600 1 Attack 31 1000 p2 2530 600 -1 WalkBack 5 0 match Fight 0 0 0 0
+at 4559 p1 2470 600 1 Attack 28 1000 p2 2530 600 -1 WalkBack 2 0 match Fight 0 0 0 0
+at 4583 p1 2470 600 1 Stand 7 1000 p2 2530 600 -1 WalkBack 26 0 match Fight 0 0 0 0
+final 8657421be090be5a

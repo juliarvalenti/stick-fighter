@@ -580,6 +580,8 @@
       "stun": 100,
       "strength": "medium",
       "guard": "mid",
+      "chip": 15,
+      "chipKo": true,
       "pushbackHit": 16,
       "pushbackBlock": 18,
       "hitbox": { "limb": "frontForearm", "radius": 8, "activeBonus": 0 },

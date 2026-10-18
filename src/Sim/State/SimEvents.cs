@@ -13,6 +13,9 @@ public enum EventKind
     Throw = 4,
     Knockdown = 5,
     Ko = 6,
+
+    // Two fireballs met and cancelled out.
+    Clash = 7,
 }
 
 // One event: when, what, who did it to whom with which move (-1 for none), and where (the contact
@@ -53,11 +56,13 @@ public struct SimEventRing
     // How many frames back the ring is complete for.
     public const int Window = 8;
 
-    // The most events one frame can record. Each fighter's contact gives a hit (or counter hit, or
-    // block), and may add a knockdown (a sweep) and a KO: 3 each, 6 for a trade. Each fighter can
-    // also land from a juggle that frame, a knockdown each: 2 more. A completed throw gives 3 (throw,
-    // knockdown, KO), but grabbed fighters have no hitboxes, so it can't coincide with the contacts.
-    public const int MaxPerFrame = 8;
+    // The most events one frame can record. On each fighter: the other's strike gives a hit (or
+    // counter hit, or block) and may add a knockdown (a sweep) and the KO (only the hit that takes the
+    // last point), and the other's fireball can land as well, a hit or block: 4 each, 8 for both.
+    // Each fighter can also land from a juggle that frame, a knockdown each: 2 more. Two fireballs
+    // that clash give 2, but then neither lands. A completed throw gives 3 (throw, knockdown, KO),
+    // but grabbed fighters have no hitboxes, so it can't coincide with the contacts.
+    public const int MaxPerFrame = 10;
 
     public const int Capacity = Window * MaxPerFrame;
 

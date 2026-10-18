@@ -22,8 +22,27 @@ public static class Synth
         Sfx.Block => Block(),
         Sfx.Throw => Throw(),
         Sfx.Knockdown => Knockdown(),
+        Sfx.Clash => Clash(),
         _ => Ko(),
     };
+
+    // Two fireballs cancelling: a bright crackle (high-passed noise in short pops) with a quick fizz
+    // rising over it. No low end: nobody got hit.
+    private static float[] Clash()
+    {
+        var o = Buffer(0.22f);
+        var n = new Noise(71);
+        var hp = new HighPass(2600);
+        for (var i = 0; i < o.Length; i++)
+        {
+            var t = i / (float)Rate;
+            var pops = MathF.Sin(t * 90 * MathF.Tau) > 0.6f ? 1f : 0.35f;
+            var crackle = hp.Run(n.Next()) * pops * Decay(t, 0.07f);
+            var fizz = Square((1600 + 2400 * t / 0.22f) * t) * 0.12f * Attack(t, 0.005f) * Decay(t, 0.05f);
+            o[i] = MathF.Tanh((crackle * 1.5f + fizz) * 1.4f);
+        }
+        return Finish(o, 0.8f);
+    }
 
     // A swish: noise through a band that sweeps up, swelling in and dying away.
     private static float[] Whiff()

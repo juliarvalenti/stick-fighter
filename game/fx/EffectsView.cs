@@ -48,6 +48,18 @@ public partial class EffectsView : Node2D
 
     public override void _Draw()
     {
+        // Fireballs in flight: the loop, in the thrower's color, facing the way it flies. Like
+        // everything here, a function of the state (the projectile's frame), so it rolls back too.
+        for (var slot = 0; slot < GameState.MaxProjectiles; slot++)
+        {
+            var projectile = _state.Projectiles[slot];
+            if (!projectile.Active)
+                continue;
+            var facing = projectile.Velocity.X >= Sim.Numerics.Fix.Zero ? 1 : -1;
+            var color = projectile.Owner == 0 ? Style.Look.P1 : Style.Look.P2;
+            Effects.Draw(this, Effect.Fireball, projectile.Frame, projectile.Position.ToVector2(), facing, color);
+        }
+
         foreach (var e in _ledger.Playing)
         {
             if (EffectOf(e) is not { } effect)
@@ -57,7 +69,9 @@ public partial class EffectsView : Node2D
             // Which way the attacker faced the contact: the guard arc faces back at it.
             var attackerX = _state.Fighters[e.Attacker].Position.X.ToFloat();
             var facing = at.X >= attackerX ? 1 : -1;
-            Effects.Draw(this, effect, frame, at, facing, screen: VisibleRect());
+            // A fireball breaking up is in its thrower's colour; everything else has its own.
+            Godot.Color? color = e.Kind == EventKind.Clash ? Style.Look.Player(e.Attacker) : null;
+            Effects.Draw(this, effect, frame, at, facing, color, screen: VisibleRect());
         }
     }
 
@@ -76,6 +90,7 @@ public partial class EffectsView : Node2D
             EventKind.Block => Effect.Block,
             EventKind.Knockdown => Effect.Dust,
             EventKind.Ko => Effect.KoFlash,
+            EventKind.Clash => Effect.FireballDissipate,
             _ => null,
         };
     }

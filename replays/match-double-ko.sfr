@@ -1,6 +1,6 @@
 stick-fighter-replay 6
 seed 1
-data a25ed9f5779f0a87
+data 1ba8a54ffb938c84
 stage 0 2560 600 1280
 mode versus
 frames 1670
@@ -78,4 +78,4 @@ at 1499 p1 860 600 1 Hitstun 10 0 p2 946.293121337890625 600 -1 Attack 17 1000 m
 at 1559 p1 860 600 1 Stand 48 0 p2 946.293121337890625 600 -1 Stand 51 1000 match RoundEnd 2 5601 1 1
 at 1619 p1 860 600 1 Stand 108 0 p2 946.293121337890625 600 -1 Stand 111 1000 match MatchEnd 2 5601 1 2
 at 1669 p1 860 600 1 Stand 158 0 p2 946.293121337890625 600 -1 Stand 161 1000 match MatchEnd 2 5601 1 2
-final 4735f3beed84c6ba
+final 208eb91a6918cd1a

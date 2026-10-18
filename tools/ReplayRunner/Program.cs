@@ -202,6 +202,10 @@ static Buttons RandomButtons(ref Rng rng)
     return rng.Chance(1, 2) ? buttons & Buttons.Directions : buttons;
 }
 
+// throw-in-blockstun: how long P1 walks in behind its fireball before the throw, so the throw lands
+// in range while P2 is still in blockstun.
+static int ThrowInBlockstunWalk() => 151;
+
 // Scripted matches on the training stage, as runs of (p1, p2, frames). P1 starts on the left
 // facing right and P2 on the right facing left, so Left is back for P1 and forward for P2.
 static List<FrameInput>? Scripts(string name) => name switch
@@ -572,6 +576,67 @@ static List<FrameInput>? Scripts(string name) => name switch
         Runs((Buttons.None, Buttons.None, 160))),
 
     // Both walk in and throw on the same frame: both tech and break apart.
+    // Specials: the fireball (236 + P). P1 throws a heavy one from the start positions; it hits P2.
+    "fireball-hit" => Concat(Qcf(Buttons.HeavyPunch), Runs((Buttons.None, Buttons.None, 80))),
+
+    // The same, P2 holding back: blocked, for 15 chip.
+    "fireball-block-chip" => Concat(Qcf(Buttons.HeavyPunch, Buttons.Right), Runs((Buttons.None, Buttons.Right, 80))),
+
+    // Both walk right until P2 is in the corner, P1 at point-blank. Then P2 blocks fireball after
+    // fireball (15 chip each; the corner keeps it in place and a fireball never pushes P1), and the
+    // 67th takes the last point: a chip KO.
+    "fireball-chip-ko" => Concat(
+        Runs((Buttons.Right, Buttons.Right, 300)),
+        Repeat(Concat(Qcf(Buttons.HeavyPunch, Buttons.Right), Runs((Buttons.None, Buttons.Right, 60))), 68)),
+
+    // Both throw on the same frame: the fireballs meet in the middle and cancel out.
+    "fireball-clash" => Runs(
+        (Buttons.Down, Buttons.Down, 1),
+        (Buttons.Down | Buttons.Right, Buttons.Down | Buttons.Left, 1),
+        (Buttons.Right | Buttons.LightPunch, Buttons.Left | Buttons.LightPunch, 1),
+        (Buttons.None, Buttons.None, 120)),
+
+    // One fireball per player: P1 throws a slow one, and the motion again while it's still flying
+    // gives the jab instead of a second.
+    "fireball-one-on-screen" => Concat(
+        Qcf(Buttons.LightPunch), Runs((Buttons.None, Buttons.None, 40)),
+        Qcf(Buttons.LightPunch), Runs((Buttons.None, Buttons.None, 80))),
+
+    // A sloppy motion still counts: 2, 1, 2, 3, 6 + MP.
+    "motion-lenient" => Runs(
+        (Buttons.Down, Buttons.None, 1),
+        (Buttons.Down | Buttons.Left, Buttons.None, 1),
+        (Buttons.Down, Buttons.None, 1),
+        (Buttons.Down | Buttons.Right, Buttons.None, 1),
+        (Buttons.Right | Buttons.MediumPunch, Buttons.None, 1),
+        (Buttons.None, Buttons.None, 80)),
+
+    // Negative edge: HP pressed and held (a standing heavy punch comes out and plays), the motion done
+    // still holding it, and HP released after the 6: the release throws a heavy fireball.
+    "negative-edge" => Runs(
+        (Buttons.HeavyPunch, Buttons.None, 30),
+        (Buttons.Down | Buttons.HeavyPunch, Buttons.None, 1),
+        (Buttons.Down | Buttons.Right | Buttons.HeavyPunch, Buttons.None, 1),
+        (Buttons.Right | Buttons.HeavyPunch, Buttons.None, 1),
+        (Buttons.Right, Buttons.None, 1),
+        (Buttons.None, Buttons.None, 80)),
+
+    // Owed from Normals: both walk back to the separation limit, then P1's fireball hits P2 there. The
+    // pushback can't take P2 past the limit, and it never drags P1 forward.
+    "fireball-separation-limit" => Concat(
+        Runs((Buttons.Left, Buttons.Right, 150)),
+        Qcf(Buttons.HeavyPunch),
+        Runs((Buttons.None, Buttons.None, 160))),
+
+    // Owed from Throws: a throw on a fighter in full blockstun fails. P2 in the corner, P1 backed off
+    // to the separation limit. P1 throws a slow fireball and walks in behind it; P2 blocks it, and P1's
+    // throw, made in range while P2 is still in blockstun, whiffs.
+    "throw-in-blockstun" => Concat(
+        Runs((Buttons.Right, Buttons.Right, 300), (Buttons.Left, Buttons.Right, 300)),
+        Qcf(Buttons.LightPunch, Buttons.Right),
+        Runs((Buttons.None, Buttons.Right, 42), (Buttons.Right, Buttons.Right, ThrowInBlockstunWalk())),
+        Runs((Buttons.LightPunch | Buttons.LightKick, Buttons.Right, 1), (Buttons.None, Buttons.Right, 60))),
+
     "throw-same-frame" => Runs(
         (Buttons.Right, Buttons.Left, 23),
         (Buttons.LightPunch | Buttons.LightKick, Buttons.LightPunch | Buttons.LightKick, 1),
@@ -715,6 +780,20 @@ static Buttons Attack(in GameState state, int player)
 }
 
 // Buttons pressed every other frame (down, up, down...) for `frames` frames: mashing.
+// P1's quarter circle forward and a punch (P1 faces right from the start positions), P2 holding `p2`.
+static List<FrameInput> Qcf(Buttons punch, Buttons p2 = Buttons.None) => Runs(
+    (Buttons.Down, p2, 1),
+    (Buttons.Down | Buttons.Right, p2, 1),
+    (Buttons.Right | punch, p2, 1));
+
+static List<FrameInput> Repeat(List<FrameInput> part, int times)
+{
+    var inputs = new List<FrameInput>();
+    for (var i = 0; i < times; i++)
+        inputs.AddRange(part);
+    return inputs;
+}
+
 static List<FrameInput> Mash(Buttons p1, Buttons p2, int frames)
 {
     var inputs = new List<FrameInput>();

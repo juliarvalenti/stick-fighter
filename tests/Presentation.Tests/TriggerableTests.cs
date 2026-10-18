@@ -24,12 +24,13 @@ public class TriggerableTests
         }
     }
 
+    // Specials can trigger the fireball now (236P), so it's listed, and with it every move in the data.
     [Fact]
-    public void TheFireballIsHiddenUntilSpecialsCanTriggerIt()
+    public void TheFireballIsListedNowItCanBeTriggered()
     {
         var fireball = Data.Moves.IndexOf(Data.FindMove("236P")!);
-        Assert.DoesNotContain(fireball, Triggerable.Moves);
-        Assert.Equal(Data.Moves.Length - 1, Triggerable.Moves.Count);
+        Assert.Contains(fireball, Triggerable.Moves);
+        Assert.Equal(Data.Moves.Length, Triggerable.Moves.Count);
         Assert.All(Triggerable.Moves, i => Assert.InRange(i, 0, Data.Moves.Length - 1));
         Assert.Equal(Triggerable.Moves.Count, Triggerable.Moves.Distinct().Count());
     }
