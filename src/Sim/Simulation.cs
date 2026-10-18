@@ -293,19 +293,36 @@ public static class Simulation
         fighter.Move = -1;
     }
 
-    // The newest unused attack press within the buffer window, as a move index, or -1.
-    // Standing LP+LK is a throw rather than either normal (there are no air throws).
+    // The earliest unused attack press within the buffer window, as a move index, or -1. Earliest,
+    // because that's the button the player committed to: a plink (MP, then LP a frame later, an SF4
+    // habit) comes out as MP. Standing LP+LK is a throw rather than either normal, including LP then
+    // LK within the throw leniency (there are no air throws).
     private static int BufferedNormal(in InputHistory history, int now, int lastMoveFrame, NormalStance stance)
     {
-        for (var frame = now; frame > now - Normals.BufferWindow && frame > lastMoveFrame; frame--)
+        var oldest = now - Normals.BufferWindow + 1;
+        for (var frame = oldest > lastMoveFrame ? oldest : lastMoveFrame + 1; frame <= now; frame++)
         {
-            if (stance == NormalStance.Standing && Normals.ThrowPressedOn(history, frame, now))
+            var pressed = history.PressedOn(frame, now) & Buttons.Attacks;
+            if (pressed == Buttons.None)
+                continue;
+            if (stance == NormalStance.Standing && pressed.HasAny(Buttons.LightPunch | Buttons.LightKick) && ThrowCompletes(history, frame, now))
                 return Normals.Throw;
-            var move = Normals.Pick(history.PressedOn(frame, now) & Buttons.Attacks, stance);
+            var move = Normals.Pick(pressed, stance);
             if (move >= 0)
                 return move;
         }
         return -1;
+    }
+
+    // LP+LK completed on this frame or within the throw leniency after it (up to now).
+    private static bool ThrowCompletes(in InputHistory history, int frame, int now)
+    {
+        for (var at = frame; at < frame + Normals.ThrowLeniency && at <= now; at++)
+        {
+            if (Normals.ThrowPressedOn(history, at, now))
+                return true;
+        }
+        return false;
     }
 
     // backThrow: a throw started holding back throws behind (Throws also takes back held when it connects).
