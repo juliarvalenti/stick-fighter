@@ -154,6 +154,51 @@ public class NormalsTests
         Assert.Equal(Data.Stats.Health, state.Fighters[1].Health);
     }
 
+    [Fact]
+    public void InTheCornerTheAttackerTakesThePushback()
+    {
+        var state = GameState.NewMatch(1);
+        var wall = Collision.Pushing.MaxX(state.Stage);
+        state.Fighters[0].Position = new FixVec2(wall - Fix.FromInt(60), state.Fighters[0].Position.Y);
+        state.Fighters[1].Position = new FixVec2(wall, state.Fighters[1].Position.Y);
+        var jab = Data.FindMove("5LP")!;
+        var attackerBefore = state.Fighters[0].Position.X;
+
+        Simulation.Step(ref state, new FrameInput(Buttons.LightPunch, default));
+        for (var i = 1; i < jab.TotalFrames; i++)
+            Simulation.Step(ref state, default);
+
+        Assert.True(state.Fighters[1].Health < Data.Stats.Health);
+        Assert.Equal(wall, state.Fighters[1].Position.X); // still pinned
+        Assert.Equal(attackerBefore - Fix.FromInt(jab.PushbackHit), state.Fighters[0].Position.X);
+    }
+
+    [Fact]
+    public void AtTheSeparationLimitTheAttackerIsNotDraggedForward()
+    {
+        // Only a projectile could hit this far away; build the contact by hand.
+        var state = GameState.NewMatch(1);
+        var gap = Collision.Pushing.MaxGap(state.Stage);
+        var left = state.Stage.Center - gap / 2;
+        state.Fighters[0].Position = new FixVec2(left, state.Fighters[0].Position.Y);
+        state.Fighters[1].Position = new FixVec2(left + gap, state.Fighters[1].Position.Y);
+        state.Fighters[0].Action = (int)FighterAction.Attack;
+        state.Fighters[0].Move = Data.Moves.IndexOf(Data.FindMove("5HP")!);
+        var p1Before = state.Fighters[0].Position.X;
+        var p2Before = state.Fighters[1].Position.X;
+
+        var contacts = new Collision.Contacts { Count = 1 };
+        contacts.Items[0] = new Collision.Contact { Kind = Collision.ContactKind.Hit, Attacker = 0, Defender = 1 };
+        Hits.Apply(ref state, contacts);
+        Collision.Pushing.Resolve(ref state, p1Before, p2Before);
+
+        // The defender can't be pushed past the limit, and the attacker can't slide back either
+        // (that widens the gap just the same), so nobody moves; above all, the attacker isn't pulled in.
+        Assert.Equal(p1Before, state.Fighters[0].Position.X);
+        Assert.Equal(p2Before, state.Fighters[1].Position.X);
+        Assert.Equal(1, state.Fighters[1].Hitstun > 0 ? 1 : 0);
+    }
+
     // On-hit advantage from reference/frame-data-baseline. 2HK knocks down, so it's left out.
     [Theory]
     [InlineData("5LP", 6)]

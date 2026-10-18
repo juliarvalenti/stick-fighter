@@ -152,6 +152,15 @@ static List<FrameInput>? Scripts(string name) => name switch
         (Buttons.HeavyKick, Buttons.None, 1),
         (Buttons.None, Buttons.None, 40)),
 
+    // P1 walks P2 back into the right wall, then hits P2 there twice: P2 stays pinned and P1 takes
+    // the pushback instead.
+    "pushback-corner" => Runs(
+        (Buttons.Right, Buttons.Right, 240),
+        (Buttons.MediumPunch, Buttons.None, 1),
+        (Buttons.None, Buttons.None, 30),
+        (Buttons.LightPunch, Buttons.None, 1),
+        (Buttons.None, Buttons.None, 30)),
+
     // Both walk in and jab on the same frame: both get hit.
     "trade" => Runs(
         (Buttons.Right, Buttons.Left, 23),

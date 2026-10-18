@@ -5,7 +5,13 @@ namespace StickFighter.Sim.Collision;
 // Keeps fighters from overlapping, within one screen of each other, and inside the stage walls.
 public static class Pushing
 {
-    public static void Resolve(ref GameState state)
+    // Only from tests and tools that move fighters by velocity alone; Step passes real positions.
+    public static void Resolve(ref GameState state) =>
+        Resolve(ref state, state.Fighters[0].Position.X - state.Fighters[0].Velocity.X, state.Fighters[1].Position.X - state.Fighters[1].Velocity.X);
+
+    // p1Before and p2Before are where each fighter stood at the start of the frame, so every
+    // source of movement this frame (walking, pushback, ...) counts toward "moved away".
+    public static void Resolve(ref GameState state, Fix p1Before, Fix p2Before)
     {
         ref var p1 = ref state.Fighters[0];
         ref var p2 = ref state.Fighters[1];
@@ -16,10 +22,8 @@ public static class Pushing
         var p1Left = p1.Position.X != p2.Position.X ? p1.Position.X < p2.Position.X : p1.Facing > 0;
         ref var left = ref p1Left ? ref p1 : ref p2;
         ref var right = ref p1Left ? ref p2 : ref p1;
-
-        // Where each stood before this frame's move (Step adds the velocity just before this).
-        var leftBefore = left.Position.X - left.Velocity.X;
-        var rightBefore = right.Position.X - right.Velocity.X;
+        var leftBefore = p1Left ? p1Before : p2Before;
+        var rightBefore = p1Left ? p2Before : p1Before;
 
         // Split the overlap evenly. An odd raw amount rounds up for both, so neither gets the extra unit.
         var overlap = Overlap.BoxesX(Body.PushBox(left.Position), Body.PushBox(right.Position));
@@ -82,8 +86,9 @@ public static class Pushing
         right.Position = new FixVec2(right.Position.X - rightBack, right.Position.Y);
     }
 
-    private static Fix MinX(in Stage stage) => stage.LeftWall + Body.PushHalfWidth;
-    private static Fix MaxX(in Stage stage) => stage.RightWall - Body.PushHalfWidth;
+    // The furthest left and right a fighter's feet can be: its pushbox against the wall.
+    public static Fix MinX(in Stage stage) => stage.LeftWall + Body.PushHalfWidth;
+    public static Fix MaxX(in Stage stage) => stage.RightWall - Body.PushHalfWidth;
 
     private static void ClampToWalls(ref FighterState fighter, in Stage stage) =>
         fighter.Position = new FixVec2(Fix.Clamp(fighter.Position.X, MinX(stage), MaxX(stage)), fighter.Position.Y);
