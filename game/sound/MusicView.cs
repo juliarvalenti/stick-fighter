@@ -56,8 +56,12 @@ public partial class MusicView : Node, IMusicSink
             _fade.Kill();
             _players[1 - _current].Stop();
         }
-        _players[_current].VolumeDb = gainDb;
+        // A short glide, so ducking under the voice or the pause menu doesn't jump.
+        _fade = CreateTween();
+        _fade.TweenProperty(_players[_current], "volume_db", gainDb, GlideSeconds);
     }
+
+    private const float GlideSeconds = 0.12f;
 
     private static Dictionary<Track, AudioStreamWav> Build()
     {

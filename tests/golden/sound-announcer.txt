@@ -1,0 +1,64 @@
+# effects volume 80 (-3.9 dB), 6 voices
+# music volume 80 (-3.9 dB, -10 dB more paused)
+# announcer volume 80 (-3.9 dB), music -6 dB under it
+display frame    0  voice round-1 (0.72 s)
+display frame    0  music Match, under the voice
+display frame   44  music back up
+display frame   59  voice fight (0.35 s)
+display frame   59  music under the voice
+display frame   81  music back up
+frame  119  HitHeavy    P1  pitch 1.004
+frame  119  HitHeavy    P2  pitch 0.986
+frame  163  HitHeavy    P1  pitch 1.029
+frame  163  HitHeavy    P2  pitch 0.987
+frame  207  HitHeavy    P1  pitch 1.033
+frame  207  HitHeavy    P2  pitch 0.984
+frame  250  HitHeavy    P1  pitch 0.974
+frame  250  HitHeavy    P2  pitch 1.010
+frame  294  HitHeavy    P1  pitch 0.972
+frame  294  HitHeavy    P2  pitch 0.998
+frame  458  HitHeavy    P1  pitch 1.002
+frame  458  HitHeavy    P2  pitch 1.024
+frame  501  HitHeavy    P1  pitch 0.985
+frame  501  HitHeavy    P2  pitch 0.966
+frame  545  HitHeavy    P1  pitch 0.951
+frame  545  HitHeavy    P2  pitch 1.017
+frame  589  HitHeavy    P1  pitch 0.959
+frame  589  HitHeavy    P2  pitch 0.965
+frame  632  HitHeavy    P1  pitch 0.977
+frame  632  HitHeavy    P2  pitch 1.011
+frame  796  HitHeavy    P1  pitch 1.025
+frame  796  Ko          P1  pitch 1.006
+frame  796  HitHeavy    P2  pitch 1.033
+frame  796  Ko          P2  pitch 1.042
+display frame  796  voice double-ko (0.94 s)
+display frame  796  music under the voice
+display frame  853  music back up
+display frame  928  voice round-2 (0.62 s)
+display frame  928  music under the voice
+display frame  966  music back up
+display frame  988  voice fight (0.35 s)
+display frame  988  music under the voice
+display frame 1010  music back up
+frame 1070  HitHeavy    P2  pitch 1.023
+frame 1111  HitHeavy    P2  pitch 1.047
+frame 1152  HitHeavy    P2  pitch 1.038
+frame 1192  HitHeavy    P2  pitch 0.977
+frame 1233  HitHeavy    P2  pitch 1.024
+frame 1274  HitHeavy    P2  pitch 1.003
+frame 1314  HitHeavy    P2  pitch 1.043
+frame 1355  HitHeavy    P2  pitch 1.006
+frame 1396  HitHeavy    P2  pitch 0.992
+frame 1436  HitHeavy    P2  pitch 0.961
+frame 1477  HitHeavy    P2  pitch 1.010
+frame 1477  Ko          P2  pitch 1.026
+display frame 1477  voice ko (0.41 s)
+display frame 1477  music under the voice
+display frame 1502  music back up
+display frame 1549  voice perfect (0.41 s)
+display frame 1549  music under the voice
+display frame 1574  music back up
+display frame 1609  voice p2-wins (1.25 s)
+display frame 1609  music under the voice
+display frame 1670  music Menu, under the voice
+display frame 1684  music back up

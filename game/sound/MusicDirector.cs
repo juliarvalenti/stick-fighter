@@ -12,14 +12,23 @@ public interface IMusicSink
 
 // Which loop plays, and how loud: the menu loop on the title, menus and results, the match loop in
 // a match. The level is the Options music volume, ducked while paused so the pause menu is quiet
-// but the match still feels held, not stopped. Presentation only; MusicView plays it.
+// but the match still feels held, not stopped, and a little under the announcer so every call is
+// heard. Presentation only; MusicView plays it.
 public sealed class MusicDirector
 {
     public const float PausedDuckDb = -10;
+    public const float VoiceDuckDb = -6;
+
+    private enum Duck
+    {
+        None,
+        Voice,
+        Paused,
+    }
 
     private readonly IMusicSink _sink;
     private float _gainDb = float.NaN;
-    private bool _ducked;
+    private Duck _duck;
 
     public MusicDirector(IMusicSink sink) => _sink = sink;
 
@@ -28,19 +37,20 @@ public sealed class MusicDirector
     // When set, a line per change: "display frame 20  music Match", "... music ducked".
     public List<string>? Log { get; set; }
 
-    public static float GainDb(int musicVolume, bool paused) =>
-        SoundDirector.VolumeDb(musicVolume) + (paused ? PausedDuckDb : 0);
+    public static float GainDb(int musicVolume, bool paused, bool voice = false) =>
+        SoundDirector.VolumeDb(musicVolume) + DuckDb(DuckFor(paused, voice));
 
-    public void Update(Track track, int musicVolume, bool paused, int displayFrame)
+    public void Update(Track track, int musicVolume, bool paused, int displayFrame, bool voice = false)
     {
-        var gain = GainDb(musicVolume, paused);
+        var duck = DuckFor(paused, voice);
+        var gain = SoundDirector.VolumeDb(musicVolume) + DuckDb(duck);
         if (track != Playing)
         {
             Playing = track;
             _gainDb = gain;
-            _ducked = paused;
+            _duck = duck;
             _sink.Play(track, gain);
-            Log?.Add($"display frame {displayFrame,4}  music {track}{(paused ? ", ducked" : "")}");
+            Log?.Add($"display frame {displayFrame,4}  music {track}{(duck == Duck.Paused ? ", ducked" : duck == Duck.Voice ? ", under the voice" : "")}");
             return;
         }
         if (gain != _gainDb)
@@ -48,10 +58,21 @@ public sealed class MusicDirector
             _gainDb = gain;
             _sink.SetGain(gain);
         }
-        if (paused != _ducked)
+        if (duck != _duck)
         {
-            _ducked = paused;
-            Log?.Add($"display frame {displayFrame,4}  music {(paused ? "ducked" : "back up")}");
+            _duck = duck;
+            var now = duck switch { Duck.Paused => "ducked", Duck.Voice => "under the voice", _ => "back up" };
+            Log?.Add($"display frame {displayFrame,4}  music {now}");
         }
     }
+
+    // Pause wins: under the pause menu the voice doesn't matter.
+    private static Duck DuckFor(bool paused, bool voice) => paused ? Duck.Paused : voice ? Duck.Voice : Duck.None;
+
+    private static float DuckDb(Duck duck) => duck switch
+    {
+        Duck.Paused => PausedDuckDb,
+        Duck.Voice => VoiceDuckDb,
+        _ => 0,
+    };
 }
