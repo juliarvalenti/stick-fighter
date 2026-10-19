@@ -4,7 +4,7 @@ namespace StickFighter.Sim;
 
 public struct FighterState
 {
-    public const int EncodedSize = 16 + 16 + 4 + 4 + 4 + 4 + 4 + 1 + 4 + 4 + 4 + 1 + 4 + 4 + 4 + 4 + 1 + 1 + 1 + 1 + 4 + 4 + 1 + 4 + 4 + 4 + 4 + 4 + 4 + 4;
+    public const int EncodedSize = 16 + 16 + 4 + 4 + 4 + 4 + 4 + 1 + 4 + 4 + 4 + 4 + 1 + 4 + 4 + 4 + 4 + 1 + 1 + 1 + 1 + 4 + 4 + 1 + 4 + 4 + 4 + 4 + 4 + 4 + 4;
 
     public FixVec2 Position;
     public FixVec2 Velocity;
@@ -27,6 +27,10 @@ public struct FighterState
     // The action frame the current move connected on (hit or block), while MoveHit: its cancel and
     // chain windows count from it (Combat.Cancels).
     public int ContactFrame;
+
+    // Hit windows of the current move used up (Move.HitWindows): the last one that connected, plus
+    // one. Each window can hit once, so a multi-hit special's hitbox comes back in the next window.
+    public int HitWindow;
 
     // Frames of hitstun left after this one. The fighter can't act while it's above zero.
     public int Hitstun;
@@ -108,6 +112,7 @@ public struct FighterState
         writer.Write(Move);
         writer.Write(MoveHit);
         writer.Write(ContactFrame);
+        writer.Write(HitWindow);
         writer.Write(Hitstun);
         writer.Write(Blockstun);
         writer.Write(KnockedDown);

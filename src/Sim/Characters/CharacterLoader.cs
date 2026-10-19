@@ -237,6 +237,10 @@ public static class CharacterLoader
                 HardKnockdown: Flag(m, "hardKnockdown", h),
                 SpecialCancel: Flag(m, "specialCancel", h),
                 Chains: Inputs(m, "chains", h),
+                Invincible: Invincible(m, total, h),
+                Launch: Flag(m, "launch", h),
+                HitWindows: HitWindows(m, active, h),
+                Path: ReadPath(m, total, h),
                 HitstunOverride: OptionalInt(m, "hitstun", h),
                 BlockstunOverride: OptionalInt(m, "blockstun", h),
                 HitboxLimb: limb,
@@ -345,6 +349,70 @@ public static class CharacterLoader
         }
         h.Add(value ? 1 : 0);
         return value;
+    }
+
+    private static int Invincible(JsonElement m, int total, DataHasher h)
+    {
+        var frames = OptionalInt(m, "invincible", h) ?? 0;
+        if (frames < 0 || frames > total)
+            throw new CharacterDataException($"'invincible' is {frames} frames, outside the move (0..{total})");
+        return frames;
+    }
+
+    // Window lengths, each at least a frame, filling the active phase exactly.
+    private static ImmutableArray<int> HitWindows(JsonElement m, int active, DataHasher h)
+    {
+        var windows = ImmutableArray.CreateBuilder<int>();
+        if (m.TryGetProperty("hitWindows", out var list))
+        {
+            if (list.ValueKind != JsonValueKind.Array)
+                throw new CharacterDataException("'hitWindows' must be a list of frame counts");
+            foreach (var item in list.EnumerateArray())
+            {
+                var frames = IntValue(item, "hitWindows", null);
+                if (frames < 1)
+                    throw new CharacterDataException($"'hitWindows' has a window of {frames} frames (at least 1)");
+                windows.Add(frames);
+            }
+            var sum = 0;
+            foreach (var w in windows)
+                sum += w;
+            if (sum != active)
+                throw new CharacterDataException($"'hitWindows' add up to {sum} frames, but active is {active}");
+        }
+        h.Add(windows.Count);
+        foreach (var w in windows)
+            h.Add(w);
+        return windows.ToImmutable();
+    }
+
+    // One [x, y] per frame, starting at [0, 0] and back on the floor (y 0) by the last; never below it.
+    private static ImmutableArray<FixVec2> ReadPath(JsonElement m, int total, DataHasher h)
+    {
+        var path = ImmutableArray.CreateBuilder<FixVec2>();
+        if (m.TryGetProperty("path", out var list))
+        {
+            if (list.ValueKind != JsonValueKind.Array)
+                throw new CharacterDataException("'path' must be a list of [x, y] per frame");
+            foreach (var point in list.EnumerateArray())
+            {
+                if (point.ValueKind != JsonValueKind.Array || point.GetArrayLength() != 2)
+                    throw new CharacterDataException($"'path' entries must be [x, y], found {point.GetRawText()}");
+                var x = IntValue(point[0], "path", h);
+                var y = IntValue(point[1], "path", h);
+                if (y > 0)
+                    throw new CharacterDataException($"'path' frame {path.Count} is {y} px below the floor");
+                path.Add(new FixVec2(Fix.FromInt(x), Fix.FromInt(y)));
+            }
+            if (path.Count != total)
+                throw new CharacterDataException($"'path' has {path.Count} frames, but the move has {total}");
+            if (path[0] != FixVec2.Zero)
+                throw new CharacterDataException("'path' must start at [0, 0]");
+            if (path[^1].Y != Fix.Zero)
+                throw new CharacterDataException("'path' must end back on the floor (y 0)");
+        }
+        h.Add(path.Count);
+        return path.ToImmutable();
     }
 
     // Cancels only go forwards: only ground normals cancel or chain, and only into ground normals (a
