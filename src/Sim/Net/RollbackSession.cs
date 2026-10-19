@@ -71,6 +71,12 @@ public sealed class RollbackSession
     private int _samples;
     private int _framesSinceSkip;
 
+    // For the ping: the tick each of our inputs was first sent, and the last one acknowledged.
+    private readonly int[] _sentAtTick = new int[History];
+    private int _ticks;
+    private int _pingFrame = -1;
+    private int _pingSixteenths = -1;
+
     private GameState _state;
 
     // `localPlayer`: 0 for P1, 1 for P2. `step` is the simulation (a test can swap in a broken one).
@@ -128,6 +134,10 @@ public sealed class RollbackSession
     // The largest advantage, either way, seen so far.
     public int WidestAdvantage { get; private set; }
 
+    // The round trip, in milliseconds (-1 until measured): from sending an input to the other
+    // acknowledging it, smoothed. Whole ticks, so to within a frame (about 17 ms).
+    public int PingMs => _pingSixteenths < 0 ? -1 : _pingSixteenths * 1000 / (16 * GameInfo.TicksPerSecond);
+
     // The first checksum frame that didn't match the other peer's, if any; and, once the two have
     // swapped their per-frame checksums, the first frame that differed.
     public Desync? Desynced { get; private set; }
@@ -146,6 +156,7 @@ public sealed class RollbackSession
 
     private bool Update(Buttons local, bool advance)
     {
+        _ticks++;
         var rollbackFrom = Receive();
         if (rollbackFrom < _state.Frame)
             Resimulate(rollbackFrom);
@@ -168,6 +179,7 @@ public sealed class RollbackSession
             {
                 _localKnown = _state.Frame + InputDelay;
                 _localInputs[_localKnown % History] = local;
+                _sentAtTick[_localKnown % History] = _ticks;
                 Advance();
                 advanced = true;
             }
@@ -186,6 +198,7 @@ public sealed class RollbackSession
         while (_transport.TryReceive(out var message))
         {
             _peerAck = Max(_peerAck, message.Ack);
+            MeasurePing(message.Ack);
             if (message.Frame >= _remoteFrame)
             {
                 _remoteFrame = message.Frame;
@@ -208,6 +221,18 @@ public sealed class RollbackSession
                 FindFirstDivergence(message.TrailFirst, trail);
         }
         return rollbackFrom;
+    }
+
+    // An acknowledgement of our input for a frame newer than any before: how long it took, from the
+    // tick that input was sent, averaged in (an eighth of each new sample, kept in sixteenths of a
+    // tick). Inputs from before the first send (the delay's empty frames) don't count.
+    private void MeasurePing(int ack)
+    {
+        if (ack <= _pingFrame || ack < InputDelay || ack > _localKnown || _localKnown - ack >= History)
+            return;
+        _pingFrame = ack;
+        var sample = (_ticks - _sentAtTick[ack % History]) * 16;
+        _pingSixteenths = _pingSixteenths < 0 ? sample : _pingSixteenths + (sample - _pingSixteenths) / 8;
     }
 
     // This peer's view (its frame less the other's latest), against the other's view of itself.

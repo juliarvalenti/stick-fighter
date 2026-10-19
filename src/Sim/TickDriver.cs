@@ -31,13 +31,22 @@ public sealed class TickDriver
     // Advances the state by however many whole ticks fit in the elapsed time. Returns that count.
     public int Update(ref GameState state, long elapsedMicroseconds, IInputSource input)
     {
+        var ticks = Due(elapsedMicroseconds);
+        for (var i = 0; i < ticks; i++)
+            Simulation.Step(ref state, input.Read(state.Frame));
+        return ticks;
+    }
+
+    // How many whole ticks are due for the elapsed time (at most MaxTicksPerUpdate, the rest
+    // dropped), for a caller that runs the ticks itself: an online match, ticking its session.
+    public int Due(long elapsedMicroseconds)
+    {
         if (elapsedMicroseconds > 0)
             _accumulator += elapsedMicroseconds * GameInfo.TicksPerSecond;
 
         var ticks = 0;
         while (_accumulator >= UnitsPerTick && ticks < MaxTicksPerUpdate)
         {
-            Simulation.Step(ref state, input.Read(state.Frame));
             _accumulator -= UnitsPerTick;
             ticks++;
         }

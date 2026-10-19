@@ -334,6 +334,9 @@ public partial class Main : Node2D
                 case "Versus":
                     ShowSelect();
                     break;
+                case "Online":
+                    ShowOnline(); // MainOnline
+                    break;
                 case "Training":
                     StartMatch(Menus.MatchSettings.Training); // training goes straight in
                     break;
@@ -395,6 +398,11 @@ public partial class Main : Node2D
     // same characters and colors, the next seed).
     private void ShowResults()
     {
+        if (_online is not null)
+        {
+            ShowOnlineResults(forfeit: false);
+            return;
+        }
         _flow = Flow.Results;
         var results = new UI.Screens.ResultsScreen(_presenter.Results(_state), new[] { _settings.P1Color, _settings.P2Color });
         results.Chosen += item =>
@@ -448,6 +456,7 @@ public partial class Main : Node2D
                     Pause(UI.Screens.PauseScreen.Page.Menu, UI.Screens.PauseScreen.Quit);
                     break;
                 case UI.Screens.PauseScreen.QuitConfirmed:
+                    CloseOnline(); // online, leaving is a forfeit (the other side's grace runs out)
                     _paused = null;
                     _presenter.Visible = false;
                     ShowMenu();
@@ -640,11 +649,13 @@ public partial class Main : Node2D
         // and paused, no ticks run at all, so the match is exactly as it was when play resumes.
         // (Not calling the driver also keeps it from banking time to catch up on afterwards.)
         var running = _flow is Flow.Match or Flow.Results && _paused is null;
-        var ticks = running ? _driver.Update(ref _state, elapsed, _input) : 0;
+        // Online, the NetMatch runs the ticks (and pause doesn't stop them: see MainOnline).
+        var ticks = _online is not null ? TickOnline(elapsed) : running ? _driver.Update(ref _state, elapsed, _input) : 0;
         var simMs = Stopwatch.GetElapsedTime(start).TotalMilliseconds;
         if (_scenario is { Flow: true })
             CheckPauseHolds();
 
+        _overlay.Net = NetStats();
         _overlay.Record(delta * 1000, simMs, ticks, _driver.DroppedTicks, _state.Frame);
         PresentView(ticks);
         _debugView.Present(_state);

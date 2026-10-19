@@ -22,6 +22,9 @@ public partial class DebugOverlay : CanvasLayer
     // Scenario runs show fixed timings so captures are identical every run.
     public bool Deterministic { get; set; }
 
+    // Online, a line of netcode stats (ping, frame advantage, rollbacks a second, stalls); null offline.
+    public string? Net { get; set; }
+
     public override void _Ready()
     {
         Layer = 100;
@@ -73,7 +76,8 @@ public partial class DebugOverlay : CanvasLayer
             $"FPS {Engine.GetFramesPerSecond():0}   frame {frameMs:0.0} ms\n" +
             $"sim {_simMs:0.000} ms   ticks {_ticks}   dropped {_dropped}\n" +
             $"render cpu {renderCpu:0.00} ms   gpu {renderGpu:0.00} ms\n" +
-            $"rollback frames 0   sim frame {_frame}";
+            $"rollback frames 0   sim frame {_frame}" +
+            (Net is { } net ? "\n" + net : "");
         _panel.QueueRedraw();
     }
 

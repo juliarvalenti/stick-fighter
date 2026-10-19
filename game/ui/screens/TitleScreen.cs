@@ -31,7 +31,7 @@ public partial class TitleScreen : Screen
             var panel = Ui.Panel();
             var rows = new VBoxContainer();
             panel.AddChild(rows);
-            var first = Menu(rows, "Versus", "Training", "Options", "Quit");
+            var first = Menu(rows, "Versus", "Training", "Online", "Options", "Quit");
             AddChild(panel);
             CenterAt(panel, 244);
             first.GrabFocus();
