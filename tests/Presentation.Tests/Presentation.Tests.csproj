@@ -35,6 +35,9 @@
     <Compile Include="../../game/sound/MusicSynth.cs" Link="Linked/MusicSynth.cs" />
     <Compile Include="../../game/sound/MusicDirector.cs" Link="Linked/MusicDirector.cs" />
     <Compile Include="../../game/sound/Voice.cs" Link="Linked/Voice.cs" />
+    <Compile Include="../../game/editor/MoveDocument.cs" Link="Linked/MoveDocument.cs" />
+    <Compile Include="../../game/editor/ScriptWriter.cs" Link="Linked/ScriptWriter.cs" />
+    <Compile Include="../../tools/MoveCompiler/*.cs" Exclude="../../tools/MoveCompiler/Program.cs" LinkBase="Linked/MoveCompiler" />
   </ItemGroup>
 
   <!-- The characters' moves, to check every notation they use reads as glyphs. -->

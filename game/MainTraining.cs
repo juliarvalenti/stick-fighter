@@ -100,6 +100,9 @@ public partial class Main
                     Unpause();
                     ResetTraining();
                     break;
+                case "Pose editor":
+                    ShowPoseEditor(OpenTrainingMenu); // still paused underneath
+                    break;
                 default:
                     CloseTrainingMenu();
                     break;

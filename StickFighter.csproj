@@ -16,6 +16,12 @@
     <Compile Remove="build/**" />
   </ItemGroup>
 
+  <!-- The move compiler, built in, so the pose editor recompiles and checks a move as it's edited.
+       Its command line (Program.cs) stays in tools/MoveCompiler. -->
+  <ItemGroup>
+    <Compile Include="tools/MoveCompiler/*.cs" Exclude="tools/MoveCompiler/Program.cs" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="src/Sim/Sim.csproj" />
   </ItemGroup>

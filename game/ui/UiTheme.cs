@@ -32,6 +32,10 @@ public static class UiTheme
     public const string ScrimPanel = "ScrimPanel"; // the dimmed screen behind pause and dialogs
     public const string CharacterCard = "CharacterCard";
 
+    // Tools (the pose editor): a compact list row, and a text field, plain or flagged with a problem.
+    public const string SmallRow = "SmallRow";
+    public const string FieldError = "FieldError";
+
     // Dims the screen behind a dialog: ink at half strength, so the paper reads as set aside.
     public static readonly Color Scrim = new(Look.Ink, 0.55f);
 
@@ -57,7 +61,57 @@ public static class UiTheme
         Sliders(theme);
         Toggles(theme);
         Screens(theme);
+        Fields(theme);
         return theme;
+    }
+
+    // Text fields: a raised rounded box with the text in the UI face, an accent caret, and the same
+    // focus ring as everything else. A field with a problem is ringed in the danger color.
+    private static void Fields(Theme theme)
+    {
+        const string type = "LineEdit";
+        var box = Card(Look.SurfaceRaised, margin: 8);
+        box.SetCornerRadiusAll(10);
+        box.ContentMarginLeft = box.ContentMarginRight = 12;
+        box.ContentMarginTop = box.ContentMarginBottom = 3;
+        theme.SetStylebox("normal", type, box);
+        theme.SetStylebox("read_only", type, Card(Look.Surface, margin: 8));
+        var focus = (StyleBoxFlat)box.Duplicate();
+        focus.DrawCenter = false;
+        focus.BorderColor = Look.Accent;
+        focus.SetBorderWidthAll(FocusWidth / 2);
+        theme.SetStylebox("focus", type, focus);
+        theme.SetFont("font", type, Look.Ui);
+        theme.SetFontSize("font_size", type, Look.UiSmall + 2);
+        theme.SetColor("font_color", type, Look.Text);
+        theme.SetColor("font_placeholder_color", type, Look.TextMuted);
+        theme.SetColor("caret_color", type, Look.Accent);
+        theme.SetColor("selection_color", type, new Color(Look.Accent, 0.35f));
+
+        theme.SetTypeVariation(FieldError, type);
+        var error = (StyleBoxFlat)box.Duplicate();
+        error.BorderColor = Look.Danger;
+        error.SetBorderWidthAll(2);
+        theme.SetStylebox("normal", FieldError, error);
+
+        theme.SetTypeVariation(SmallRow, "Button");
+        var row = Pill(Colors.Transparent, horizontal: 12);
+        row.ContentMarginTop = row.ContentMarginBottom = 3;
+        var on = Pill(Look.SurfaceRaised, horizontal: 12);
+        on.ContentMarginTop = on.ContentMarginBottom = 3;
+        theme.SetStylebox("normal", SmallRow, row);
+        theme.SetStylebox("hover", SmallRow, on);
+        theme.SetStylebox("pressed", SmallRow, on);
+        theme.SetStylebox("hover_pressed", SmallRow, on);
+        theme.SetStylebox("disabled", SmallRow, row);
+        theme.SetStylebox("focus", SmallRow, FocusRing(on, filled: true));
+        theme.SetFont("font", SmallRow, Look.Ui);
+        theme.SetFontSize("font_size", SmallRow, Look.UiSmall + 2);
+        theme.SetColor("font_color", SmallRow, Look.Text);
+        theme.SetColor("font_focus_color", SmallRow, Look.Accent);
+        theme.SetColor("font_hover_color", SmallRow, Look.Text);
+        theme.SetColor("font_pressed_color", SmallRow, Look.Accent);
+        theme.SetColor("font_hover_pressed_color", SmallRow, Look.Accent);
     }
 
     // What screens put straight on the paper: ink type, status chips, character cards.

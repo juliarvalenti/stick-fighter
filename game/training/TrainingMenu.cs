@@ -62,7 +62,7 @@ public partial class TrainingMenu : Screen
         Switch(right, "Frame data", _session.FrameData, on => _session.FrameData = on);
         Switch(right, "Hitbox view", _session.Hitboxes, on => _session.Hitboxes = on);
         Switch(right, "Floor grid", _session.Grid, on => _session.Grid = on);
-        Menu(right, "Back");
+        Menu(right, "Pose editor", "Back");
 
         AddChild(panel);
         CenterAt(panel, 120);
