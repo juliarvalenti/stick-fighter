@@ -175,18 +175,19 @@ public partial class PoseEditor : Screen
         var panel = Ui.Panel();
         panel.Position = new Vector2(758, 16);
         panel.Size = new Vector2(506, 688);
+        // Tight enough that the longest script (nine verbs) fits under the frame data.
         var column = new VBoxContainer();
-        column.AddThemeConstantOverride("separation", 8);
+        column.AddThemeConstantOverride("separation", 6);
         panel.AddChild(column);
 
         column.AddChild(Ui.Label("FRAME DATA", UiTheme.Caption));
         var grid = new GridContainer { Columns = 2 };
         grid.AddThemeConstantOverride("h_separation", 16);
-        grid.AddThemeConstantOverride("v_separation", 2);
+        grid.AddThemeConstantOverride("v_separation", 0);
         column.AddChild(grid);
         foreach (var (key, label, _, _) in MoveDocument.Numbers)
         {
-            var stepper = new Stepper(label) { CustomMinimumSize = new Vector2(221, 32) };
+            var stepper = new Stepper(label) { CustomMinimumSize = new Vector2(221, 30) };
             stepper.Stepped += step =>
             {
                 _doc.SetNumber(key, _doc.GetNumber(key) + step);
@@ -197,7 +198,7 @@ public partial class PoseEditor : Screen
         }
         foreach (var (stepper, key) in new[] { (_strength, "strength"), (_guard, "guard") })
         {
-            stepper.CustomMinimumSize = new Vector2(221, 32);
+            stepper.CustomMinimumSize = new Vector2(221, 30);
             stepper.Stepped += step =>
             {
                 _doc.Cycle(key, step);
@@ -208,7 +209,7 @@ public partial class PoseEditor : Screen
         column.AddChild(_advantage);
 
         column.AddChild(Ui.Label("SCRIPT", UiTheme.Caption));
-        _verbs.AddThemeConstantOverride("separation", 3);
+        _verbs.AddThemeConstantOverride("separation", 2);
         column.AddChild(_verbs);
 
         column.AddChild(new Control { SizeFlagsVertical = SizeFlags.ExpandFill });
@@ -307,7 +308,7 @@ public partial class PoseEditor : Screen
         for (var i = 0; i < verbs.Count; i++)
         {
             var index = i;
-            var field = new LineEdit { Text = verbs[i], CustomMinimumSize = new Vector2(0, 28), CaretBlink = true };
+            var field = new LineEdit { Text = verbs[i], CustomMinimumSize = new Vector2(0, 26), CaretBlink = true };
             field.TextChanged += text =>
             {
                 _doc.SetVerb(index, text);

@@ -73,6 +73,7 @@ public static class UiTheme
         var box = Card(Look.SurfaceRaised, margin: 8);
         box.SetCornerRadiusAll(10);
         box.ContentMarginLeft = box.ContentMarginRight = 12;
+        box.ContentMarginTop = box.ContentMarginBottom = 3;
         theme.SetStylebox("normal", type, box);
         theme.SetStylebox("read_only", type, Card(Look.Surface, margin: 8));
         var focus = (StyleBoxFlat)box.Duplicate();
