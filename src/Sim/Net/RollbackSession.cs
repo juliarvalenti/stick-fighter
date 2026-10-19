@@ -11,6 +11,12 @@ namespace StickFighter.Sim.Net;
 // it stalls (doesn't advance) until the other catches up. Peers compare checksums of confirmed
 // frames, so a desync is caught where it happens. Nothing here knows about sockets or clocks: it's
 // given a transport, and ticked once a frame.
+//
+// Time sync: each peer tells the other how far ahead it thinks it is. The two views, averaged,
+// cancel the network's latency out and give the frame advantage: how many frames this peer is
+// ahead of the other. A peer that's ahead skips a tick now and then (at most one in
+// MinFramesBetweenSkips), so a peer whose clock runs fast settles back level instead of running
+// into the rollback cap and stalling.
 public sealed class RollbackSession
 {
     public const int MaxRollback = 8;
@@ -19,8 +25,14 @@ public sealed class RollbackSession
     // Confirmed frames whose checksums are compared: every this many.
     public const int ChecksumInterval = 30;
 
-    // How far back inputs and states are kept: comfortably more than the rollback cap, the delay and
-    // the lag before a checksum frame is confirmed on both sides.
+    // Time sync skips a tick at most once in this many frames.
+    public const int MinFramesBetweenSkips = 10;
+
+    // The advantage is averaged over this many ticks, so a late message doesn't cause a skip.
+    private const int AdvantageWindow = 16;
+
+    // How far back inputs, states and per-frame checksums are kept: comfortably more than the
+    // rollback cap, the delay and the lag before a checksum frame is confirmed on both sides.
     private const int History = 128;
 
     // At most this many inputs in one message (more would only resend what's long acknowledged).
@@ -43,15 +55,28 @@ public sealed class RollbackSession
     // The last of our inputs the other has confirmed it has.
     private int _peerAck = -1;
 
+    // The checksum of every confirmed frame (the state on that frame, before it's simulated), by
+    // frame, for the last History frames: to compare, and to find where a desync began.
+    private readonly ulong[] _frameChecksums = new ulong[History];
+    private int _lastChecksummed;
+
     private readonly List<(int Frame, ulong Checksum, GameState State)> _ownChecksums = new();
     private readonly List<(int Frame, ulong Checksum)> _theirChecksums = new();
     private int _lastChecksumFrame;
 
+    // The other peer's latest frame and its view of its advantage, and this peer's averaged view.
+    private int _remoteFrame;
+    private int _remoteAdvantage;
+    private readonly int[] _advantageSamples = new int[AdvantageWindow];
+    private int _samples;
+    private int _framesSinceSkip;
+
     private GameState _state;
 
     // `localPlayer`: 0 for P1, 1 for P2. `step` is the simulation (a test can swap in a broken one).
+    // `timeSync`: whether a peer that's ahead slows down (on unless a test wants to see without).
     public RollbackSession(int localPlayer, ulong seed, in Stage stage, MatchMode mode, int inputDelay, ITransport transport,
-        Stepper? step = null)
+        Stepper? step = null, bool timeSync = true)
     {
         if (inputDelay < 0 || inputDelay > MaxInputDelay)
             throw new System.ArgumentOutOfRangeException(nameof(inputDelay), $"Input delay must be 0 to {MaxInputDelay} frames");
@@ -60,13 +85,16 @@ public sealed class RollbackSession
         _step = step ?? Simulation.Step;
         _state = GameState.NewMatch(seed, stage, mode);
         InputDelay = inputDelay;
+        TimeSync = timeSync;
 
         // The first `inputDelay` frames have no input from us: nothing was pressed that long ago.
         _localKnown = inputDelay - 1;
+        _frameChecksums[0] = _state.Checksum();
     }
 
     public int LocalPlayer => _local;
     public int InputDelay { get; }
+    public bool TimeSync { get; }
 
     // The match as this peer has it now (the last frames may still rest on a prediction).
     public GameState State => _state;
@@ -79,15 +107,37 @@ public sealed class RollbackSession
     public int DeepestRollback { get; private set; }
     public int ResimulatedFrames { get; private set; }
     public int StalledTicks { get; private set; }
+    public int SkippedTicks { get; private set; }
 
-    // The first frame whose checksum didn't match the other peer's, if any.
+    // How many frames ahead of the other peer this one is (negative: behind), averaged over the
+    // last few ticks, with latency cancelled out: half the difference between the two views.
+    public int FrameAdvantage
+    {
+        get
+        {
+            var count = Min(_samples, AdvantageWindow);
+            if (count == 0)
+                return 0;
+            var sum = 0;
+            for (var i = 0; i < count; i++)
+                sum += _advantageSamples[i];
+            return sum / (2 * count);
+        }
+    }
+
+    // The largest advantage, either way, seen so far.
+    public int WidestAdvantage { get; private set; }
+
+    // The first checksum frame that didn't match the other peer's, if any; and, once the two have
+    // swapped their per-frame checksums, the first frame that differed.
     public Desync? Desynced { get; private set; }
 
-    public readonly record struct Desync(int Frame, ulong Local, ulong Remote);
+    public readonly record struct Desync(int Frame, ulong Local, ulong Remote, int FirstDiverged = -1);
 
     // One frame of play: takes in what's arrived (rolling back if a prediction was wrong), then
     // advances a frame with `local` as this player's input, unless that would mean predicting more
-    // than MaxRollback frames, in which case it stalls. Sends either way. True if it advanced.
+    // than MaxRollback frames (it stalls), or time sync has it wait a tick for the other to catch up.
+    // Sends either way. True if it advanced.
     public bool Tick(Buttons local) => Update(local, advance: true);
 
     // Takes in what's arrived and sends, without advancing: for a peer that has reached the end of
@@ -99,13 +149,20 @@ public sealed class RollbackSession
         var rollbackFrom = Receive();
         if (rollbackFrom < _state.Frame)
             Resimulate(rollbackFrom);
+        SampleAdvantage();
 
         var advanced = false;
         if (advance)
         {
+            _framesSinceSkip++;
             if (_state.Frame - _remoteConfirmed > MaxRollback)
             {
                 StalledTicks++;
+            }
+            else if (TimeSync && FrameAdvantage >= 1 && _framesSinceSkip >= MinFramesBetweenSkips)
+            {
+                SkippedTicks++;
+                _framesSinceSkip = 0;
             }
             else
             {
@@ -129,6 +186,11 @@ public sealed class RollbackSession
         while (_transport.TryReceive(out var message))
         {
             _peerAck = Max(_peerAck, message.Ack);
+            if (message.Frame >= _remoteFrame)
+            {
+                _remoteFrame = message.Frame;
+                _remoteAdvantage = message.Advantage;
+            }
             for (var i = 0; i < message.Inputs.Length; i++)
             {
                 var frame = message.FirstFrame + i;
@@ -142,8 +204,20 @@ public sealed class RollbackSession
             }
             if (message.ChecksumFrame >= 0)
                 _theirChecksums.Add((message.ChecksumFrame, message.Checksum));
+            if (message.Trail is { } trail)
+                FindFirstDivergence(message.TrailFirst, trail);
         }
         return rollbackFrom;
+    }
+
+    // This peer's view (its frame less the other's latest), against the other's view of itself.
+    private void SampleAdvantage()
+    {
+        var local = _state.Frame - _remoteFrame;
+        _advantageSamples[_samples % AdvantageWindow] = local - _remoteAdvantage;
+        _samples++;
+        var advantage = FrameAdvantage;
+        WidestAdvantage = Max(WidestAdvantage, advantage < 0 ? -advantage : advantage);
     }
 
     // Back to `frame`, then forward again to where we were, with the inputs as now known.
@@ -172,7 +246,7 @@ public sealed class RollbackSession
         var mine = frame <= _localKnown && frame >= InputDelay ? _localInputs[frame % History] : Buttons.None;
         var input = _local == 0 ? new FrameInput(mine, remote) : new FrameInput(remote, mine);
         _step(ref _state, input);
-        RecordChecksum();
+        RecordChecksums();
     }
 
     // Known, or predicted: the last known input held.
@@ -183,25 +257,33 @@ public sealed class RollbackSession
         return _remoteConfirmed >= 0 ? _remoteInputs[_remoteConfirmed % History] : Buttons.None;
     }
 
-    // Once a checksum frame is confirmed (both inputs known for every frame before it), keep its
-    // checksum and state, to send and to compare.
-    private void RecordChecksum()
+    // Checksums each frame as it's confirmed (both inputs known for every frame before it); and at
+    // each checksum frame keeps the checksum and state, to send and to compare.
+    private void RecordChecksums()
     {
-        var next = _lastChecksumFrame + ChecksumInterval;
-        if (next > ConfirmedFrame || next > _state.Frame)
-            return;
-        var state = _state;
-        if (next != _state.Frame && !_saved.TryLoad(next, ref state))
-            return;
-        _lastChecksumFrame = next;
-        _ownChecksums.Add((next, state.Checksum(), state));
-        if (_ownChecksums.Count > 8)
-            _ownChecksums.RemoveAt(0);
+        var confirmed = Min(ConfirmedFrame, _state.Frame);
+        while (_lastChecksummed < confirmed)
+        {
+            var frame = _lastChecksummed + 1;
+            var state = _state;
+            if (frame != _state.Frame && !_saved.TryLoad(frame, ref state))
+                return;
+            _lastChecksummed = frame;
+            var checksum = state.Checksum();
+            _frameChecksums[frame % History] = checksum;
+            if (frame == _lastChecksumFrame + ChecksumInterval)
+            {
+                _lastChecksumFrame = frame;
+                _ownChecksums.Add((frame, checksum, state));
+                if (_ownChecksums.Count > 8)
+                    _ownChecksums.RemoveAt(0);
+            }
+        }
     }
 
     private void CompareChecksums()
     {
-        RecordChecksum();
+        RecordChecksums();
         for (var i = _theirChecksums.Count - 1; i >= 0; i--)
         {
             var (frame, theirs) = _theirChecksums[i];
@@ -213,6 +295,25 @@ public sealed class RollbackSession
                     Desynced = new Desync(frame, own, theirs);
             }
             _theirChecksums.RemoveAt(i);
+        }
+    }
+
+    // The other peer's checksums for the frames leading up to the mismatch, against ours: the first
+    // that differs is where the desync began.
+    private void FindFirstDivergence(int first, ulong[] trail)
+    {
+        if (Desynced is not { FirstDiverged: < 0 } desync)
+            return;
+        for (var i = 0; i < trail.Length; i++)
+        {
+            var frame = first + i;
+            if (frame > _lastChecksummed || frame <= _lastChecksummed - History)
+                continue;
+            if (_frameChecksums[frame % History] != trail[i])
+            {
+                Desynced = desync with { FirstDiverged = frame };
+                return;
+            }
         }
     }
 
@@ -242,7 +343,19 @@ public sealed class RollbackSession
             inputs[i] = frame >= InputDelay ? _localInputs[frame % History] : Buttons.None;
         }
         var (checksumFrame, checksum) = _ownChecksums.Count > 0 ? (_ownChecksums[^1].Frame, _ownChecksums[^1].Checksum) : (-1, 0UL);
-        _transport.Send(new NetMessage(first, inputs, _remoteConfirmed, checksumFrame, checksum));
+
+        // After a desync, the checksums of the frames since the last checksum frame that matched.
+        var (trailFirst, trail) = (-1, (ulong[]?)null);
+        if (Desynced is { } desync)
+        {
+            trailFirst = desync.Frame - ChecksumInterval + 1;
+            trail = new ulong[ChecksumInterval];
+            for (var i = 0; i < trail.Length; i++)
+                trail[i] = _frameChecksums[(trailFirst + i) % History];
+        }
+
+        _transport.Send(new NetMessage(first, inputs, _remoteConfirmed, checksumFrame, checksum,
+            _state.Frame, _state.Frame - _remoteFrame, trailFirst, trail));
     }
 
     // Integer min and max (System.Math is banned in the sim, for its floating-point members).

@@ -60,8 +60,10 @@ jobs:
           path: replay-traces/
       # The rollback gate (GGPO's SyncTest): every frame of every recorded match, rolled back 1 to 8
       # frames and resimulated, on the same inputs and after a misprediction, must come out the same.
+      # Release: it's millions of steps and checksums, several times faster optimized (the sim is
+      # deterministic either way: the replays check the same build configuration against itself).
       - name: SyncTest
-        run: dotnet run --no-build --project tools/ReplayRunner -- synctest replays
+        run: dotnet run -c Release --project tools/ReplayRunner -- synctest replays
       # Compiled move data must match the scripts it's compiled from, and pass the body checks.
       - name: Move data is up to date
         run: dotnet run --no-build --project tools/MoveCompiler -- --check

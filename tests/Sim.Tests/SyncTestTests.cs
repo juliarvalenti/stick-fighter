@@ -110,6 +110,78 @@ public class SyncTestTests
         Assert.True(failure.Value.Mispredicted);
     }
 
+    // The tiered depths on long replays still catch both kinds of bug, even when it only starts deep
+    // into the replay: a hidden counter from frame 1,500 on, and a misprediction's trace.
+    [Fact]
+    public void ALongReplaysBugLateInItIsStillCaught()
+    {
+        var calls = 0;
+        Stepper leaky = (ref GameState state, in FrameInput input) =>
+        {
+            Simulation.Step(ref state, input);
+            if (state.Frame > 1500 && ++calls % 5 == 0)
+                state.Fighters[0].Health--;
+        };
+
+        var failure = SyncTest.Run(1, Stage.Training, Alternating(2000), leaky);
+        Assert.NotNull(failure);
+        Assert.InRange(failure.Value.Frame, 1500, 1520);
+    }
+
+    [Fact]
+    public void ALongReplaysMispredictionTraceIsStillCaught()
+    {
+        var last = default(FrameInput);
+        var run = 0;
+        var tainted = false;
+        Stepper leaky = (ref GameState state, in FrameInput input) =>
+        {
+            run = input.Player1 == last.Player1 && input.Player2 == last.Player2 ? run + 1 : 1;
+            last = input;
+            tainted |= run >= 3 && state.Frame > 1500;
+            Simulation.Step(ref state, input);
+            if (tainted)
+                state.Fighters[0].Health--;
+        };
+
+        var failure = SyncTest.Run(1, Stage.Training, Alternating(2000), leaky);
+        Assert.NotNull(failure);
+        Assert.True(failure.Value.Mispredicted);
+    }
+
+    // A bug only a 3-frame rollback shows. Long replays skip depth 3 on most frames, but the full
+    // sweep every FullSweepEvery frames still finds it, within that many frames.
+    [Fact]
+    public void ADepthOnlyTheFullSweepCoversIsStillCaught()
+    {
+        int highest = -1, previous = -1;
+        Stepper leaky = (ref GameState state, in FrameInput input) =>
+        {
+            var frame = state.Frame;
+            var depth3 = frame <= previous && highest - frame == 2; // the first step of a 3-frame rollback
+            highest = frame > highest ? frame : highest;
+            previous = frame;
+            Simulation.Step(ref state, input);
+            if (depth3 && frame > 700)
+                state.Fighters[0].Health--;
+        };
+
+        var failure = SyncTest.Run(1, Stage.Training, Alternating(2000), leaky);
+        Assert.NotNull(failure);
+        Assert.Equal(3, failure.Value.Depth);
+        Assert.InRange(failure.Value.Frame, 700, 700 + SyncTest.FullSweepEvery);
+    }
+
+    [Theory]
+    [InlineData(599, 100, 3, true)] // short: every depth, every frame
+    [InlineData(600, 100, 3, false)] // long: not depth 3 on most frames
+    [InlineData(600, 100, 4, true)]
+    [InlineData(600, 120, 3, true)] // the full sweep
+    public void LongReplaysUseTieredDepths(int frames, int frame, int depth, bool tested)
+    {
+        Assert.Equal(tested, SyncTest.Tests(frames, frame, depth));
+    }
+
     [Fact]
     public void AFailureSaysWhereAndHow()
     {

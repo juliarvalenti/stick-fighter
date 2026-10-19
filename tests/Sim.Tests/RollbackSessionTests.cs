@@ -46,14 +46,16 @@ public class RollbackSessionTests
 
     // Plays the script on both peers until both have every frame confirmed. Each peer, on each tick,
     // presses what the script has for the frame its input lands on (now + delay). `during` runs
-    // before each tick (to break the network for a while, say).
+    // before each tick (to break the network for a while, say). `fastEvery`: P2's clock runs fast,
+    // ticking an extra time every that many ticks (50 is 2% fast).
     private static Played Play(int pingMs, int jitter = 10, int loss = 2, int reorder = 5, int delay = 2,
-        MatchMode mode = MatchMode.Sandbox, Stepper? stepB = null, Action<SimulatedNetwork, int>? during = null, Func<Played, bool>? stop = null)
+        MatchMode mode = MatchMode.Sandbox, Stepper? stepB = null, Action<SimulatedNetwork, int>? during = null, Func<Played, bool>? stop = null,
+        bool timeSync = true, int fastEvery = 0)
     {
         var script = Script(7, MatchFrames);
         var network = new SimulatedNetwork(3, pingMs, jitter, loss, reorder);
-        var a = new RollbackSession(0, 1, Stage.Training, mode, delay, network.Ends[0]);
-        var b = new RollbackSession(1, 1, Stage.Training, mode, delay, network.Ends[1], stepB);
+        var a = new RollbackSession(0, 1, Stage.Training, mode, delay, network.Ends[0], timeSync: timeSync);
+        var b = new RollbackSession(1, 1, Stage.Training, mode, delay, network.Ends[1], stepB, timeSync);
 
         Buttons Press(RollbackSession s)
         {
@@ -76,6 +78,8 @@ public class RollbackSessionTests
                 else
                     s.Poll();
             }
+            if (fastEvery > 0 && tick % fastEvery == fastEvery - 1 && b.Frame < MatchFrames)
+                b.Tick(Press(b));
             network.Tick();
         }
 
@@ -178,6 +182,61 @@ public class RollbackSessionTests
         Assert.True(played.A.TryGetChecksumState(desync.Value.Frame, out var good));
         Assert.True(played.B.TryGetChecksumState(desync.Value.Frame, out var bad));
         Assert.Contains(StateDiff.Between(good, bad), line => line.StartsWith("Fighters[1].Health: ", StringComparison.Ordinal));
+    }
+
+    // P2's clock runs 2% fast. Without time sync it pulls ahead until it's predicting the full 8
+    // frames, then stalls, again and again, dropping inputs. With time sync it skips the odd tick
+    // instead, the advantage stays within a frame or two, and stalls all but vanish.
+    [Fact]
+    public void ClockSkewWithoutTimeSyncDriftsIntoStalls()
+    {
+        var played = Play(120, timeSync: false, fastEvery: 50);
+        Assert.True(played.B.StalledTicks >= 20, $"P2 stalled {played.B.StalledTicks} ticks");
+        Assert.True(played.B.WidestAdvantage >= 4, $"P2 got {played.B.WidestAdvantage} frames ahead");
+        Assert.Equal(0, played.B.SkippedTicks);
+    }
+
+    [Fact]
+    public void ClockSkewWithTimeSyncStaysLevel()
+    {
+        var played = Play(120, fastEvery: 50);
+        var offline = Replay.Record(1, Stage.Training, played.Inputs).FinalChecksum;
+        Assert.True(played.B.SkippedTicks > 0, "P2, running fast, skipped ticks to stay level");
+        Assert.True(played.B.StalledTicks <= 2, $"P2 stalled {played.B.StalledTicks} ticks");
+        Assert.True(played.A.StalledTicks <= 2, $"P1 stalled {played.A.StalledTicks} ticks");
+        Assert.InRange(played.B.WidestAdvantage, 0, 2);
+        Assert.Equal(offline, played.A.State.Checksum());
+        Assert.Equal(offline, played.B.State.Checksum());
+    }
+
+    // At 200 ms with time sync: next to no stalls, and the rollbacks shared between the peers.
+    [Fact]
+    public void At200MsStallsAreRareAndRollbacksShared()
+    {
+        var played = Play(200);
+        Assert.True(played.A.StalledTicks + played.B.StalledTicks <= 2, $"stalls {played.A.StalledTicks} and {played.B.StalledTicks}");
+        var (a, b) = (played.A.Rollbacks, played.B.Rollbacks);
+        Assert.True(a > 0 && b > 0 && a <= 2 * b && b <= 2 * a, $"rollbacks {a} and {b}");
+    }
+
+    // A real peer can't diff the other's state, but it can say where the desync began: after a
+    // checksum mismatch the peers swap their per-frame checksums since the last match, and both name
+    // frame 500, where P2's broken step took the health point.
+    [Fact]
+    public void ADesyncReportSaysWhichFrameFirstDiverged()
+    {
+        Stepper broken = (ref GameState state, in FrameInput input) =>
+        {
+            Simulation.Step(ref state, input);
+            if (state.Frame == 500)
+                state.Fighters[1].Health--;
+        };
+        var played = Play(60, stepB: broken,
+            stop: p => p.A.Desynced is { FirstDiverged: >= 0 } && p.B.Desynced is { FirstDiverged: >= 0 });
+
+        Assert.Equal(500, played.A.Desynced!.Value.FirstDiverged);
+        Assert.Equal(500, played.B.Desynced!.Value.FirstDiverged);
+        Assert.Equal(510, played.A.Desynced!.Value.Frame);
     }
 
     [Fact]

@@ -41,7 +41,7 @@ public partial class MatchPresenter : CanvasLayer
         _hud.Refresh();
         _log.Present(state);
 
-        // Sound will voice each call here, once.
+        // Each call once, in the log (the announcer's voice keys its own the same way: Sound.VoiceCalls).
         if (_announcer.Present(state) is { } call)
             GD.Print($"announce round {call.Round} {call.Kind} (frame {state.Frame})");
     }
