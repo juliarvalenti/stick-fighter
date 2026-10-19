@@ -553,6 +553,26 @@ public static class Scenarios
         new Scenario("screen-movelist", 1, _ => default, Captures: new[] { 5 }, Frames: 5,
             Setup: s => Place(s, 540, 740), StyleFrame: () => new UI.Screens.PauseScreen(moveList: true)),
 
+        // The pose editor on 5HK in the middle of its active frames (hitbox out), as the data is.
+        new Scenario("pose-editor", 1, _ => default, Captures: new[] { 3 }, Frames: 3,
+            StyleFrame: () => new Editor.PoseEditor(Editor.PoseEditor.Load(), Editor.PoseEditor.ProjectRoot, "5HK", 11)),
+
+        // An edit that fails a check: 5LP snapping home in recovery whips the elbow round faster than
+        // the body allows. The frame is flagged on the timeline, the recovery verbs are ringed, the
+        // check says what's wrong, and Save is off.
+        new Scenario("pose-editor-check", 1, _ => default, Captures: new[] { 3 }, Frames: 3,
+            StyleFrame: () =>
+            {
+                var doc = Editor.PoseEditor.Load();
+                doc.Select("5LP");
+                for (var i = 0; i < doc.Verbs.Count; i++)
+                {
+                    if (Editor.MoveDocument.PhaseOf(doc.Verbs[i]) == "recovery")
+                        doc.SetVerb(i, "recovery: ease:snap");
+                }
+                return new Editor.PoseEditor(doc, Editor.PoseEditor.ProjectRoot, "5LP", 5);
+            }),
+
         // Options on the defaults: the music slider focused, then down three times to input delay
         // and right once, to 1 frame.
         new Scenario("screen-options", 1, _ => default, Captures: new[] { 5, 25 }, Frames: 25,

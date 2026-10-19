@@ -174,6 +174,14 @@ public partial class Main : Node2D
                 DeviceInput.Pads.Changed(pad, connected: true);
             Input.JoyConnectionChanged += (device, connected) => OnPadChanged((int)device, connected);
             ShowPressStart();
+
+            // `--pose-editor [move]` (after `--`) opens the pose editor straight away; Back goes to the title.
+            // (In the menus' flow, so start and confirm don't count as "press start".)
+            if (System.Array.IndexOf(args, "--pose-editor") >= 0)
+            {
+                _flow = Flow.Menu;
+                ShowPoseEditor(ShowPressStart, Arg(args, "--pose-editor") is { } input && !input.StartsWith("--") ? input : null);
+            }
         }
         PresentView(0);
     }
@@ -465,6 +473,22 @@ public partial class Main : Node2D
         ShowScreen(null);
     }
 
+    // The pose editor, over whatever was showing; `back` returns there. The open scripts stay open for
+    // the session, so leaving and coming back keeps unsaved edits.
+    private void ShowPoseEditor(System.Action back, string? input = null)
+    {
+        _poseDocument ??= Editor.PoseEditor.Load();
+        var editor = new Editor.PoseEditor(_poseDocument, Editor.PoseEditor.ProjectRoot, input);
+        editor.Chosen += item =>
+        {
+            if (item == Editor.PoseEditor.BackItem)
+                back();
+        };
+        ShowScreen(editor, back);
+    }
+
+    private Editor.MoveDocument? _poseDocument;
+
     // Back, one screen: from a pause page to the pause menu, from pause to the match, from the menu
     // to the title. Select handles its own (undoing P1's pick first).
     private void GoBack()
@@ -472,6 +496,13 @@ public partial class Main : Node2D
         // Mid-bind, Back is a key or button like any other; and a lost controller isn't dismissed.
         if (_shown is UI.Screens.RebindScreen { Waiting: true } || _paused == UI.Screens.PauseScreen.Page.Disconnected)
             return;
+
+        // Typing a verb in the pose editor, Back (Escape) leaves the field, not the editor.
+        if (_shown is Editor.PoseEditor { Typing: true } editor)
+        {
+            editor.StopTyping();
+            return;
+        }
         if (_back is { } back)
         {
             back();
