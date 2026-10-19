@@ -21,12 +21,15 @@ public partial class ResultsScreen : Screen
     private readonly MatchResults _results;
 
     private readonly int[] _colors;
+    private readonly bool _online;
 
     // `colors` are the players' color choices (0 own, 1 alternate), so the winner shows as they played.
-    public ResultsScreen(MatchResults? results = null, int[]? colors = null)
+    // `online`: after an online match there's no rematch or select yet, only back to the title.
+    public ResultsScreen(MatchResults? results = null, int[]? colors = null, bool online = false)
     {
         _results = results ?? Example;
         _colors = colors ?? new[] { 0, 0 };
+        _online = online;
     }
 
     public override void _Ready()
@@ -81,7 +84,7 @@ public partial class ResultsScreen : Screen
             tally.AddChild(Ui.Label(How(round.How), UiTheme.Strong));
         }
 
-        var first = Menu(column, "Rematch", "Character select", "Title");
+        var first = _online ? Menu(column, "Title") : Menu(column, "Rematch", "Character select", "Title");
         panel.Position = new Vector2(1280 - 120 - 440, 200);
         AddChild(panel);
         first.GrabFocus();

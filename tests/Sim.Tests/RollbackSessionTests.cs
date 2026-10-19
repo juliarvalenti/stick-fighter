@@ -239,6 +239,21 @@ public class RollbackSessionTests
         Assert.Equal(510, played.A.Desynced!.Value.Frame);
     }
 
+    // The ping each peer measures (input sent to input acknowledged) tracks the network's actual round
+    // trip (whole frames each way, so 120 ms is 3 frames each way, 100 ms), to within two frames
+    // either way: jitter, and the ack going out on the other's next tick.
+    [Theory]
+    [InlineData(0)]
+    [InlineData(120)]
+    [InlineData(200)]
+    public void ThePingMatchesTheRoundTrip(int pingMs)
+    {
+        var played = Play(pingMs);
+        var roundTrip = 2 * played.Network.OneWayFrames * 1000 / GameInfo.TicksPerSecond;
+        foreach (var s in new[] { played.A, played.B })
+            Assert.InRange(s.PingMs, roundTrip - 34, roundTrip + 34);
+    }
+
     [Fact]
     public void TheNetworkIsDeterministic()
     {

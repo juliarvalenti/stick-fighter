@@ -529,6 +529,17 @@ public static class Scenarios
             StyleFrame: () => new UI.Screens.TitleScreen(menu: true) { Presses = { [10] = "ui_down" } }),
         new Scenario("screen-select", 1, _ => default, Captures: new[] { 5 }, Frames: 5,
             StyleFrame: () => new UI.Screens.SelectScreen()),
+        // Online, direct connect: the choice; hosting (a fixed example address, waiting); and
+        // joining, refused by a host with different character data.
+        new Scenario("screen-online", 1, _ => default, Captures: new[] { 5 }, Frames: 5,
+            Setup: s => Place(s, 380, 900), StyleFrame: () => new UI.Screens.OnlineScreen()),
+        new Scenario("screen-online-host", 1, _ => default, Captures: new[] { 5 }, Frames: 5,
+            Setup: s => Place(s, 380, 900),
+            StyleFrame: () => new UI.Screens.OnlineScreen(UI.Screens.OnlineScreen.Page.Host, "192.168.1.20:7000", "Waiting for a player…")),
+        new Scenario("screen-online-join", 1, _ => default, Captures: new[] { 5 }, Frames: 5,
+            Setup: s => Place(s, 380, 900),
+            StyleFrame: () => new UI.Screens.OnlineScreen(UI.Screens.OnlineScreen.Page.Join, "192.168.1.20:7000",
+                "The host's character data differs: update both games to the same version")),
 
         // Training's input display: P1 plays InputDemo (236P, a 66 dash, an MP~LP plink, a held
         // back). F4 turns the display on (both players) at the start, and again near the end
