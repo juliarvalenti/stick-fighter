@@ -64,6 +64,19 @@ jobs:
       # deterministic either way: the replays check the same build configuration against itself).
       - name: SyncTest
         run: dotnet run -c Release --project tools/ReplayRunner -- synctest replays
+      # Online play for real: a host and a joiner as two processes, over UDP on localhost, through
+      # the handshake and a scripted match. Both must end where the offline replay does.
+      - name: Two processes over UDP
+        run: |
+          dotnet build -c Release tools/NetPlay -o /tmp/netplay
+          dotnet /tmp/netplay/StickFighter.NetPlay.dll host 7777 900 > host.log 2>&1 &
+          host=$!
+          sleep 1
+          status=0
+          dotnet /tmp/netplay/StickFighter.NetPlay.dll join 127.0.0.1:7777 900 || status=1
+          wait $host || status=1
+          cat host.log
+          exit $status
       # Compiled move data must match the scripts it's compiled from, and pass the body checks.
       - name: Move data is up to date
         run: dotnet run --no-build --project tools/MoveCompiler -- --check

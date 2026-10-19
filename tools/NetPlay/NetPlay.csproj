@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Headless online match over real UDP: CI runs a host and a joiner as two processes on
+       localhost and checks both end where the offline replay does. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <RootNamespace>StickFighter.NetPlay</RootNamespace>
+    <AssemblyName>StickFighter.NetPlay</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/Sim/Sim.csproj" />
+    <!-- The game's UDP link, which has no Godot in it. -->
+    <Compile Include="../../game/net/UdpLink.cs" Link="Linked/UdpLink.cs" />
+  </ItemGroup>
+</Project>
