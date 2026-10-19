@@ -87,9 +87,12 @@ public partial class PoseEditor : Screen
         panel.Position = new Vector2(16, 16);
         panel.Size = new Vector2(190, 688);
         var column = new VBoxContainer();
-        column.AddThemeConstantOverride("separation", 2);
         panel.AddChild(column);
         column.AddChild(Ui.Label("MOVES", UiTheme.Caption));
+        var list = new GridContainer { Columns = 2 };
+        list.AddThemeConstantOverride("h_separation", 4);
+        list.AddThemeConstantOverride("v_separation", 2);
+        column.AddChild(list);
         for (var i = 0; i < _doc.Inputs.Count; i++)
         {
             var index = i;
@@ -100,6 +103,7 @@ public partial class PoseEditor : Screen
                 FocusMode = FocusModeEnum.All,
                 Alignment = HorizontalAlignment.Left,
                 ToggleMode = true,
+                CustomMinimumSize = new Vector2(69, 0),
             };
             row.Pressed += () =>
             {
@@ -109,7 +113,7 @@ public partial class PoseEditor : Screen
                 Refresh(rebuildVerbs: true);
             };
             _moveRows.Add(row);
-            column.AddChild(row);
+            list.AddChild(row);
         }
         column.AddChild(new Control { SizeFlagsVertical = SizeFlags.ExpandFill });
         var back = Ui.Button(BackItem);
@@ -204,7 +208,7 @@ public partial class PoseEditor : Screen
         column.AddChild(_advantage);
 
         column.AddChild(Ui.Label("SCRIPT", UiTheme.Caption));
-        _verbs.AddThemeConstantOverride("separation", 4);
+        _verbs.AddThemeConstantOverride("separation", 3);
         column.AddChild(_verbs);
 
         column.AddChild(new Control { SizeFlagsVertical = SizeFlags.ExpandFill });
@@ -303,7 +307,7 @@ public partial class PoseEditor : Screen
         for (var i = 0; i < verbs.Count; i++)
         {
             var index = i;
-            var field = new LineEdit { Text = verbs[i], CustomMinimumSize = new Vector2(0, 30), CaretBlink = true };
+            var field = new LineEdit { Text = verbs[i], CustomMinimumSize = new Vector2(0, 28), CaretBlink = true };
             field.TextChanged += text =>
             {
                 _doc.SetVerb(index, text);

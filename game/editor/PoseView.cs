@@ -11,7 +11,7 @@ namespace StickFighter.Editor;
 // on the pose sheets and the debug view.
 public partial class PoseView : Control
 {
-    private const float Zoom = 1.7f;
+    private const float Zoom = 1.2f; // a standing fighter fills about two thirds of the view's height
 
     private static readonly Color Hurt = new(0.1f, 0.7f, 0.3f);
     private static readonly Color Hit = new(0.9f, 0.1f, 0.1f);

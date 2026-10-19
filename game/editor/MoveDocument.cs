@@ -37,8 +37,8 @@ public sealed partial class MoveDocument
         ("recovery", "Recovery", 0, 90),
         ("damage", "Damage", 0, 400),
         ("stun", "Stun", 0, 400),
-        ("pushbackHit", "Pushback on hit", 0, 60),
-        ("pushbackBlock", "Pushback on block", 0, 60),
+        ("pushbackHit", "Push hit", 0, 60),
+        ("pushbackBlock", "Push block", 0, 60),
     };
 
     private readonly string _characterJson;
