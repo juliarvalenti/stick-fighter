@@ -217,6 +217,9 @@ public enum HurtMode
 
     // Projectiles pass through the limb's hurtbox.
     IgnoreProjectiles,
+
+    // The limb has no hurtbox at all (a DP's lower-body invulnerability, a low-profile kick's legs).
+    Intangible,
 }
 
 // A change to one limb's hurtbox on frames From..To of a move. Applied when moves run.
@@ -257,6 +260,17 @@ public sealed record Move(
     // short by a special (SpecialCancel) or by one of the normals in Chains (their inputs, e.g. "2LP").
     bool SpecialCancel,
     ImmutableArray<string> Chains,
+    // Fully invincible (no hurtboxes, can't be thrown) on frames 0 to Invincible - 1: a DP's startup.
+    int Invincible,
+    // A hit on a grounded fighter knocks it into a fall, like an air hit (a DP's uppercut).
+    bool Launch,
+    // The active frames split into windows that can each hit once, in order (a multi-hit special);
+    // empty means one window, the whole active phase.
+    ImmutableArray<int> HitWindows,
+    // Where the fighter's feet are on each frame, from where the move started: x forward (flipped by
+    // facing), y up negative. Empty for a move that stays put. Off the floor (y < 0) the fighter is in
+    // the air: it can't be thrown, and a hit knocks it into a fall.
+    ImmutableArray<FixVec2> Path,
     Limb HitboxLimb,
     Fix HitboxRadius,
     Fix ActiveBonus,
@@ -264,6 +278,32 @@ public sealed record Move(
     Spawn? Spawn,
     PoseTrack Track)
 {
+    public bool InvincibleOn(int frame) => frame < Invincible;
+
+    public FixVec2 PathAt(int frame) => Path.IsDefaultOrEmpty ? FixVec2.Zero : Path[frame];
+
+    public bool AirborneOn(int frame) => !Path.IsDefaultOrEmpty && Path[frame].Y < Fix.Zero;
+
+    // The hit window this frame is in (0 for the first), or -1 if the move isn't active on it.
+    public int HitWindowOf(int frame)
+    {
+        if (!IsActive(frame))
+            return -1;
+        if (HitWindows.IsDefaultOrEmpty)
+            return 0;
+        var into = frame - FirstActiveFrame;
+        for (var w = 0; w < HitWindows.Length; w++)
+        {
+            into -= HitWindows[w];
+            if (into < 0)
+                return w;
+        }
+        return HitWindows.Length - 1;
+    }
+
+    // How many times the move can hit: once per window.
+    public int HitCount => HitWindows.IsDefaultOrEmpty ? 1 : HitWindows.Length;
+
     // Startup includes the first active frame, so frames are counted from 0.
     public int FirstActiveFrame => Startup - 1;
     public int TotalFrames => Startup - 1 + Active + Recovery;

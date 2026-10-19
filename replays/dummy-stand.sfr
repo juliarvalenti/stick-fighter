@@ -1,6 +1,6 @@
 stick-fighter-replay 6
 seed 1
-data fdd3e8a020c812e3
+data 23299c3dcc9f232b
 stage 0 2560 600 1280
 mode training
 frames 200
@@ -14,4 +14,4 @@ at 59 p1 1410.7479248046875 600 1 Attack 6 1000 p2 1496 600 -1 Hitstun 0 940 mat
 at 119 p1 1433.298919677734375 600 1 Stand 11 1000 p2 1512 600 -1 Stand 6 1000 match Fight 0 0 0 0
 at 179 p1 1433.298919677734375 600 1 Stand 71 1000 p2 1512 600 -1 Stand 66 1000 match Fight 0 0 0 0
 at 199 p1 1433.298919677734375 600 1 Stand 91 1000 p2 1512 600 -1 Stand 86 1000 match Fight 0 0 0 0
-final dee79fd39fe23ab7
+final fba4c8a1f5101697

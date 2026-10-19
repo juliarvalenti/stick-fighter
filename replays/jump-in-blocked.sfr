@@ -1,6 +1,6 @@
 stick-fighter-replay 6
 seed 1
-data fdd3e8a020c812e3
+data 23299c3dcc9f232b
 stage 0 2560 600 1280
 mode sandbox
 frames 82
@@ -11,4 +11,4 @@ input 0200 0008 1
 input 0000 0008 40
 at 59 p1 1370.3399658203125 396.729339599609375 1 Attack 10 1000 p2 1507.010986328125 600 -1 BlockStand 0 1000 match Fight 0 0 0 0
 at 81 p1 1410.3399658203125 600 1 Stand 8 1000 p2 1522.0439453125 600 -1 WalkBack 2 1000 match Fight 0 0 0 0
-final 6b99059f2b14e17f
+final 61afc8bff6b16faf
