@@ -9,14 +9,16 @@ namespace StickFighter.Sim.Combat;
 // meeting (both cancel out).
 public static class Hits
 {
-    public static void Apply(ref GameState state, in Contacts contacts)
+    // p1Blockstun, p2Blockstun: each fighter was still in blockstun when the frame began, so it guards
+    // whatever the stick does this frame (only the height follows down).
+    public static void Apply(ref GameState state, in Contacts contacts, bool p1Blockstun, bool p2Blockstun)
     {
         var character = Characters.Characters.Placeholder;
 
         // Read both moves, and whether each fighter is guarding, before anything is applied: applying
         // one hit clears the defender's move, and in a trade that defender's own hit still has to land.
         var moves = new Pair(state.Fighters[0].Move, state.Fighters[1].Move);
-        var guarding = new Pair(Guarding(state, 0, out var p1Crouching) ? 1 : 0, Guarding(state, 1, out var p2Crouching) ? 1 : 0);
+        var guarding = new Pair(Guarding(state, 0, p1Blockstun, out var p1Crouching) ? 1 : 0, Guarding(state, 1, p2Blockstun, out var p2Crouching) ? 1 : 0);
         var crouching = new Pair(p1Crouching ? 1 : 0, p2Crouching ? 1 : 0);
 
         // Likewise each fighter's stance before any hit: in its own attack's startup (a hit there is
@@ -54,7 +56,11 @@ public static class Hits
                     continue;
                 var key = ComboKey(state.Fighters[contact.Attacker].LastMoveFrame, contact.Attacker, projectile: false);
                 if (Land(ref state, contact.Attacker, contact.Defender, moveIndex, contact.Point, before, key, pushFrom: null, ref freeze))
-                    state.Fighters[contact.Attacker].MoveHit = true;
+                {
+                    ref var attacker = ref state.Fighters[contact.Attacker];
+                    attacker.MoveHit = true;
+                    attacker.ContactFrame = attacker.ActionFrame;
+                }
             }
             else if (contact.Kind == ContactKind.ProjectileHit)
             {
@@ -163,11 +169,13 @@ public static class Hits
         return true;
     }
 
-    // Holding back (away from the attacker, by position) while free to guard.
-    private static bool Guarding(in GameState state, int player, out bool crouching)
+    // Holding back (away from the attacker, by position) while free to guard, or still in blockstun:
+    // blockstun keeps a fighter guarding whatever the stick does, so a string blocked with no gap stays
+    // blocked (a "true" blockstring) even if the stick is let go. Only the height follows down.
+    private static bool Guarding(in GameState state, int player, bool inBlockstun, out bool crouching)
     {
         crouching = Blocking.HoldingDown(state, player);
-        return Blocking.CanGuard(state.Fighters[player]) && Blocking.HoldingBack(state, player);
+        return inBlockstun || (Blocking.CanGuard(state.Fighters[player]) && Blocking.HoldingBack(state, player));
     }
 
     // Blocked: blockstun (counting the frame of contact, like hitstun, so on-block advantage is

@@ -222,7 +222,7 @@ public class NormalsTests
 
         var contacts = new Collision.Contacts { Count = 1 };
         contacts.Items[0] = new Collision.Contact { Kind = Collision.ContactKind.Hit, Attacker = 0, Defender = 1 };
-        Hits.Apply(ref state, contacts);
+        Hits.Apply(ref state, contacts, p1Blockstun: false, p2Blockstun: false);
         Collision.Pushing.Resolve(ref state, p1Before, p2Before);
 
         // The defender can't be pushed past the limit, and the attacker can't slide back either

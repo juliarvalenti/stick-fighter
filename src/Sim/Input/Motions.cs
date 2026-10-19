@@ -5,13 +5,13 @@ namespace StickFighter.Sim;
 // (2, 1, 2, 3, 6 is still a quarter circle), and the button can come a few frames after the last one.
 public static class Motions
 {
-    // A quarter circle forward (2, 3, 6) finished by `buttons` pressed on frame `at` (or, for negative
-    // edge, released on it): the 6 no more than `leniency` frames before `at`, and the whole motion
-    // within `window` frames ending at `at`.
-    public static bool QuarterCircleForward(in InputHistory history, int at, int now, int facing, int window, int leniency)
+    // A quarter circle forward (2, 3, 6) finished by a button pressed on frame `at` (or, for negative
+    // edge, released on it): the 6 no earlier than `forwardStart`, and the whole motion no earlier
+    // than `start`. (The caller sets those from the window and leniency, skipping hitstop: a motion
+    // made during a normal that connected stretches across the freeze.)
+    public static bool QuarterCircleForward(in InputHistory history, int at, int now, int facing, int start, int forwardStart)
     {
-        var start = at - window + 1;
-        var forward = Latest(history, now, facing, 6, at, at - leniency);
+        var forward = Latest(history, now, facing, 6, at, forwardStart);
         if (forward < 0)
             return false;
         var downForward = Latest(history, now, facing, 3, forward - 1, start);

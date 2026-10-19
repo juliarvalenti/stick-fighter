@@ -94,6 +94,51 @@ public class FrameDataAnalyserTests
         Assert.Equal(6 - jab.Startup + 1, analyser.Last.LinkWindow);
     }
 
+    // 2MK cancelled into a fireball (the motion rolled through it, HP in the hitstop) is a cancel, not a
+    // link: on hit a two-hit combo with no link window, on block a true block string.
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ACancelIsReportedAsACancelNotALink(bool blocked)
+    {
+        var state = Apart(60);
+        var analyser = new FrameDataAnalyser();
+        Buttons[] p1 = { Buttons.Down | Buttons.MediumKick, Buttons.Down, Buttons.Down, Buttons.Down | Buttons.Right, Buttons.Down | Buttons.Right, Buttons.Right | Buttons.HeavyPunch };
+        var guard = blocked ? Buttons.Down | Buttons.Right : Buttons.None;
+        for (var frame = 0; frame < 60; frame++)
+        {
+            Simulation.Step(ref state, new FrameInput(frame < p1.Length ? p1[frame] : Buttons.None, frame < 5 ? guard : Buttons.None));
+            analyser.Observe(state);
+        }
+        var report = analyser.Last!;
+        Assert.Equal("236P", report.Move);
+        Assert.Equal("2MK", report.CancelledFrom);
+        Assert.Null(report.LinkWindow);
+        Assert.Equal(blocked, report.Blocked);
+        if (blocked)
+            Assert.Equal(0, report.Gap);
+        else
+            Assert.Equal(2, report.Combo);
+    }
+
+    // A chain (2LP pressed in the first 2LP's hitstop) is a cancel too.
+    [Fact]
+    public void AChainIsReportedAsACancel()
+    {
+        var state = Apart(60);
+        var analyser = new FrameDataAnalyser();
+        for (var frame = 0; frame < 40; frame++)
+        {
+            var press = frame is 0 or 5 ? Buttons.LightPunch : Buttons.None;
+            Simulation.Step(ref state, new FrameInput(Buttons.Down | press, Buttons.None));
+            analyser.Observe(state);
+        }
+        Assert.Equal("2LP", analyser.Last!.Move);
+        Assert.Equal("2LP", analyser.Last.CancelledFrom);
+        Assert.Equal(2, analyser.Last.Combo);
+        Assert.Null(analyser.Last.LinkWindow);
+    }
+
     [Fact]
     public void AWhiffAfterABlockIsReportedOnItsOwn()
     {

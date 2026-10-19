@@ -49,7 +49,7 @@ public static class Body
         }
 
         // A move that throws a projectile has no hitbox of its own: the projectile is what hits.
-        if (MoveOf(fighter) is { Kind: MoveKind.Normal, Spawn: null } move && move.IsActive(fighter.ActionFrame) && !fighter.MoveHit)
+        if (MoveOf(fighter) is { Kind: not MoveKind.Throw, Spawn: null } move && move.IsActive(fighter.ActionFrame) && !fighter.MoveHit)
             shapes.AddHit(Segment(joints, move.HitboxLimb, move.HitboxRadius + move.ActiveBonus));
 
         shapes.Push = PushBox(fighter);

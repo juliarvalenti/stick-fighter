@@ -195,7 +195,7 @@ public class BlockingTests
 
         var contacts = new Contacts { Count = 1 };
         contacts.Items[0] = new Contact { Kind = ContactKind.Hit, Attacker = 0, Defender = 1 };
-        Hits.Apply(ref state, contacts);
+        Hits.Apply(ref state, contacts, p1Blockstun: false, p2Blockstun: false);
         return state;
     }
 }

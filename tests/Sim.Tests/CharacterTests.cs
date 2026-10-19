@@ -57,6 +57,11 @@ public class CharacterDataTests
     [InlineData("\"limb\": \"frontForearm\"", "\"limb\": \"tail\"", "move 5LP: 'limb' = 'tail' is not one of")]
     [InlineData("\"strength\": \"light\"", "\"strength\": \"mighty\"", "move 5LP: 'strength' = 'mighty' is not one of")]
     [InlineData("\"frame\": 10, \"hip\"", "\"frame\": 11, \"hip\"", "move 5LP: pose key 9: frame 11 is past the end (length 11)")]
+    // Cancels only go forwards: a normal chains into ground normals, and a special cancels into nothing.
+    [InlineData("\"chains\": [\"5LP\", \"2LP\"]", "\"chains\": [\"5LP\", \"236P\"]", "move 5LP: chains into '236P', which isn't a ground normal")]
+    [InlineData("\"chains\": [\"5LP\", \"2LP\"]", "\"chains\": [\"5LP\", \"j.LP\"]", "move 5LP: chains into 'j.LP', which isn't a ground normal")]
+    [InlineData("\"chains\": [\"5LP\", \"2LP\"]", "\"chains\": [\"5LP\", \"5XX\"]", "move 5LP: chains into '5XX', which isn't a move")]
+    [InlineData("\"kind\": \"special\",", "\"kind\": \"special\", \"specialCancel\": true,", "move 236P: only ground normals can cancel or chain")]
     public void BadMoveDataFailsLoudlyNamingWhere(string find, string replace, string message)
     {
         var broken = ReplaceFirst(Moves, find, replace);

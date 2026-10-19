@@ -289,6 +289,11 @@ public class ReplayTests
     [InlineData("negative-edge", false, true)]
     [InlineData("fireball-separation-limit", false, true)]
     [InlineData("throw-in-blockstun", false, true)]
+    [InlineData("cancel-2mk-fireball", false, true)]
+    [InlineData("cancel-2mk-fireball-block", false, true)]
+    [InlineData("cancel-whiff", false, false)]
+    [InlineData("chain-lights", false, true)]
+    [InlineData("special-no-cancel", false, true)]
     [InlineData("throw", false, true)]
     [InlineData("throw-back", false, true)]
     [InlineData("throw-meaty", false, true)]
@@ -450,9 +455,10 @@ public class ReplayTests
     {
         var (states, _) = Play("combo-scaling");
         var hits = Hits(states, 1);
-        Assert.Equal(new[] { 20, 20, 16 }, hits.ConvertAll(h => h.Damage));
+        Assert.Equal(new[] { 20, 20, 16, 14, 12 }, hits.ConvertAll(h => h.Damage));
         Assert.Equal(3, states[hits[2].Frame].Fighters[1].ComboHits);
         Assert.Equal(56, states[hits[2].Frame].Fighters[1].ComboDamage);
+        Assert.Equal(5, states[hits[4].Frame].Fighters[1].ComboHits);
     }
 
     [Fact]
@@ -583,6 +589,101 @@ public class ReplayTests
         Assert.True(states.Exists(s => HasEvent(s, EventKind.Clash)));
         Assert.False(FireballOut(states[^1], 0) || FireballOut(states[^1], 1));
     }
+
+    // The fireball starts on the first frame after the 2MK's hitstop, long before the 2MK would have
+    // recovered, and hits P2 still reeling from it: two hits, one combo, the second at full scaling.
+    [Fact]
+    public void The2MkCancelsIntoAFireballCombo()
+    {
+        var (states, _) = Play("cancel-2mk-fireball");
+        var lowKick = Characters.Characters.Placeholder.FindMove("2MK")!;
+        var fireball = Characters.Characters.Placeholder.FindMove("236P")!;
+        var cancel = CancelFrame(states, Specials.Fireball);
+        Assert.True(cancel > 0, "the fireball came out of the 2MK");
+        Assert.True(Hitstop.Frozen(states[cancel - 1], cancel - 1), "on the first frame after the hitstop");
+        Assert.True(states[cancel - 1].Fighters[0].ActionFrame + 1 < lowKick.TotalFrames, "before the 2MK recovered");
+
+        var hits = Hits(states, 1);
+        Assert.Equal(new[] { lowKick.Damage, fireball.Damage }, hits.ConvertAll(h => h.Damage));
+        Assert.Equal(2, states[hits[1].Frame].Fighters[1].ComboHits);
+        Assert.Equal(2, states[hits[1].Frame].Fighters[1].ComboMoves);
+    }
+
+    // Blocked, the same cancel is a true blockstring: P2 lets go of the stick after the 2MK, but stays
+    // in blockstun until the fireball arrives, so it blocks that too and never had a frame to act.
+    [Fact]
+    public void The2MkFireballBlockstringIsTrue()
+    {
+        var (states, _) = Play("cancel-2mk-fireball-block");
+        Assert.True(CancelFrame(states, Specials.Fireball) > 0, "cancelled on block");
+        var hits = Hits(states, 1);
+        var (chipFrame, chip) = Assert.Single(hits); // only the fireball chips; the 2MK did nothing
+        Assert.Equal(Characters.Characters.Placeholder.FindMove("236P")!.Chip, chip);
+        Assert.True(states[chipFrame].Fighters[1].Blockstun > 0, "the fireball was blocked");
+        Assert.True(states[chipFrame - 1].Fighters[1].Blockstun > 0, "still in the 2MK's blockstun as that frame began");
+        Assert.Equal(Buttons.None, states[chipFrame].Inputs[1].At(chipFrame, chipFrame)); // not holding back
+
+        var first = states.FindIndex(s => s.Fighters[1].Blockstun > 0);
+        for (var i = first; i < chipFrame; i++)
+            Assert.True(states[i].Fighters[1].Blockstun > 0, $"P2 was free on frame {i + 1}");
+    }
+
+    // A whiffed 2MK can't be cancelled: it runs its whole length, and the fireball never comes out.
+    [Fact]
+    public void AWhiffedNormalDoesntCancel()
+    {
+        var (states, _) = Play("cancel-whiff");
+        var lowKick = Characters.Characters.Placeholder.FindMove("2MK")!;
+        var kicking = states.FindAll(s => s.Fighters[0].Move == Normals.Pick(Buttons.MediumKick, NormalStance.Crouching));
+        Assert.Equal(lowKick.TotalFrames, kicking.Count);
+        Assert.DoesNotContain(states, s => s.Fighters[0].Move == Specials.Fireball);
+    }
+
+    // 2LP, 2LP, 5LP: each chained on the first frame after the last one's hitstop, one combo of three,
+    // the third scaled to 80%.
+    [Fact]
+    public void TheLightChainIsOneCombo()
+    {
+        var (states, _) = Play("chain-lights");
+        var crJab = Normals.Pick(Buttons.LightPunch, NormalStance.Crouching);
+        var jab = Normals.Pick(Buttons.LightPunch, NormalStance.Standing);
+        var started = new System.Collections.Generic.List<int>();
+        for (var i = 1; i < states.Count; i++)
+        {
+            var f = states[i].Fighters[0];
+            if (f.Action == (int)Characters.FighterAction.Attack && f.ActionFrame == 0 && f.LastMoveFrame == i)
+            {
+                started.Add(f.Move);
+                if (started.Count > 1)
+                    Assert.True(Hitstop.Frozen(states[i - 1], i - 1), "chained straight out of the hitstop");
+            }
+        }
+        Assert.Equal(new[] { crJab, crJab, jab }, started);
+        var hits = Hits(states, 1);
+        Assert.Equal(new[] { 30, 30, 16 }, hits.ConvertAll(h => h.Damage));
+        Assert.Equal(3, states[hits[2].Frame].Fighters[1].ComboHits);
+    }
+
+    // Never backwards: the fireball hits, and the jab mashed all through it comes out only once the
+    // fireball has run its whole length.
+    [Fact]
+    public void ASpecialDoesntCancelIntoANormal()
+    {
+        var (states, _) = Play("special-no-cancel");
+        var fireball = Characters.Characters.Placeholder.FindMove("236P")!;
+        var thrown = states.FindIndex(s => s.Fighters[0].Move == Specials.Fireball);
+        var hits = Hits(states, 1);
+        Assert.Equal(fireball.Damage, hits[0].Damage);
+        Assert.Equal(Specials.Fireball, states[hits[0].Frame].Fighters[0].Move); // hit while still being thrown
+        var jab = states.FindIndex(thrown, s => s.Fighters[0].Move == Normals.Pick(Buttons.LightPunch, NormalStance.Standing));
+        Assert.Equal(Specials.Fireball, states[jab - 1].Fighters[0].Move);
+        Assert.Equal(fireball.TotalFrames - 1, states[jab - 1].Fighters[0].ActionFrame); // its very last frame
+    }
+
+    // The frame `move` started while the fighter was still in another move (a cancel), or -1.
+    private static int CancelFrame(System.Collections.Generic.List<GameState> states, int move) =>
+        states.FindIndex(1, s => s.Fighters[0].Move == move && s.Fighters[0].ActionFrame == 0)
+            is var i and > 0 && states[i - 1].Fighters[0].Action == (int)Characters.FighterAction.Attack && states[i - 1].Fighters[0].Move != move ? i : -1;
 
     private static bool HasEvent(in GameState state, EventKind kind)
     {

@@ -1,0 +1,23 @@
+stick-fighter-replay 6
+seed 1
+data fdd3e8a020c812e3
+stage 0 2560 600 1280
+mode sandbox
+frames 388
+input 0008 0008 300
+input 0000 0000 30
+input 0012 0000 1
+input 0002 0000 5
+input 0012 0000 1
+input 0002 0000 6
+input 0000 0000 4
+input 0010 0000 1
+input 0000 0000 40
+at 59 p1 1531.0198974609375 600 1 WalkForward 59 1000 p2 1780.6591796875 600 -1 WalkBack 59 1000 match Fight 0 0 0 0
+at 119 p1 1982.039794921875 600 1 WalkForward 119 1000 p2 2081.318359375 600 -1 WalkBack 119 1000 match Fight 0 0 0 0
+at 179 p1 2366.40997314453125 600 1 WalkForward 179 1000 p2 2426.410003662109375 600 -1 WalkBack 179 1000 match Fight 0 0 0 0
+at 239 p1 2470 600 1 WalkForward 239 1000 p2 2530 600 -1 WalkBack 239 1000 match Fight 0 0 0 0
+at 299 p1 2470 600 1 WalkForward 299 1000 p2 2530 600 -1 WalkBack 299 1000 match Fight 0 0 0 0
+at 359 p1 2434 600 1 Attack 3 1000 p2 2530 600 -1 Hitstun 0 924 match Fight 0 0 0 0
+at 387 p1 2434 600 1 Stand 16 1000 p2 2530 600 -1 Stand 10 924 match Fight 0 0 0 0
+final 91a29fc8ee37ae19

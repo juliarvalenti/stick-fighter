@@ -1,12 +1,12 @@
 {
-  "comment": "Move scripts for the placeholder character. tools/MoveCompiler turns these into data/characters/placeholder.moves.json; edit these, never the compiled file. Frame data from reference/frame-data-baseline. Verbs: pose, reach, lean, crouch, step, hold, ease, hitbox, hurt, spawn. A 'phase:' prefix (startup, active, recovery) starts that phase's verbs. Scripts say where the hit lands; the compiler moves the whole body around it by default (wind-up, weight shift, lean, counter-arm, arcs home), and a script's own 'lean' or 'step' replaces the default one. 'lean:N' is degrees relative to the move's stance (lean:0 is as the stance stands), so crouching and jumping leans keep their look if a stance changes. Pushback values are placeholders by strength until Normals and getting hit tunes them.",
+  "comment": "Move scripts for the placeholder character. tools/MoveCompiler turns these into data/characters/placeholder.moves.json; edit these, never the compiled file. Frame data from reference/frame-data-baseline. Verbs: pose, reach, lean, crouch, step, hold, ease, hitbox, hurt, spawn. A 'phase:' prefix (startup, active, recovery) starts that phase's verbs. Scripts say where the hit lands; the compiler moves the whole body around it by default (wind-up, weight shift, lean, counter-arm, arcs home), and a script's own 'lean' or 'step' replaces the default one. 'lean:N' is degrees relative to the move's stance (lean:0 is as the stance stands), so crouching and jumping leans keep their look if a stance changes. Pushback values are placeholders by strength until Normals and getting hit tunes them. Cancels (SF4's shoto table): 'specialCancel' lets a special cut the move short once it connects, and 'chains' lists the normals it chains into (lights into lights, kicks into punches but not back up). Only ground normals have them; specials ('kind': 'special') never cancel into anything.",
   "moves": [
-    { "name": "Standing light punch", "input": "5LP", "startup": 4, "active": 2, "recovery": 6, "damage": 20, "stun": 50, "strength": "light", "guard": "mid", "pushbackHit": 12, "pushbackBlock": 14,
+    { "name": "Standing light punch", "input": "5LP", "startup": 4, "active": 2, "recovery": 6, "damage": 20, "stun": 50, "strength": "light", "guard": "mid", "pushbackHit": 12, "pushbackBlock": 14, "specialCancel": true, "chains": ["5LP", "2LP"],
       "do": ["startup: reach:front-hand opponent-chest 0.5", "lean:4",
              "active: reach:front-hand opponent-chest 1.0", "lean:8", "hitbox:front-hand 8",
              "recovery: hold:0.2", "pose:guard"] },
 
-    { "name": "Standing medium punch", "input": "5MP", "startup": 7, "active": 2, "recovery": 10, "damage": 60, "stun": 100, "strength": "medium", "guard": "mid", "pushbackHit": 16, "pushbackBlock": 18,
+    { "name": "Standing medium punch", "input": "5MP", "startup": 7, "active": 2, "recovery": 10, "damage": 60, "stun": 100, "strength": "medium", "guard": "mid", "pushbackHit": 16, "pushbackBlock": 18, "specialCancel": true,
       "do": ["startup: pose:windup-punch",
              "active: reach:front-hand opponent-chest 1.0", "lean:12", "hitbox:front-hand 9",
              "recovery: hold:0.2", "pose:guard"] },
@@ -16,7 +16,7 @@
              "active: reach:back-hand opponent-head 1.0", "lean:16", "ease:overshoot", "hitbox:back-hand 10",
              "recovery: hold:0.25", "pose:guard"] },
 
-    { "name": "Standing light kick", "input": "5LK", "startup": 4, "active": 3, "recovery": 9, "damage": 40, "stun": 50, "strength": "light", "guard": "mid", "pushbackHit": 12, "pushbackBlock": 14,
+    { "name": "Standing light kick", "input": "5LK", "startup": 4, "active": 3, "recovery": 9, "damage": 40, "stun": 50, "strength": "light", "guard": "mid", "pushbackHit": 12, "pushbackBlock": 14, "chains": ["5LP", "2LP", "5LK", "2LK"],
       "do": ["startup: reach:front-foot opponent-shin 0.6",
              "active: reach:front-foot opponent-shin 1.0", "lean:-6", "hitbox:front-foot 8",
              "recovery: hold:0.2", "pose:guard"] },
@@ -31,24 +31,24 @@
              "active: reach:back-foot opponent-head 1.0", "lean:-24", "ease:overshoot", "hitbox:back-foot 10",
              "recovery: hold:0.3", "pose:guard"] },
 
-    { "name": "Crouching light punch", "input": "2LP", "startup": 3, "active": 3, "recovery": 6, "damage": 30, "stun": 50, "strength": "light", "guard": "mid", "pushbackHit": 12, "pushbackBlock": 14,
+    { "name": "Crouching light punch", "input": "2LP", "startup": 3, "active": 3, "recovery": 6, "damage": 30, "stun": 50, "strength": "light", "guard": "mid", "pushbackHit": 12, "pushbackBlock": 14, "specialCancel": true, "chains": ["5LP", "2LP"],
       "do": ["active: reach:front-hand opponent-chest 1.0", "lean:4.359375", "hitbox:front-hand 8",
              "recovery: hold:0.2", "pose:crouch-guard"] },
 
-    { "name": "Crouching medium punch", "input": "2MP", "startup": 5, "active": 5, "recovery": 8, "damage": 60, "stun": 100, "strength": "medium", "guard": "mid", "pushbackHit": 16, "pushbackBlock": 18,
+    { "name": "Crouching medium punch", "input": "2MP", "startup": 5, "active": 5, "recovery": 8, "damage": 60, "stun": 100, "strength": "medium", "guard": "mid", "pushbackHit": 16, "pushbackBlock": 18, "specialCancel": true,
       "do": ["active: reach:front-hand opponent-chest 1.0", "lean:10.359375", "hitbox:front-hand 9",
              "recovery: hold:0.2", "pose:crouch-guard"] },
 
-    { "name": "Crouching heavy punch", "input": "2HP", "startup": 5, "active": 5, "recovery": 22, "damage": 100, "stun": 200, "strength": "heavy", "guard": "mid", "pushbackHit": 20, "pushbackBlock": 22, "hitstun": 23,
+    { "name": "Crouching heavy punch", "input": "2HP", "startup": 5, "active": 5, "recovery": 22, "damage": 100, "stun": 200, "strength": "heavy", "guard": "mid", "pushbackHit": 20, "pushbackBlock": 22, "hitstun": 23, "specialCancel": true,
       "do": ["startup: reach:back-hand hip 0.6", "lean:-7.640625",
              "active: reach:back-hand opponent-head 1.0", "lean:-7.640625", "crouch:0.4", "hitbox:back-hand 11",
              "recovery: hold:0.3", "pose:crouch-guard"] },
 
-    { "name": "Crouching light kick", "input": "2LK", "startup": 3, "active": 4, "recovery": 8, "damage": 20, "stun": 50, "strength": "light", "guard": "low", "pushbackHit": 12, "pushbackBlock": 14,
+    { "name": "Crouching light kick", "input": "2LK", "startup": 3, "active": 4, "recovery": 8, "damage": 20, "stun": 50, "strength": "light", "guard": "low", "pushbackHit": 12, "pushbackBlock": 14, "specialCancel": true, "chains": ["5LP", "2LP", "5LK", "2LK"],
       "do": ["active: reach:front-foot opponent-shin 1.0", "lean:-9.640625", "hitbox:front-foot 8",
              "recovery: hold:0.2", "pose:crouch-guard"] },
 
-    { "name": "Crouching medium kick", "input": "2MK", "startup": 5, "active": 5, "recovery": 12, "damage": 60, "stun": 100, "strength": "medium", "guard": "low", "pushbackHit": 16, "pushbackBlock": 18, "blockstun": 15,
+    { "name": "Crouching medium kick", "input": "2MK", "startup": 5, "active": 5, "recovery": 12, "damage": 60, "stun": 100, "strength": "medium", "guard": "low", "pushbackHit": 16, "pushbackBlock": 18, "blockstun": 15, "specialCancel": true,
       "do": ["startup: reach:front-foot opponent-shin 0.5", "lean:-13.640625",
              "active: reach:front-foot opponent-shin 1.0", "lean:-13.640625", "hurt:front-foot shrink", "hitbox:front-foot 9",
              "recovery: hold:0.2", "pose:crouch-guard"] },
@@ -84,7 +84,7 @@
       "do": ["active: reach:both-hands opponent-chest 0.8", "lean:14", "hitbox:both-hands 8",
              "recovery: hold:0.15", "lean:4", "pose:guard"] },
 
-    { "name": "Fireball", "input": "236P", "startup": 13, "active": 2, "recovery": 31, "damage": 60, "stun": 100, "strength": "medium", "guard": "mid", "pushbackHit": 16, "pushbackBlock": 18, "chip": 15, "chipKo": true,
+    { "name": "Fireball", "input": "236P", "kind": "special", "startup": 13, "active": 2, "recovery": 31, "damage": 60, "stun": 100, "strength": "medium", "guard": "mid", "pushbackHit": 16, "pushbackBlock": 18, "chip": 15, "chipKo": true,
       "do": ["startup: pose:windup-punch", "reach:both-hands hip 0.4", "lean:-8",
              "active: reach:both-hands opponent-chest 1.0", "lean:6", "ease:snap", "spawn:projectile from:both-hands", "hitbox:both-hands 8",
              "recovery: hold:0.3", "pose:guard"] }

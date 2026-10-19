@@ -622,8 +622,8 @@ static List<FrameInput>? Scripts(string name) => name switch
         (Buttons.None, Buttons.None, 40)),
 
     // Both walk right until P2 is in the corner, then P1 mashes jab (pressed every other frame) for
-    // 40 frames: each comes out on the first free frame and links (+6), so three hits make one combo,
-    // scaled 100%, 100%, 80%.
+    // 40 frames: each one chains from the last on the first frame after its hitstop (lights chain into
+    // lights), so the mashing makes a five-hit combo, scaled 100, 100, 80, 70, 60%.
     "combo-scaling" => Concat(
         Runs((Buttons.Right, Buttons.Right, 300)),
         Mash(Buttons.LightPunch, Buttons.None, 40),
@@ -719,6 +719,44 @@ static List<FrameInput>? Scripts(string name) => name switch
         Runs((Buttons.Left, Buttons.Right, 150)),
         Qcf(Buttons.HeavyPunch),
         Runs((Buttons.None, Buttons.None, 160))),
+
+    // Cancels. P1 walks in to point-blank, does 2MK and rolls the fireball motion through it (the 2MK
+    // is the 2), pressing HP in the hitstop: the fireball comes out on the first frame after the
+    // freeze and hits P2 still in the 2MK's hitstun, a two-hit combo.
+    "cancel-2mk-fireball" => Concat(
+        Runs((Buttons.Right, Buttons.None, 46)),
+        LowIntoFireball(Buttons.None, Buttons.None),
+        Runs((Buttons.None, Buttons.None, 80))),
+
+    // The same, blocked: P2 holds down-back for the 2MK (a low), then lets go of the stick. Blockstun
+    // keeps it guarding, and the fireball reaches it before blockstun ends: a true blockstring.
+    "cancel-2mk-fireball-block" => Concat(
+        Runs((Buttons.Right, Buttons.Down | Buttons.Right, 46)),
+        LowIntoFireball(Buttons.Down | Buttons.Right, Buttons.None),
+        Runs((Buttons.None, Buttons.None, 80))),
+
+    // The same from the start positions: the 2MK whiffs, so it can't be cancelled, and by the time it
+    // has recovered the motion and the press are too old. No fireball.
+    "cancel-whiff" => Concat(
+        LowIntoFireball(Buttons.None, Buttons.None),
+        Runs((Buttons.None, Buttons.None, 40))),
+
+    // A light chain: P2 in the corner, P1 at point-blank. 2LP, then 2LP pressed in its hitstop (down
+    // still held), then LP pressed in that one's hitstop with the stick let go: 2LP, 2LP, 5LP, each
+    // chained on the first frame after the freeze.
+    "chain-lights" => Concat(
+        Runs((Buttons.Right, Buttons.Right, 300), (Buttons.None, Buttons.None, 30)),
+        Runs((Buttons.Down | Buttons.LightPunch, Buttons.None, 1), (Buttons.Down, Buttons.None, 5),
+            (Buttons.Down | Buttons.LightPunch, Buttons.None, 1), (Buttons.Down, Buttons.None, 6),
+            (Buttons.None, Buttons.None, 4), (Buttons.LightPunch, Buttons.None, 1), (Buttons.None, Buttons.None, 40))),
+
+    // Never backwards: P1's fireball hits P2 at point-blank, and P1 mashes jab all through it. A special
+    // doesn't cancel into a normal: the jab comes out only once the fireball has recovered.
+    "special-no-cancel" => Concat(
+        Runs((Buttons.Right, Buttons.None, 46)),
+        Qcf(Buttons.HeavyPunch),
+        Mash(Buttons.LightPunch, Buttons.None, 60),
+        Runs((Buttons.None, Buttons.None, 30))),
 
     // Owed from Throws: a throw on a fighter in full blockstun fails. P2 in the corner, P1 backed off
     // to the separation limit. P1 throws a slow fireball and walks in behind it; P2 blocks it, and P1's
@@ -877,6 +915,16 @@ static List<FrameInput> Qcf(Buttons punch, Buttons p2 = Buttons.None) => Runs(
     (Buttons.Down, p2, 1),
     (Buttons.Down | Buttons.Right, p2, 1),
     (Buttons.Right | punch, p2, 1));
+
+// P1's 2MK with the fireball motion rolled through it: 2+MK, 2, 2, 3, 3, 6+HP. The 2MK connects on
+// its 5th frame, so at point-blank the HP is pressed in the hitstop. P2 holds `p2During` up to the
+// contact and `p2After` from then on.
+static List<FrameInput> LowIntoFireball(Buttons p2During, Buttons p2After) => Runs(
+    (Buttons.Down | Buttons.MediumKick, p2During, 1),
+    (Buttons.Down, p2During, 2),
+    (Buttons.Down | Buttons.Right, p2During, 2),
+    (Buttons.Right | Buttons.HeavyPunch, p2After, 1),
+    (Buttons.None, p2After, 4));
 
 static List<FrameInput> Repeat(List<FrameInput> part, int times)
 {
