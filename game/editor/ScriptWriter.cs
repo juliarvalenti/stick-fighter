@@ -54,6 +54,7 @@ public static class ScriptWriter
     {
         null => "null",
         JsonValue v when v.TryGetValue<string>(out var s) => Str(s),
+        JsonArray a => "[" + string.Join(", ", a.Select(Value)) + "]", // as written: "chains": ["5LP", "2LP"]
         _ => node.ToJsonString(Strings),
     };
 
